@@ -7,7 +7,7 @@ UOdinTokenGenerator::UOdinTokenGenerator(const class FObjectInitializer &PCIP)
 {
 }
 
-UOdinTokenGenerator *UOdinTokenGenerator::ConstructTokenGenerator(UObject *      WorldContextObject,
+UOdinTokenGenerator *UOdinTokenGenerator::ConstructTokenGenerator(UObject       *WorldContextObject,
                                                                   const FString &AccessKey)
 {
     UOdinTokenGenerator *TokenGenerator = NewObject<UOdinTokenGenerator>();

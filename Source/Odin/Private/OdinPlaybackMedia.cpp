@@ -5,18 +5,25 @@
 
 UOdinPlaybackMedia::UOdinPlaybackMedia() {}
 
-UOdinPlaybackMedia::UOdinPlaybackMedia(struct OdinMediaStream *stream, UOdinRoom *Room)
+UOdinPlaybackMedia::UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *Room)
     : UOdinPlaybackMedia()
 {
-    this->stream_ = stream;
-    this->Room    = Room;
+    this->stream_handle_ = streamHandle;
+    this->Room           = Room;
+}
+
+int32 UOdinPlaybackMedia::GetMediaId()
+{
+    uint16_t media_id;
+    odin_media_stream_media_id(stream_handle_, &media_id);
+    return media_id;
 }
 
 void UOdinPlaybackMedia::BeginDestroy()
 {
-    if (this->stream_) {
-        odin_media_stream_destroy(this->stream_);
-        this->stream_ = nullptr;
+    if (this->stream_handle_) {
+        odin_media_stream_destroy(this->stream_handle_);
+        this->stream_handle_ = 0;
     }
     this->Room = nullptr;
     Super::BeginDestroy();

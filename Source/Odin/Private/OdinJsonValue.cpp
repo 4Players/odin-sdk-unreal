@@ -17,7 +17,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueNumber(UObject *WorldContextOb
     return NewValue;
 }
 
-UOdinJsonValue *UOdinJsonValue::ConstructJsonValueString(UObject *      WorldContextObject,
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValueString(UObject       *WorldContextObject,
                                                          const FString &StringValue)
 {
     TSharedPtr<FJsonValue> NewVal = MakeShareable(new FJsonValueString(StringValue));
@@ -54,7 +54,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObj
     return NewValue;
 }
 
-UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject *        WorldContextObject,
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject         *WorldContextObject,
                                                          UOdinJsonObject *JsonObject)
 {
     TSharedPtr<FJsonValue> NewVal =
@@ -66,7 +66,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject *        WorldC
     return NewValue;
 }
 
-UOdinJsonValue *ConstructJsonValue(UObject *                     WorldContextObject,
+UOdinJsonValue *ConstructJsonValue(UObject                      *WorldContextObject,
                                    const TSharedPtr<FJsonValue> &InValue)
 {
     TSharedPtr<FJsonValue> NewVal = InValue;

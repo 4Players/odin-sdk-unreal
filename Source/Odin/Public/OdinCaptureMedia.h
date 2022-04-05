@@ -1,5 +1,7 @@
 #pragma once
 
+#include "OdinLibrary/include/odin.h"
+
 #include "AudioCapture.h"
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
@@ -15,17 +17,17 @@ class UOdinCaptureMedia : public UObject
     void SetAudioCapture(UAudioCapture *audio_capture);
     void Reset();
 
-    struct OdinMediaStream *GetMedia()
+    OdinMediaStreamHandle GetMediaHandle()
     {
-        return this->stream_;
+        return this->stream_handle_;
     }
 
   protected:
     void BeginDestroy() override;
 
-    struct OdinMediaStream *stream_ = nullptr;
+    OdinMediaStreamHandle stream_handle_ = 0;
 
-    UPROPERTY()
+    UPROPERTY(BlueprintReadOnly)
     UAudioCapture *audio_capture_ = nullptr;
 
     FAudioGeneratorHandle audio_generator_handle_;

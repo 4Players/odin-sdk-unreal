@@ -15,12 +15,12 @@ bool UOdinSynthComponent::Init(int32 &SampleRate)
 void UOdinSynthComponent::BeginDestroy()
 {
     if (this->sound_generator_) {
-        this->sound_generator_->SetOdinStream(nullptr);
+        this->sound_generator_->SetOdinStream(0);
     }
 
-    this->sound_generator_ = nullptr;
-    this->pending_stream_  = nullptr;
-    this->playback_media_  = nullptr;
+    this->sound_generator_       = nullptr;
+    this->pending_stream_handle_ = 0;
+    this->playback_media_        = nullptr;
 
     Super::BeginDestroy();
 }
@@ -30,9 +30,9 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UOdinPlaybackMedia *media)
     this->playback_media_ = media;
 
     if (sound_generator_) {
-        sound_generator_->SetOdinStream(media->GetMedia());
+        sound_generator_->SetOdinStream(media->GetMediaHandle());
     } else {
-        pending_stream_ = media->GetMedia();
+        pending_stream_handle_ = media->GetMediaHandle();
     }
 }
 
@@ -45,9 +45,9 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
 #endif
 {
     sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
-    if (this->pending_stream_) {
-        sound_generator_->SetOdinStream(this->pending_stream_);
-        this->pending_stream_ = nullptr;
+    if (this->pending_stream_handle_) {
+        sound_generator_->SetOdinStream(this->pending_stream_handle_);
+        this->pending_stream_handle_ = 0;
     }
     return sound_generator_;
 }

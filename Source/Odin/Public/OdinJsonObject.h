@@ -17,6 +17,20 @@ class UOdinJsonObject : public UObject
               Category = "Odin|Json")
     static UOdinJsonObject *ConstructJsonObject(UObject *WorldContextObject);
 
+    UFUNCTION(BlueprintPure,
+              meta     = (DisplayName = "Construct Json Object From String",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+              Category = "Odin|Json")
+    static UOdinJsonObject *ConstructJsonObjectFromString(UObject *WorldContextObject,
+                                                          FString  data);
+
+    UFUNCTION(BlueprintPure,
+              meta     = (DisplayName = "Construct Json Object From Bytes",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+              Category = "Odin|Json")
+    static UOdinJsonObject *ConstructJsonObjectFromBytes(UObject             *WorldContextObject,
+                                                         const TArray<uint8> &data);
+
     UFUNCTION(BlueprintCallable, Category = "Odin|Json")
     void Reset();
 
@@ -106,7 +120,7 @@ class UOdinJsonObject : public UObject
     TArray<UOdinJsonObject *> GetObjectArrayField(const FString &FieldName);
 
     UFUNCTION(BlueprintCallable, Category = "Odin|Json")
-    void SetObjectArrayField(const FString &                  FieldName,
+    void SetObjectArrayField(const FString                   &FieldName,
                              const TArray<UOdinJsonObject *> &ObjectArray);
 
   private:

@@ -12,12 +12,18 @@ class UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_UCLASS_BODY()
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Statics")
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Statics")
     static UOdinFunctionLibrary *getOdinFunctionLibrary();
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Function")
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Function")
     static UOdinCaptureMedia *Odin_CreateMedia(UAudioCapture *audioCapture);
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Function")
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Function")
     static FString GenerateAccessKey();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Function")
+    static FString FormatError(int32 code);
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Function")
+    static FString BytesToString(const TArray<uint8> &data);
 };

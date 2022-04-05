@@ -1,5 +1,7 @@
 #pragma once
 
+#include "OdinLibrary/include/odin.h"
+
 #include "DSP/Dsp.h"
 #include "Sound/SoundGenerator.h"
 
@@ -8,7 +10,7 @@ class OdinMediaSoundGenerator : public ISoundGenerator
   public:
     OdinMediaSoundGenerator();
 
-    void SetOdinStream(OdinMediaStream *stream);
+    void SetOdinStream(OdinMediaStreamHandle streamHandle);
 
     // Called when a new buffer is required.
     int32 OnGenerateAudio(float *OutAudio, int32 NumSamples) override final;
@@ -26,5 +28,5 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     void OnEndGenerate() override final;
 
   private:
-    struct OdinMediaStream *stream_ = nullptr;
+    OdinMediaStreamHandle stream_handle_ = 0;
 };

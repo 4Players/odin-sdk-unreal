@@ -14,22 +14,20 @@ class UOdinPlaybackMedia : public UObject
 {
     GENERATED_BODY()
 
+    friend class UOdinRoom;
+
   public:
     UOdinPlaybackMedia();
-    UOdinPlaybackMedia(struct OdinMediaStream *streamm, UOdinRoom *Room);
+    UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *room);
 
-    struct OdinMediaStream *GetMedia()
+    OdinMediaStreamHandle GetMediaHandle()
     {
-        return this->stream_;
+        return this->stream_handle_;
     }
 
-    void SetMedia(struct OdinMediaStream *stream)
+    void SetMedia(OdinMediaStreamHandle streamHandle)
     {
-        this->stream_ = stream;
-    }
-
-    void SetSharedRoom(std::shared_ptr<struct OdinRoom> sharedRoom) {
-        this->sharedRoom_ = sharedRoom;
+        this->stream_handle_ = streamHandle;
     }
 
     void SetRoom(UOdinRoom *room)
@@ -37,13 +35,14 @@ class UOdinPlaybackMedia : public UObject
         this->Room = room;
     }
 
+    UFUNCTION(BlueprintCallable)
+    int32 GetMediaId();
+
   protected:
     void BeginDestroy() override;
 
-    struct OdinMediaStream *stream_ = nullptr;
+    OdinMediaStreamHandle stream_handle_ = 0;
 
     UPROPERTY(BlueprintReadOnly)
     UOdinRoom *Room;
-
-    std::shared_ptr<struct OdinRoom> sharedRoom_;
 };

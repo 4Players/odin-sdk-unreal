@@ -17,6 +17,24 @@ UOdinJsonObject *UOdinJsonObject::ConstructJsonObject(UObject *WorldContextObjec
     return NewObject<UOdinJsonObject>();
 }
 
+UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromString(UObject *WorldContextObject,
+                                                                FString  data)
+{
+    auto obj = NewObject<UOdinJsonObject>();
+    obj->DecodeJson(data);
+
+    return obj;
+}
+
+UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromBytes(UObject *WorldContextObject,
+                                                               const TArray<uint8> &data)
+{
+    auto obj    = NewObject<UOdinJsonObject>();
+    auto s_data = BytesToString(data.GetData(), data.Num());
+    obj->DecodeJson(s_data);
+    return obj;
+}
+
 void UOdinJsonObject::Reset()
 {
     if (JsonObj.IsValid()) {
@@ -57,12 +75,8 @@ TArray<uint8> UOdinJsonObject::EncodeJsonBytes() const
         return data;
     }
 
-    FString                                OutputString;
-    TSharedRef<FCondensedJsonStringWriter> Writer =
-        FCondensedJsonStringWriterFactory::Create(&OutputString);
-    FJsonSerializer::Serialize(JsonObj.ToSharedRef(), Writer);
-
-    uint32 size = OutputString.Len();
+    FString OutputString = EncodeJson();
+    uint32  size         = OutputString.Len();
 
     data.AddUninitialized(size);
     StringToBytes(OutputString, data.GetData(), size);
@@ -220,7 +234,7 @@ TArray<UOdinJsonValue *> UOdinJsonObject::GetArrayField(const FString &FieldName
     return OutArray;
 }
 
-void UOdinJsonObject::SetArrayField(const FString &                 FieldName,
+void UOdinJsonObject::SetArrayField(const FString                  &FieldName,
                                     const TArray<UOdinJsonValue *> &InArray)
 {
     if (!JsonObj.IsValid()) {
@@ -320,7 +334,7 @@ TArray<float> UOdinJsonObject::GetNumberArrayField(const FString &FieldName)
     return NumberArray;
 }
 
-void UOdinJsonObject::SetNumberArrayField(const FString &      FieldName,
+void UOdinJsonObject::SetNumberArrayField(const FString       &FieldName,
                                           const TArray<float> &NumberArray)
 {
     if (!JsonObj.IsValid()) {
@@ -352,7 +366,7 @@ TArray<FString> UOdinJsonObject::GetStringArrayField(const FString &FieldName)
     return StringArray;
 }
 
-void UOdinJsonObject::SetStringArrayField(const FString &        FieldName,
+void UOdinJsonObject::SetStringArrayField(const FString         &FieldName,
                                           const TArray<FString> &StringArray)
 {
     if (!JsonObj.IsValid()) {
@@ -420,7 +434,7 @@ TArray<UOdinJsonObject *> UOdinJsonObject::GetObjectArrayField(const FString &Fi
     return OutArray;
 }
 
-void UOdinJsonObject::SetObjectArrayField(const FString &                  FieldName,
+void UOdinJsonObject::SetObjectArrayField(const FString                   &FieldName,
                                           const TArray<UOdinJsonObject *> &ObjectArray)
 {
     if (!JsonObj.IsValid()) {

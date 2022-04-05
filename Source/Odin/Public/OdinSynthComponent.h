@@ -31,7 +31,7 @@ class UOdinSynthComponent : public USynthComponent
                                                     int32 InNumChannels) override;
 #endif
   private:
-    struct OdinMediaStream *pending_stream_ = nullptr;
+    OdinMediaStreamHandle pending_stream_handle_ = 0;
 
     UPROPERTY()
     UOdinPlaybackMedia *playback_media_ = nullptr;

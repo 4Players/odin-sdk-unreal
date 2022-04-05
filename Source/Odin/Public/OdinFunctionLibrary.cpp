@@ -2,6 +2,8 @@
 
 #include "OdinCaptureMedia.h"
 
+#include <string>
+
 static UOdinFunctionLibrary *g_odinFunctionLibrary = nullptr;
 
 UOdinFunctionLibrary::UOdinFunctionLibrary(const class FObjectInitializer &PCIP)
@@ -27,4 +29,21 @@ FString UOdinFunctionLibrary::GenerateAccessKey()
     char buf[128] = {0};
     odin_access_key_generate(buf, sizeof(buf));
     return ANSI_TO_TCHAR(buf);
+}
+
+FString UOdinFunctionLibrary::FormatError(int32 code)
+{
+    std::string result;
+    result.resize(128);
+    auto r = odin_error_format(code, (char *)result.data(), result.size());
+    while (r > result.size()) {
+        r = odin_error_format(code, (char *)result.data(), result.size());
+    };
+    result.resize(r);
+    return result.c_str();
+}
+
+FString UOdinFunctionLibrary::BytesToString(const TArray<uint8> &data)
+{
+    return ::BytesToString(data.GetData(), data.Num());
 }

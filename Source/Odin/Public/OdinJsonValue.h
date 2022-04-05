@@ -41,7 +41,7 @@ class UOdinJsonValue : public UObject
               meta = (DisplayName = "Construct Json String Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Json")
-    static UOdinJsonValue *ConstructJsonValueString(UObject *      WorldContextObject,
+    static UOdinJsonValue *ConstructJsonValueString(UObject       *WorldContextObject,
                                                     const FString &StringValue);
 
     UFUNCTION(BlueprintPure,
@@ -61,10 +61,10 @@ class UOdinJsonValue : public UObject
               meta = (DisplayName = "Construct Json Object Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Json")
-    static UOdinJsonValue *ConstructJsonValueObject(UObject *        WorldContextObject,
+    static UOdinJsonValue *ConstructJsonValueObject(UObject         *WorldContextObject,
                                                     UOdinJsonObject *JsonObject);
 
-    static UOdinJsonValue *ConstructJsonValue(UObject *                     WorldContextObject,
+    static UOdinJsonValue *ConstructJsonValue(UObject                      *WorldContextObject,
                                               const TSharedPtr<FJsonValue> &InValue);
 
     TSharedPtr<FJsonValue> &GetRootValue();

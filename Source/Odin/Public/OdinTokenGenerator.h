@@ -14,7 +14,7 @@ class UOdinTokenGenerator : public UObject
               meta = (DisplayName = "Construct a Token Generator", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Token")
-    static UOdinTokenGenerator *ConstructTokenGenerator(UObject *      WorldContextObject,
+    static UOdinTokenGenerator *ConstructTokenGenerator(UObject       *WorldContextObject,
                                                         const FString &AccessKey);
 
     void SetAccessKey(const FString &AccesssKey);
