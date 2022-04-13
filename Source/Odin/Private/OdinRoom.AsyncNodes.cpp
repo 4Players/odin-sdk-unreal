@@ -38,6 +38,7 @@ void UOdinRoomJoin::Activate()
                                             this->UserData, this->OnResponse, this->OnError,
                                             this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
 
 UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject *WorldContextObject, UOdinRoom *room,
@@ -59,6 +60,7 @@ void UOdinRoomAddMedia::Activate()
     (new FAutoDeleteAsyncTask<AddMediaTask>(this->Room->room_handle_, this->CaptureMedia,
                                             this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
 
 UOdinRoomUpdatePosition *
@@ -80,6 +82,7 @@ void UOdinRoomUpdatePosition::Activate()
     (new FAutoDeleteAsyncTask<UpdatePositionTask>(this->Room->room_handle_, this->Position,
                                                   this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
 
 /// <summary>
@@ -107,6 +110,7 @@ void UOdinRoomUpdatePeerUserData::Activate()
     (new FAutoDeleteAsyncTask<UpdatePeerUserDataTask>(
          this->Room->room_handle_, this->Data, this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
 
 /// <summary>
@@ -134,6 +138,7 @@ void UOdinRoomUpdateRoomUserData::Activate()
     (new FAutoDeleteAsyncTask<UpdateRoomUserDataTask>(
          this->Room->room_handle_, this->Data, this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
 
 /// <summary>
@@ -163,4 +168,5 @@ void UOdinRoomSendMessage::Activate()
     (new FAutoDeleteAsyncTask<SendMessageTask>(this->Room->room_handle_, this->Targets, this->Data,
                                                this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
+    this->SetReadyToDestroy();
 }
