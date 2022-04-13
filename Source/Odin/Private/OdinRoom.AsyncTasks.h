@@ -49,7 +49,7 @@ class JoinRoomTask : public FNonAbandonableTask
 
         if (odin_is_error(join_room_result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, join_room_result]() {
                     OnError.ExecuteIfBound(join_room_result);
                     Response.Broadcast(false);
                 },
@@ -59,7 +59,8 @@ class JoinRoomTask : public FNonAbandonableTask
             // OnSuccess is handled in UOdinRoom::HandleEvent
             // See also, UOdinRoomJoin in OdinRoom.AsyncNodes.cpp
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { Response.Broadcast(true); }, TStatId(), nullptr, ENamedThreads::GameThread);
+                [OnSuccess = OnSuccess, Response = Response]() { Response.Broadcast(true); },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -97,14 +98,14 @@ class AddMediaTask : public FNonAbandonableTask
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, result]() {
                     OnError.ExecuteIfBound(result);
                     Response.Broadcast(false);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnSuccess = OnSuccess, Response = Response, result]() {
                     OnSuccess.ExecuteIfBound(result);
                     Response.Broadcast(true);
                 },
@@ -147,7 +148,7 @@ class UpdatePositionTask : public FNonAbandonableTask
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, result]() {
                     OnError.ExecuteIfBound(result);
                     Response.Broadcast(false);
                 },
@@ -155,7 +156,7 @@ class UpdatePositionTask : public FNonAbandonableTask
 
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnSuccess = OnSuccess, Response = Response]() {
                     OnSuccess.ExecuteIfBound();
                     Response.Broadcast(true);
                 },
@@ -225,7 +226,7 @@ class UpdatePeerUserDataTask : public FNonAbandonableTask
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, result]() {
                     OnError.ExecuteIfBound(result);
                     Response.Broadcast(false);
                 },
@@ -233,7 +234,7 @@ class UpdatePeerUserDataTask : public FNonAbandonableTask
         } else {
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnSuccess = OnSuccess, Response = Response]() {
                     OnSuccess.ExecuteIfBound();
                     Response.Broadcast(true);
                 },
@@ -278,14 +279,14 @@ class UpdateRoomUserDataTask : public FNonAbandonableTask
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, result]() {
                     OnError.ExecuteIfBound(result);
                     Response.Broadcast(false);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnSuccess = OnSuccess, Response = Response]() {
                     OnSuccess.ExecuteIfBound();
                     Response.Broadcast(true);
                 },
@@ -331,14 +332,14 @@ class SendMessageTask : public FNonAbandonableTask
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnError = OnError, Response = Response, result]() {
                     OnError.ExecuteIfBound(result);
                     Response.Broadcast(false);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [OnSuccess = OnSuccess, Response = Response]() {
                     OnSuccess.ExecuteIfBound();
                     Response.Broadcast(true);
                 },
