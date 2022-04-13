@@ -20,6 +20,15 @@ UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UOdinRoom *r
     action->OnError   = onError;
     action->OnSuccess = onSuccess;
     action->RegisterWithGameInstance(WorldContextObject);
+
+    FScopeLock lock(&room->joined_callbacks_cs_);
+    room->joined_callbacks_.Reset();
+    room->joined_callbacks_.Add(
+        [=](auto roomId, auto roomCustomer, auto roomUserData, auto ownPeerId) {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() { onSuccess.ExecuteIfBound(roomId, roomUserData, roomCustomer, ownPeerId); },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        });
     return action;
 }
 

@@ -55,6 +55,16 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             auto          own_peer_id = event->joined.own_peer_id;
             TArray<uint8> user_data{event->joined.room_user_data,
                                     (int)event->joined.room_user_data_len};
+
+            {
+                auto       roomId       = UTF8_TO_TCHAR(event->joined.room_id);
+                auto       roomCustomer = UTF8_TO_TCHAR(event->joined.customer);
+                FScopeLock lock(&joined_callbacks_cs_);
+                for (auto &callback : this->joined_callbacks_) {
+                    callback(roomId, roomCustomer, user_data, own_peer_id);
+                }
+                this->joined_callbacks_.Reset();
+            }
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [=]() { this->onRoomJoined.Broadcast(own_peer_id, user_data); }, TStatId(), nullptr,
                 ENamedThreads::GameThread);

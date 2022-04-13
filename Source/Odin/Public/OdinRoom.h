@@ -289,6 +289,11 @@ class UOdinRoom : public UObject
 
     TArray<UOdinCaptureMedia *> capture_medias_;
 
+    FCriticalSection joined_callbacks_cs_;
+    TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,
+                          int64 ownPeerId)>>
+        joined_callbacks_;
+
     void HandleOdinEvent(const struct OdinEvent *event);
 
     friend class UOdinRoomJoin;
@@ -297,4 +302,5 @@ class UOdinRoom : public UObject
     friend class UOdinRoomUpdatePeerUserData;
     friend class UOdinRoomUpdateRoomUserData;
     friend class UOdinRoomSendMessage;
+    friend class UOdinRoomJoinTask;
 };

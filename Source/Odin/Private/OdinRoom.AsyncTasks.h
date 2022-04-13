@@ -48,11 +48,18 @@ class JoinRoomTask : public FNonAbandonableTask
             odin_room_join(RoomHandle, TCHAR_TO_UTF8(*Url), TCHAR_TO_UTF8(*RoomToken));
 
         if (odin_is_error(join_room_result)) {
-            OnError.ExecuteIfBound(join_room_result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(join_room_result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+
         } else {
-            OnSuccess.ExecuteIfBound("", {}, "", 0);
-            Response.Broadcast(true);
+            // OnSuccess is handled in UOdinRoom::HandleEvent
+            // See also, UOdinRoomJoin in OdinRoom.AsyncNodes.cpp
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() { Response.Broadcast(true); }, TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -89,11 +96,19 @@ class AddMediaTask : public FNonAbandonableTask
         auto result = odin_room_add_media(RoomHandle, Media->GetMediaHandle());
 
         if (odin_is_error(result)) {
-            OnError.ExecuteIfBound(result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
-            OnSuccess.ExecuteIfBound(result);
-            Response.Broadcast(true);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnSuccess.ExecuteIfBound(result);
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -131,11 +146,20 @@ class UpdatePositionTask : public FNonAbandonableTask
         auto result = odin_room_update_position(RoomHandle, Position.X, Position.Y);
 
         if (odin_is_error(result)) {
-            OnError.ExecuteIfBound(result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+
         } else {
-            OnSuccess.ExecuteIfBound();
-            Response.Broadcast(true);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -200,11 +224,20 @@ class UpdatePeerUserDataTask : public FNonAbandonableTask
             RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Peer, Data.GetData(), Data.Num());
 
         if (odin_is_error(result)) {
-            OnError.ExecuteIfBound(result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
-            OnSuccess.ExecuteIfBound();
-            Response.Broadcast(true);
+
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -244,11 +277,19 @@ class UpdateRoomUserDataTask : public FNonAbandonableTask
             RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Room, Data.GetData(), Data.Num());
 
         if (odin_is_error(result)) {
-            OnError.ExecuteIfBound(result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
-            OnSuccess.ExecuteIfBound();
-            Response.Broadcast(true);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
@@ -289,11 +330,19 @@ class SendMessageTask : public FNonAbandonableTask
                                              Targets.Num(), Data.GetData(), Data.Num());
 
         if (odin_is_error(result)) {
-            OnError.ExecuteIfBound(result);
-            Response.Broadcast(false);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
-            OnSuccess.ExecuteIfBound();
-            Response.Broadcast(true);
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [=]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
         }
     }
 
