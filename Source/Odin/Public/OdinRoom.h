@@ -76,10 +76,10 @@ class UOdinRoomAddMedia : public UBlueprintAsyncActionBase
     UPROPERTY(BlueprintAssignable)
     FAddMediaResponsePin OnResponse;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinRoom *Room;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinCaptureMedia *CaptureMedia;
 
     FOdinRoomAddMediaError   OnError;
@@ -106,7 +106,7 @@ class UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
     UPROPERTY(BlueprintAssignable)
     FUpdatePositionResponsePin OnResponse;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinRoom *Room;
 
     FVector2D Position;
@@ -135,7 +135,7 @@ class UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
     UPROPERTY(BlueprintAssignable)
     FUpdatePeerUserDataResponsePin OnResponse;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinRoom *Room;
 
     TArray<uint8> Data;
@@ -164,7 +164,7 @@ class UOdinRoomUpdateRoomUserData : public UBlueprintAsyncActionBase
     UPROPERTY(BlueprintAssignable)
     FUpdateRoomUserDataResponsePin OnResponse;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinRoom *Room;
 
     TArray<uint8> Data;
@@ -194,7 +194,7 @@ class UOdinRoomSendMessage : public UBlueprintAsyncActionBase
     UPROPERTY(BlueprintAssignable)
     FSendMessageResponsePin OnResponse;
 
-    UPROPERTY();
+    UPROPERTY()
     UOdinRoom *Room;
 
     TArray<uint8> Data;
