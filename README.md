@@ -8,7 +8,7 @@ The ODIN SDK for Unreal enables you to add real-time VoIP communication to your 
 
 ## Prerequisites
 
-- Unreal Engine 4.10 or any later version (including 5.x)
+- Unreal Engine 4.26 or any later version (including 5.x)
 
 Internally, the plugin is built and tested with Unreal Engine 4.27.
 
