@@ -26,7 +26,7 @@ enum Type {
 /**
  * Blueprintable FJsonValue wrapper
  */
-UCLASS(BlueprintType, Blueprintable)
+UCLASS(BlueprintType, Blueprintable, ClassGroup = Odin)
 class UOdinJsonValue : public UObject
 {
     GENERATED_UCLASS_BODY()

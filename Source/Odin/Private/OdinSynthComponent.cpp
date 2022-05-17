@@ -45,7 +45,7 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
 #endif
 {
     sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
-    if (this->pending_stream_handle_) {
+    if (this->pending_stream_handle_ != 0) {
         sound_generator_->SetOdinStream(this->pending_stream_handle_);
         this->pending_stream_handle_ = 0;
     }

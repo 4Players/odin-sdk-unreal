@@ -38,12 +38,27 @@ void UOdinRoom::SetPositionScale(float Scale)
 
 void UOdinRoom::Destroy()
 {
-    for (auto media : this->capture_medias_) {
-        media->Reset();
+    {
+        FScopeLock lock(&this->capture_medias_cs_);
+        for (auto media : this->capture_medias_) {
+            media->Reset();
+        }
+        this->capture_medias_.Empty();
     }
-    this->capture_medias_.Empty();
     (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
     this->room_handle_ = 0;
+}
+
+void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia *media)
+{
+    FScopeLock lock(&this->capture_medias_cs_);
+    this->capture_medias_.Add(media);
+}
+
+void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia *media)
+{
+    FScopeLock lock(&this->capture_medias_cs_);
+    this->capture_medias_.Remove(media);
 }
 
 // void UOdinRoom::RemoveMedia(int32 mediaId) {}
