@@ -10,19 +10,36 @@
 void FOdinModule::StartupModule()
 {
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
-
     FString LibraryPath;
-#if PLATFORM_WINDOWS
-    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary/x64/Win/odin.dll"));
-#elif PLATFORM_MAC
-    LibraryPath = FPaths::Combine(*BaseDir, TEXT("$(PluginDir)/TODO"));
-#elif PLATFORM_LINUX
-    LibraryPath =
-        FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary/x64/Linux/libodin.so"));
-#endif // PLATFORM_WINDOWS
+    FString libraryName;
 
-    OdinLibraryHandle =
-        !LibraryPath.IsEmpty() ? FPlatformProcess::GetDllHandle(*LibraryPath) : nullptr;
+    FString PlatformArchitecture;
+
+#if PLATFORM_CPU_X86_FAMILY
+    PlatformArchitecture = "x64";
+#elif PLATFORM_CPU_ARM_FAMILY
+    PlatformArchitecture = "arm64";
+#endif
+
+#if PLATFORM_WINDOWS
+    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
+                                  PlatformArchitecture, TEXT("Win"));
+    libraryName = "odin.dll";
+#elif PLATFORM_MAC
+    LibraryPath          = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
+                                           PlatformArchitecture, TEXT("Mac"));
+    libraryName          = "libodin.dylib";
+#elif PLATFORM_LINUX
+    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
+                                  PlatformArchitecture, TEXT("Linux"));
+    libraryName = "libodin.so";
+#endif
+
+    FPlatformProcess::PushDllDirectory(*LibraryPath);
+    OdinLibraryHandle = !LibraryPath.IsEmpty()
+                            ? FPlatformProcess::GetDllHandle(*(LibraryPath / libraryName))
+                            : nullptr;
+    FPlatformProcess::PopDllDirectory(*LibraryPath);
 
     odin_startup(ODIN_VERSION);
 }
@@ -31,8 +48,10 @@ void FOdinModule::ShutdownModule()
 {
     odin_shutdown();
 
+#if PLATFORM_WINDOWS || PLATFORM_MAC
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;
+#endif
 }
 
 #undef LOCTEXT_NAMESPACE
