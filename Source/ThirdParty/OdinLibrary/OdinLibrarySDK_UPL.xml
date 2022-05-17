@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root xmlns:android="http://schemas.android.com/apk/res/android">
+    <init>
+        <setBool result="bSupported" value="false" />
+        <isArch arch="arm64-v8a">
+            <setBool result="bSupported" value="true" />
+        </isArch>
+        <isArch arch="x86_64">
+            <setBool result="bSupported" value="true" />
+        </isArch>
+        <if condition="bSupported">
+            <false>
+                <log text="Unsupported architecture: $S(Architecture)" />
+            </false>
+        </if>
+    </init>
+
+    <resourceCopies>
+        <if condition="bSupported">
+            <true>
+                <isArch arch="x86_64">
+                    <copyFile src="$S(AbsPluginDir)/x64/Android/libodin.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin.so" />
+                    <log text="Copying libodin.so" />
+                </isArch>
+                <isArch arch="arm64-v8a">
+                    <copyFile src="$S(AbsPluginDir)/arm64/Android/libodin.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin.so" />
+                    <log text="Copying libodin.so" />
+                </isArch>
+            </true>
+        </if>
+    </resourceCopies>
+
+    <androidManifestUpdates>
+        <if condition="bSupported">
+            <true>
+                <addPermission android:name="android.permission.INTERNET" />
+                <addPermission android:name="android.permission.ACCESS_NETWORK_STATE" />
+            </true>
+        </if>
+    </androidManifestUpdates>
+</root>
