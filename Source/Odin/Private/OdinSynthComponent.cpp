@@ -19,7 +19,6 @@ void UOdinSynthComponent::BeginDestroy()
     }
 
     this->sound_generator_       = nullptr;
-    this->pending_stream_handle_ = 0;
     this->playback_media_        = nullptr;
 
     Super::BeginDestroy();
@@ -28,11 +27,19 @@ void UOdinSynthComponent::BeginDestroy()
 void UOdinSynthComponent::Odin_AssignSynthToMedia(UOdinPlaybackMedia *media)
 {
     this->playback_media_ = media;
-
     if (sound_generator_) {
         sound_generator_->SetOdinStream(media->GetMediaHandle());
-    } else {
-        pending_stream_handle_ = media->GetMediaHandle();
+    }
+}
+
+void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings)
+{
+    bOverrideAttenuation = true;
+    AttenuationOverrides = InAttenuationSettings;
+
+    auto audioComponent = GetAudioComponent();
+    if (audioComponent) {
+        audioComponent->AdjustAttenuation(InAttenuationSettings);
     }
 }
 
@@ -44,10 +51,9 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
                                                              int32 InNumChannels)
 #endif
 {
-    sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
-    if (this->pending_stream_handle_ != 0) {
-        sound_generator_->SetOdinStream(this->pending_stream_handle_);
-        this->pending_stream_handle_ = 0;
+    this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
+    if (this->playback_media_ != 0) {
+        sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());
     }
     return sound_generator_;
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "OdinLibrary/include/odin.h"
+
 #include "CoreMinimal.h"
 #include "UObject/Object.h"
 
@@ -20,7 +22,7 @@ class UOdinPlaybackMedia : public UObject
     UOdinPlaybackMedia();
     UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *room);
 
-    OdinMediaStreamHandle GetMediaHandle()
+    OdinMediaStreamHandle GetMediaHandle() const
     {
         return this->stream_handle_;
     }

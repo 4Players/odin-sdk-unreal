@@ -18,7 +18,7 @@ class UOdinCaptureMedia : public UObject
     void           Reset();
     OdinReturnCode ResetOdinStream();
 
-    OdinMediaStreamHandle GetMediaHandle()
+    OdinMediaStreamHandle GetMediaHandle() const
     {
         return this->stream_handle_;
     }

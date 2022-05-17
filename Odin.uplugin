@@ -1,7 +1,7 @@
 {
-	"FileVersion": 3,
+	"FileVersion": 2,
 	"Version": 1,
-	"VersionName": "0.2.2",
+	"VersionName": "0.2.3",
 	"FriendlyName": "4Players ODIN",
 	"Description": "Unreal integration plugin to integrate real-time chat technology into your game",
 	"Category": "Other",
