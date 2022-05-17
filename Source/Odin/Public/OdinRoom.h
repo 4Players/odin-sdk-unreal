@@ -14,6 +14,7 @@
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FJoinRoomResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAddMediaResponsePin, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemoveMediaResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePositionResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePeerUserDataResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdateRoomUserDataResponsePin, bool, success);
@@ -84,6 +85,38 @@ class UOdinRoomAddMedia : public UBlueprintAsyncActionBase
 
     FOdinRoomAddMediaError   OnError;
     FOdinRoomAddMediaSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomRemoveMediaError, int64, errorCode);
+DECLARE_DYNAMIC_DELEGATE(FOdinRoomRemoveMediaSuccess);
+UCLASS(ClassGroup = Odin)
+class UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(
+        BlueprintCallable,
+        meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+                WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess",
+                DisplayName = "Remove the media from the room and destroy the internal media"))
+    static UOdinRoomRemoveMedia *RemoveMedia(UObject *WorldContextObject, UOdinRoom *room,
+                                             UOdinCaptureMedia                 *media,
+                                             FOdinRoomRemoveMediaError          onError,
+                                             const FOdinRoomRemoveMediaSuccess &onSuccess);
+
+    void Activate() override;
+
+    UPROPERTY(BlueprintAssignable)
+    FRemoveMediaResponsePin OnResponse;
+
+    UPROPERTY()
+    UOdinRoom *Room;
+
+    UPROPERTY()
+    UOdinCaptureMedia *CaptureMedia;
+
+    FOdinRoomRemoveMediaError   OnError;
+    FOdinRoomRemoveMediaSuccess OnSuccess;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdatePositionError, int64, errorCode);
@@ -275,6 +308,14 @@ class UOdinRoom : public UObject
               Category = "Odin|Room|Functions")
     void Destroy();
 
+    void BindCaptureMedia(UOdinCaptureMedia *media);
+    void UnbindCaptureMedia(UOdinCaptureMedia *media);
+
+    OdinRoomHandle RoomHandle() const
+    {
+        return this->room_handle_;
+    }
+
     // UFUNCTION(BlueprintCallable,
     //          meta     = (DisplayName = "Remove Media from Room",
     //                  HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
@@ -287,6 +328,8 @@ class UOdinRoom : public UObject
   private:
     OdinRoomHandle room_handle_;
 
+    FCriticalSection            capture_medias_cs_;
+    UPROPERTY()
     TArray<UOdinCaptureMedia *> capture_medias_;
 
     FCriticalSection joined_callbacks_cs_;

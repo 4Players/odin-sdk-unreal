@@ -74,18 +74,17 @@ class AddMediaTask : public FNonAbandonableTask
 {
     friend class FAutoDeleteAsyncTask<AddMediaTask>;
 
-    OdinRoomHandle RoomHandle;
-
     UOdinCaptureMedia *Media;
+    UOdinRoom         *Room;
 
     FAddMediaResponsePin     Response;
     FOdinRoomAddMediaError   OnError;
     FOdinRoomAddMediaSuccess OnSuccess;
 
-    AddMediaTask(OdinRoomHandle roomHandle, UOdinCaptureMedia *media, FAddMediaResponsePin response,
+    AddMediaTask(UOdinRoom *room, UOdinCaptureMedia *media, FAddMediaResponsePin response,
                  FOdinRoomAddMediaError onError, FOdinRoomAddMediaSuccess onSuccess)
-        : RoomHandle(roomHandle)
-        , Media(media)
+        : Media(media)
+        , Room(room)
         , Response(response)
         , OnError(onError)
         , OnSuccess(onSuccess)
@@ -94,7 +93,59 @@ class AddMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        auto result = odin_room_add_media(RoomHandle, Media->GetMediaHandle());
+        auto result = odin_room_add_media(Room->RoomHandle(), Media->GetMediaHandle());
+
+        if (odin_is_error(result)) {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnError = OnError, Response = Response, result]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        } else {
+            Room->BindCaptureMedia(Media);
+
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnSuccess = OnSuccess, Response = Response, result]() {
+                    OnSuccess.ExecuteIfBound(result);
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        }
+    }
+
+    FORCEINLINE TStatId GetStatId() const
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
+    }
+};
+
+class RemoveMediaTask : public FNonAbandonableTask
+{
+    friend class FAutoDeleteAsyncTask<RemoveMediaTask>;
+
+    UOdinCaptureMedia *Media;
+    UOdinRoom         *Room;
+
+    FRemoveMediaResponsePin     Response;
+    FOdinRoomRemoveMediaError   OnError;
+    FOdinRoomRemoveMediaSuccess OnSuccess;
+
+    RemoveMediaTask(UOdinRoom *room, UOdinCaptureMedia *media, FRemoveMediaResponsePin response,
+                    FOdinRoomRemoveMediaError onError, FOdinRoomRemoveMediaSuccess onSuccess)
+        : Media(media)
+        , Room(room)
+        , Response(response)
+        , OnError(onError)
+        , OnSuccess(onSuccess)
+    {
+    }
+
+    void DoWork()
+    {
+        Room->UnbindCaptureMedia(Media);
+
+        auto result = Media->ResetOdinStream();
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -106,7 +157,7 @@ class AddMediaTask : public FNonAbandonableTask
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnSuccess = OnSuccess, Response = Response, result]() {
-                    OnSuccess.ExecuteIfBound(result);
+                    OnSuccess.ExecuteIfBound();
                     Response.Broadcast(true);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);

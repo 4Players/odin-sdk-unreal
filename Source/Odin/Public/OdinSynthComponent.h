@@ -19,8 +19,8 @@ class UOdinSynthComponent : public USynthComponent
     void Odin_AssignSynthToMedia(UOdinPlaybackMedia *media);
 
   protected:
-    virtual bool Init(int32 &SampleRate) override;
-    virtual void BeginDestroy() override;
+    bool Init(int32 &SampleRate) override;
+    void BeginDestroy() override;
 
   protected:
 #if ENGINE_MAJOR_VERSION >= 5

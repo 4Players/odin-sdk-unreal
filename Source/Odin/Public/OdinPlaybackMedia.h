@@ -9,7 +9,7 @@
 
 class UOdinRoom;
 
-UCLASS(BlueprintType, Blueprintable)
+UCLASS(BlueprintType, ClassGroup = Odin)
 class UOdinPlaybackMedia : public UObject
 {
     GENERATED_BODY()

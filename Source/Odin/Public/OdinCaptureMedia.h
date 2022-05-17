@@ -8,14 +8,15 @@
 
 #include "OdinCaptureMedia.generated.h"
 
-UCLASS()
+UCLASS(BlueprintType, ClassGroup = Odin)
 class UOdinCaptureMedia : public UObject
 {
     GENERATED_UCLASS_BODY()
 
   public:
-    void SetAudioCapture(UAudioCapture *audio_capture);
-    void Reset();
+    void           SetAudioCapture(UAudioCapture *audio_capture);
+    void           Reset();
+    OdinReturnCode ResetOdinStream();
 
     OdinMediaStreamHandle GetMediaHandle()
     {

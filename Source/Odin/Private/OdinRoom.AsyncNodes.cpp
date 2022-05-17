@@ -57,8 +57,29 @@ UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject *WorldContextObject, UOdi
 
 void UOdinRoomAddMedia::Activate()
 {
-    (new FAutoDeleteAsyncTask<AddMediaTask>(this->Room->room_handle_, this->CaptureMedia,
-                                            this->OnResponse, this->OnError, this->OnSuccess))
+    (new FAutoDeleteAsyncTask<AddMediaTask>(this->Room, this->CaptureMedia, this->OnResponse,
+                                            this->OnError, this->OnSuccess))
+        ->StartBackgroundTask();
+    this->SetReadyToDestroy();
+}
+
+UOdinRoomRemoveMedia *UOdinRoomRemoveMedia::RemoveMedia(
+    UObject *WorldContextObject, UOdinRoom *room, UOdinCaptureMedia *captureMedia,
+    FOdinRoomRemoveMediaError onError, const FOdinRoomRemoveMediaSuccess &onSuccess)
+{
+    auto action          = NewObject<UOdinRoomRemoveMedia>();
+    action->Room         = room;
+    action->CaptureMedia = captureMedia;
+    action->OnError      = onError;
+    action->OnSuccess    = onSuccess;
+    action->RegisterWithGameInstance(WorldContextObject);
+    return action;
+}
+
+void UOdinRoomRemoveMedia::Activate()
+{
+    (new FAutoDeleteAsyncTask<RemoveMediaTask>(this->Room, this->CaptureMedia, this->OnResponse,
+                                               this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
     this->SetReadyToDestroy();
 }
