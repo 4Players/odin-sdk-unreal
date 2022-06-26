@@ -42,7 +42,7 @@ void UOdinCaptureMedia::Reset()
 {
     if (this->audio_capture_) {
         this->audio_capture_->RemoveGeneratorDelegate(this->audio_generator_handle_);
-        this->audio_capture_ = nullptr;
+        this->audio_capture_          = nullptr;
         this->audio_generator_handle_ = {};
     }
 

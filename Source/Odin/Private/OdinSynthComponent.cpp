@@ -18,8 +18,8 @@ void UOdinSynthComponent::BeginDestroy()
         this->sound_generator_->SetOdinStream(0);
     }
 
-    this->sound_generator_       = nullptr;
-    this->playback_media_        = nullptr;
+    this->sound_generator_ = nullptr;
+    this->playback_media_  = nullptr;
 
     Super::BeginDestroy();
 }
