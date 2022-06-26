@@ -6,7 +6,7 @@
 #include "OdinJsonObject.generated.h"
 
 UCLASS(BlueprintType, Blueprintable, ClassGroup = Odin)
-class UOdinJsonObject : public UObject
+class ODIN_API UOdinJsonObject : public UObject
 {
     GENERATED_UCLASS_BODY()
 

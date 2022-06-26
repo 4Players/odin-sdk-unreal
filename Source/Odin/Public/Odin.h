@@ -2,7 +2,7 @@
 
 #include "Modules/ModuleManager.h"
 
-class FOdinModule : public IModuleInterface
+class ODIN_API FOdinModule : public IModuleInterface
 {
   public:
     virtual void StartupModule() override;
