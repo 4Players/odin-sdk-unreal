@@ -8,7 +8,7 @@
 #include "OdinFunctionLibrary.generated.h"
 
 UCLASS()
-class UOdinFunctionLibrary : public UBlueprintFunctionLibrary
+class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_UCLASS_BODY()
 

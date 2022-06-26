@@ -5,7 +5,7 @@
 #include "OdinTokenGenerator.generated.h"
 
 UCLASS(ClassGroup = Utility, meta = (BlueprintSpawnableComponent))
-class UOdinTokenGenerator : public UObject
+class ODIN_API UOdinTokenGenerator : public UObject
 {
     GENERATED_UCLASS_BODY()
 

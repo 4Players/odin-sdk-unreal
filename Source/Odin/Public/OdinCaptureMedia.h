@@ -9,7 +9,7 @@
 #include "OdinCaptureMedia.generated.h"
 
 UCLASS(BlueprintType, ClassGroup = Odin)
-class UOdinCaptureMedia : public UObject
+class ODIN_API UOdinCaptureMedia : public UObject
 {
     GENERATED_UCLASS_BODY()
 

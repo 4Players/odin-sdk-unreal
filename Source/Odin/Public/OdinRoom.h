@@ -31,7 +31,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomJoinError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE_FourParams(FOdinRoomJoinSuccess, FString, roomId, const TArray<uint8> &,
                                     roomUserData, FString, customer, int64, ownPeerId);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomJoin : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -61,7 +61,7 @@ class UOdinRoomJoin : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomAddMediaError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomAddMediaSuccess, int32, mediaId);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomAddMedia : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomAddMedia : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -90,7 +90,7 @@ class UOdinRoomAddMedia : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomRemoveMediaError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE(FOdinRoomRemoveMediaSuccess);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -122,7 +122,7 @@ class UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdatePositionError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE(FOdinRoomUpdatePositionSuccess);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -151,7 +151,7 @@ class UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdatePeerUserDataError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE(FOdinRoomUpdatePeerUserDataSuccess);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -180,7 +180,7 @@ class UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdateRoomUserDataError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE(FOdinRoomUpdateRoomUserDataSuccess);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomUpdateRoomUserData : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomUpdateRoomUserData : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -209,7 +209,7 @@ class UOdinRoomUpdateRoomUserData : public UBlueprintAsyncActionBase
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomSendMessageError, int64, errorCode);
 DECLARE_DYNAMIC_DELEGATE(FOdinRoomSendMessageSuccess);
 UCLASS(ClassGroup = Odin)
-class UOdinRoomSendMessage : public UBlueprintAsyncActionBase
+class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
@@ -237,70 +237,157 @@ class UOdinRoomSendMessage : public UBlueprintAsyncActionBase
     FOdinRoomSendMessageSuccess OnSuccess;
 };
 
-UCLASS(ClassGroup = Odin, meta = (BlueprintSpawnableComponent))
-class UOdinRoom : public UObject
+UENUM(BlueprintType)
+enum EOdinNoiseSuppressionLevel {
+    None UMETA(DisplayName = "Disabled"),
+    /**
+     * Use low suppression (6 dB)
+     */
+    Low UMETA(DisplayName = "Low"),
+    /**
+     * Use moderate suppression (12 dB)
+     */
+    Moderate UMETA(DisplayName = "Moderate"),
+    /**
+     * Use high suppression (18 dB)
+     */
+    High UMETA(DisplayName = "High"),
+    /**
+     * Use very high suppression (21 dB)
+     */
+    VeryHigh UMETA(DisplayName = "VeryHigh"),
+};
+
+USTRUCT(BlueprintType)
+struct ODIN_API FOdinApmSettings {
+    GENERATED_USTRUCT_BODY()
+
+    /**
+     * Enables or disables voice activity detection
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
+              meta = (DisplayName = "Enable Voice Activity Detection"))
+    bool bVoiceActivityDetection = true;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
+              meta = (DisplayName = "Attack Probability", EditCondition = "bVoiceActivityDetection",
+                      ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+    float fVadAttackProbability = 0.9f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
+              meta = (DisplayName   = "Release Probability",
+                      EditCondition = "bVoiceActivityDetection", ClampMin = "0.0", ClampMax = "1.0",
+                      UIMin = "0.0", UIMax = "1.0"))
+    float fVadReleaseProbability = 0.8f;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
+              meta = (DisplayName = "Enable Volume Gate", DefaultValue = "false"))
+    bool bEnableVolumeGate = false;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
+              meta = (DisplayName = "Attack Loudness (dBFS)", EditCondition = "bEnableVolumeGate",
+                      ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
+    float fVolumeGateAttackLoudness = -90.0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
+              meta = (DisplayName = "Release Loudness (dBFS)", EditCondition = "bEnableVolumeGate",
+                      ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
+    float fVolumeGateReleaseLoudness = -90.0;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"))
+    bool bHighPassFilter = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"))
+    bool bPreAmplifier = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppresion"))
+    TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
+        EOdinNoiseSuppressionLevel::None;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppressor"))
+    bool bTransientSuppresor = false;
+};
+
+UCLASS(ClassGroup     = Odin, BlueprintType,
+       hidecategories = (Activation, Transform, Object, ActorComponent, Physics, Rendering,
+                         Mobility, LOD),
+       meta           = (BlueprintSpawnableComponent))
+class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 {
-    GENERATED_UCLASS_BODY()
+    GENERATED_BODY()
+
   public:
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomJoined, int64, peerId,
-                                                 const TArray<uint8> &, roomUserData);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinRoomJoined, int64, peerId,
+                                                   const TArray<uint8> &, roomUserData, UOdinRoom *,
+                                                   room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinRoomJoined onRoomJoined;
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinRoomUserDataChanged, const TArray<uint8> &,
-                                                userData);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomUserDataChanged, const TArray<uint8> &,
+                                                 userData, UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinRoomUserDataChanged onRoomUserDataChanged;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaAdded, int64, peerId,
-                                                   UOdinPlaybackMedia *, media, UOdinJsonObject *,
-                                                   properties);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaAdded, int64, peerId,
+                                                  UOdinPlaybackMedia *, media, UOdinJsonObject *,
+                                                  properties, UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaAdded onMediaAdded;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinMediaRemoved, int64, peerId, int32, mediaId);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaRemoved, int64, peerId, int32, mediaId,
+                                                   UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaRemoved onMediaRemoved;
 
     // TODO(alexander): Do we want to move this to the media object instead?
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaActiveStateChanged, int64, peerId,
-                                                   int32, mediaId, bool, active);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaActiveStateChanged, int64, peerId,
+                                                  int32, mediaId, bool, active, UOdinRoom *, room);
     FOdinMediaActiveStateChanged onMediaActiveStateChanged;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinMessageReceived, int64, peerId,
-                                                 const TArray<uint8> &, data);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMessageReceived, int64, peerId,
+                                                   const TArray<uint8> &, data, UOdinRoom *, room);
     FOdinMessageReceived onMessageReceived;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerJoined, int64, peerId,
-                                                 const TArray<uint8> &, userData);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinPeerJoined, int64, peerId,
+                                                   const TArray<uint8> &, userData, UOdinRoom *,
+                                                   room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerJoined onPeerJoined;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinPeerLeft, int64, peerId);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerLeft, int64, peerId, UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerLeft onPeerLeft;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerUserDataChanged, int64, peerId,
-                                                 const TArray<uint8> &, userData);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinPeerUserDataChanged, int64, peerId,
+                                                   const TArray<uint8> &, userData, UOdinRoom *,
+                                                   room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerUserDataChanged onPeerUserDataChanged;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinRoomConnectionStatChanged,
-                                                EOdinRoomConnectionState, connectionState);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStatChanged,
+                                                 EOdinRoomConnectionState, connectionState,
+                                                 UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinRoomConnectionStatChanged onConnectionStateChanged;
 
   public:
+    UOdinRoom(const FObjectInitializer &ObjectInitializer);
+
     UFUNCTION(BlueprintCallable, BlueprintPure,
               meta     = (DisplayName = "Construct a Room", HidePin = "WorldContextObject",
-                      DefaultToSelf = "WorldContextObject"),
+                      DefaultToSelf     = "WorldContextObject",
+                      AutoCreateRefTerm = "InitialAPMSettings"),
               Category = "Odin|Room")
-    static UOdinRoom *ConstructRoom(UObject *WorldContextObject);
+    static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
+                                    const FOdinApmSettings &InitialAPMSettings);
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Updates Position Scale", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Room|Functions")
     void SetPositionScale(float Scale);
+
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Updates APM Settings for Capture Medias",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+              Category = "Odin|Room|Functions")
+    void UpdateAPMConfig(const FOdinApmSettings &apm_config);
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Destroy the internal room and disconnect",
@@ -322,15 +409,28 @@ class UOdinRoom : public UObject
     //          Category = "Odin|Room|Functions")
     // void RemoveMedia(int32 mediaId);
 
+    UFUNCTION(BlueprintCallable, Category = Sound, meta = (DisplayName = "Current APM Settings"))
+    FOdinApmSettings GetCurrentApmSettings() const
+    {
+        return this->current_apm_settings_;
+    }
+
   protected:
     void BeginDestroy() override;
 
   private:
     OdinRoomHandle room_handle_;
 
-    FCriticalSection            capture_medias_cs_;
-    UPROPERTY()
+    UPROPERTY(BlueprintGetter = GetCurrentApmSettings, Category = Sound,
+              meta = (DisplayName = "Current APM Settings"))
+    FOdinApmSettings current_apm_settings_;
+
+    FCriticalSection capture_medias_cs_;
+    UPROPERTY(transient)
     TArray<UOdinCaptureMedia *> capture_medias_;
+
+    UPROPERTY(transient)
+    TMap<uint64, UOdinPlaybackMedia *> medias_;
 
     FCriticalSection joined_callbacks_cs_;
     TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,
