@@ -111,8 +111,8 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
                                     (int)event->joined.room_user_data_len};
 
             {
-                auto       roomId       = UTF8_TO_TCHAR(event->joined.room_id);
-                auto       roomCustomer = UTF8_TO_TCHAR(event->joined.customer);
+                FString       roomId       = UTF8_TO_TCHAR(event->joined.room_id);
+                FString       roomCustomer = UTF8_TO_TCHAR(event->joined.customer);
                 FScopeLock lock(&joined_callbacks_cs_);
                 for (auto &callback : this->joined_callbacks_) {
                     callback(roomId, roomCustomer, user_data, own_peer_id);
