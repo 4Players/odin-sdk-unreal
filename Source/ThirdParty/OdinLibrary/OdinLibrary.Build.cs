@@ -21,6 +21,7 @@ public class OdinLibrary : ModuleRules
             PublicAdditionalLibraries.Add(odinDylibPath);
             PublicDelayLoadDLLs.Add(odinDylibPath);
             RuntimeDependencies.Add("$(TargetOutputDir)/libodin.dylib", odinDylibPath);
+            RuntimeDependencies.Add(odinDylibPath);
         }
         // else if (Target.Platform == UnrealTargetPlatform.LinuxArm64)
         // {
