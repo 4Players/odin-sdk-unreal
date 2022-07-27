@@ -3,6 +3,7 @@
 #include "OdinLibrary/include/odin.h"
 
 #include "CoreMinimal.h"
+#include "OdinMediaBase.h"
 #include "UObject/Object.h"
 
 #include <memory>
@@ -12,7 +13,7 @@
 class UOdinRoom;
 
 UCLASS(BlueprintType, ClassGroup = Odin)
-class ODIN_API UOdinPlaybackMedia : public UObject
+class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
 {
     GENERATED_BODY()
 
@@ -22,28 +23,18 @@ class ODIN_API UOdinPlaybackMedia : public UObject
     UOdinPlaybackMedia();
     UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *room);
 
-    OdinMediaStreamHandle GetMediaHandle() const
-    {
-        return this->stream_handle_;
-    }
-
-    void SetMedia(OdinMediaStreamHandle streamHandle)
-    {
-        this->stream_handle_ = streamHandle;
-    }
-
     void SetRoom(UOdinRoom *room)
     {
         this->Room = room;
     }
 
-    UFUNCTION(BlueprintCallable)
+    UFUNCTION(BlueprintCallable,
+              meta = (DeprecatedFunction,
+                      DeprecationMessage = "Media IDs are retired from the public API. Use Media Objects or Media Handles instead."))
     int32 GetMediaId();
 
   protected:
     void BeginDestroy() override;
-
-    OdinMediaStreamHandle stream_handle_ = 0;
 
     UPROPERTY(BlueprintReadOnly)
     UOdinRoom *Room;

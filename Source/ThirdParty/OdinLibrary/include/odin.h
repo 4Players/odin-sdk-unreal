@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "0.7.1"
+#define ODIN_VERSION "1.0.0"
 
 /**
  * Supported channel layouts in audio functions.
@@ -154,7 +154,7 @@ typedef struct OdinTokenGenerator OdinTokenGenerator;
  *
  * Note: Use `odin_error_format` to get a human readable string to represent error codes.
  */
-typedef int32_t OdinReturnCode;
+typedef uint32_t OdinReturnCode;
 
 /**
  * Internal handle identifier for an ODIN room to interact with.
@@ -210,7 +210,6 @@ typedef enum OdinEventTag {
      * Emitted when others peers sent arbitrary data
      */
     OdinEvent_MessageReceived,
-    OdinEvent_None,
 } OdinEventTag;
 
 typedef struct OdinEvent_JoinedData {
@@ -291,39 +290,35 @@ typedef struct OdinEvent_PeerUserDataChangedData {
 
 typedef struct OdinEvent_MediaAddedData {
     /**
-     * ID of the media
-     */
-    uint16_t media_id;
-    /**
      * ID of the peer this media belongs to
      */
     uint64_t peer_id;
     /**
      * Handle identifier of the new audio/video stream
      */
-    OdinMediaStreamHandle stream;
+    OdinMediaStreamHandle media_handle;
 } OdinEvent_MediaAddedData;
 
 typedef struct OdinEvent_MediaRemovedData {
     /**
-     * ID of the media
-     */
-    uint16_t media_id;
-    /**
      * ID of the peer this media belongs to
      */
     uint64_t peer_id;
+    /**
+     * Handle identifier of the audio/video stream
+     */
+    OdinMediaStreamHandle media_handle;
 } OdinEvent_MediaRemovedData;
 
 typedef struct OdinEvent_MediaActiveStateChangedData {
     /**
-     * ID of the media
-     */
-    uint16_t media_id;
-    /**
      * ID of the peer this media belongs to
      */
     uint64_t peer_id;
+    /**
+     * Handle identifier of the audio/video stream
+     */
+    OdinMediaStreamHandle media_handle;
     /**
      * Indicator for whether or not the media is sending/receiving data
      */
@@ -448,6 +443,8 @@ typedef struct OdinAudioStreamConfig {
     uint8_t channel_count;
 } OdinAudioStreamConfig;
 
+typedef size_t OdinResamplerHandle;
+
 /**
  * Options for ODIN room tokens.
  */
@@ -481,6 +478,7 @@ size_t odin_error_format(OdinReturnCode error, char *buf, size_t buf_len);
  * Checks whether the code returned from ODIN function calls represents an error or an actual
  * result. This is used to easier work with certain functions that might return an error or a
  * valid result like `odin_audio_data_len`.
+ * Internally this simply does `(code >> 29) > 0`.
  */
 bool odin_is_error(OdinReturnCode code);
 
@@ -502,15 +500,20 @@ bool odin_startup(const char *version);
 void odin_shutdown(void);
 
 /**
- * Creates a new ODIN room in an unconnected state and returns its handle identifier. This will
- * return `0` when the internal ODIN client runtime is not initialized using `odin_startup` or
- * has already been terminated using `odin_shutdown`.
+ * Creates a new ODIN room handle in an unconnected state and returns its handle identifier. This
+ * will return `0` when the internal ODIN client runtime is not initialized using `odin_startup`
+ * or has already been terminated using `odin_shutdown`.
  */
 OdinRoomHandle odin_room_create(void);
 
 /**
- * Destroys the specified ODIN room, thus making our own peer leave the room on the ODIN server
+ * Closes the specified ODIN room handle, thus making our own peer leave the room on the server
  * and closing the connection if needed.
+ */
+OdinReturnCode odin_room_close(OdinRoomHandle room);
+
+/**
+ * Destroys the specified ODIN room handle.
  */
 OdinReturnCode odin_room_destroy(OdinRoomHandle room);
 
@@ -688,6 +691,36 @@ OdinReturnCode odin_audio_process_reverse(OdinRoomHandle room,
                                           float *buffer,
                                           size_t buffer_len,
                                           enum OdinChannelLayout out_channel_layout);
+
+/**
+ * Creates a new ODIN resampler instance. This is intended for situations where your audio pipeline
+ * doesn't support 48 kHz.
+ *
+ * Note: One resampler should be used exclusively per audio stream.
+ */
+OdinResamplerHandle odin_resampler_create(uint32_t from_rate,
+                                          uint32_t to_rate,
+                                          uint16_t channel_count);
+
+/**
+ * Resamples a single chunk of audio. If the ODIN resampler instance was created with multiple
+ * channels, the data is assumed to be interleaved. The `output_capacity` argument also serves as
+ * an out parameter when the provided capacity wasn't enough to fullfil the resample request, in
+ * which case this function will write the minimum required buffer size into the given variable.
+ * On success, the written size for the processed sample is returned in both, the return value
+ * and the `output_capacity` out parameter.
+ */
+OdinReturnCode odin_resampler_process(OdinResamplerHandle resampler,
+                                      const float *input,
+                                      size_t input_len,
+                                      float *output,
+                                      size_t *output_capacity);
+
+/**
+ * Destroys the given ODIN resampler instance. After this call, all attempts to use this handle
+ * will fail.
+ */
+OdinReturnCode odin_resampler_destroy(OdinResamplerHandle resampler);
 
 /**
  * Creates a new access key required to access the ODIN network. An access key is a 44 character

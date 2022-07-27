@@ -2,6 +2,8 @@
 
 #include "Modules/ModuleManager.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(Odin, Log, All);
+
 class ODIN_API FOdinModule : public IModuleInterface
 {
   public:

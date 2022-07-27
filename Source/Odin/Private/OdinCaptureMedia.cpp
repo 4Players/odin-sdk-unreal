@@ -13,7 +13,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
 
     if (this->stream_handle_) {
         odin_media_stream_destroy(this->stream_handle_);
-        this->stream_handle_ = 0;
+        this->SetMediaHandle(0);
     }
 
     auto sample_rate   = 48000;

@@ -4,12 +4,13 @@
 
 #include "AudioCapture.h"
 #include "CoreMinimal.h"
+#include "OdinMediaBase.h"
 #include "UObject/Object.h"
 
 #include "OdinCaptureMedia.generated.h"
 
 UCLASS(BlueprintType, ClassGroup = Odin)
-class ODIN_API UOdinCaptureMedia : public UObject
+class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 {
     GENERATED_UCLASS_BODY()
 
@@ -18,15 +19,8 @@ class ODIN_API UOdinCaptureMedia : public UObject
     void           Reset();
     OdinReturnCode ResetOdinStream();
 
-    OdinMediaStreamHandle GetMediaHandle() const
-    {
-        return this->stream_handle_;
-    }
-
   protected:
     void BeginDestroy() override;
-
-    OdinMediaStreamHandle stream_handle_ = 0;
 
     UPROPERTY(BlueprintReadOnly)
     UAudioCapture *audio_capture_ = nullptr;

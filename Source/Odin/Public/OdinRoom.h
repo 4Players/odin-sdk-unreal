@@ -267,7 +267,7 @@ struct ODIN_API FOdinApmSettings {
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Enable Voice Activity Detection"))
-    bool bVoiceActivityDetection = true;
+    bool bVoiceActivityDetection = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Attack Probability", EditCondition = "bVoiceActivityDetection",
@@ -330,14 +330,15 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaAdded onMediaAdded;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaRemoved, int64, peerId, int32, mediaId,
-                                                   UOdinRoom *, room);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaRemoved, int64, peerId,
+                                                   UOdinPlaybackMedia *, media, UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaRemoved onMediaRemoved;
 
     // TODO(alexander): Do we want to move this to the media object instead?
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaActiveStateChanged, int64, peerId,
-                                                  int32, mediaId, bool, active, UOdinRoom *, room);
+                                                  UOdinMediaBase *const, media, bool, active,
+                                                  UOdinRoom *, room);
     FOdinMediaActiveStateChanged onMediaActiveStateChanged;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMessageReceived, int64, peerId,
@@ -429,8 +430,9 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(transient)
     TArray<UOdinCaptureMedia *> capture_medias_;
 
+    FCriticalSection medias_cs_;
     UPROPERTY(transient)
-    TMap<uint64, UOdinPlaybackMedia *> medias_;
+    TMap<uint64, UOdinMediaBase *> medias_;
 
     FCriticalSection joined_callbacks_cs_;
     TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,

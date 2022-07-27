@@ -417,6 +417,7 @@ class DestroyRoomTask : public FNonAbandonableTask
 
     void DoWork()
     {
+        odin_room_close(roomHandle);
         odin_room_destroy(roomHandle);
         roomHandle = 0;
     }
