@@ -12,6 +12,7 @@ DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
 {
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
     FString LibraryPath;
     FString libraryName;
@@ -49,6 +50,7 @@ void FOdinModule::StartupModule()
     } else {
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
+#endif
     odin_startup(ODIN_VERSION);
 }
 
