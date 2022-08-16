@@ -1,7 +1,9 @@
+/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
 #include "OdinPlaybackMedia.h"
 #include "OdinRoom.h"
 
-#include "OdinLibrary/include/odin.h"
+#include "OdinCore/include/odin.h"
 
 UOdinPlaybackMedia::UOdinPlaybackMedia() {}
 

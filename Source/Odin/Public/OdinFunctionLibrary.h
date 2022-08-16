@@ -1,4 +1,6 @@
-﻿#pragma once
+﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
+#pragma once
 
 #include "AudioCapture.h"
 #include "Kismet/BlueprintFunctionLibrary.h"

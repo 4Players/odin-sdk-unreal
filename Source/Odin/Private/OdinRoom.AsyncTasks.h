@@ -1,6 +1,8 @@
+/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
 #pragma once
 
-#include "OdinLibrary/include/odin.h"
+#include "OdinCore/include/odin.h"
 
 #include "Async/Async.h"
 #include "Async/AsyncWork.h"

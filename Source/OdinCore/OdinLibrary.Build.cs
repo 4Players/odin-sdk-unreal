@@ -13,7 +13,7 @@ public class OdinLibrary : ModuleRules
             string modulePath = Path.Combine(ModuleDirectory, "x64", "Win");
             PublicAdditionalLibraries.Add(Path.Combine(modulePath, "odin.lib")); ;
             PublicDelayLoadDLLs.Add("odin.dll");
-            RuntimeDependencies.Add("$(TargetOutputDir)/odin.dll", "$(PluginDir)/Source/ThirdParty/OdinLibrary/x64/Win/odin.dll");
+            RuntimeDependencies.Add("$(TargetOutputDir)/odin.dll", "$(PluginDir)/Source/OdinCore/x64/Win/odin.dll");
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
