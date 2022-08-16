@@ -1,10 +1,12 @@
+/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
 #include "Odin.h"
 #include "CoreMinimal.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 
-#include "OdinLibrary/include/odin.h"
+#include "OdinCore/include/odin.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
 
@@ -26,16 +28,16 @@ void FOdinModule::StartupModule()
 #endif
 
 #if PLATFORM_WINDOWS
-    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
-                                  PlatformArchitecture, TEXT("Win"));
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Win"));
     libraryName = "odin.dll";
 #elif PLATFORM_MAC
-    LibraryPath          = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
-                                           PlatformArchitecture, TEXT("Mac"));
-    libraryName          = "libodin.dylib";
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Mac"));
+    libraryName = "libodin.dylib";
 #elif PLATFORM_LINUX
-    LibraryPath = FPaths::Combine(*BaseDir, TEXT("Source/ThirdParty/OdinLibrary"),
-                                  PlatformArchitecture, TEXT("Linux"));
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Linux"));
     libraryName = "libodin.so";
 #endif
 

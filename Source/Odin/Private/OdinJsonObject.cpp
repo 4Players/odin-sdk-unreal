@@ -1,3 +1,5 @@
+/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
 #include "OdinJsonObject.h"
 
 #include "OdinJsonValue.h"

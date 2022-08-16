@@ -1,8 +1,10 @@
+/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
 #include "OdinRoom.h"
 
 #include "OdinRoom.AsyncTasks.h"
 
-#include "OdinLibrary/include/odin.h"
+#include "OdinCore/include/odin.h"
 
 #include "Async/Async.h"
 #include "Async/AsyncWork.h"

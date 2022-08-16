@@ -1,4 +1,6 @@
-﻿#include "OdinFunctionLibrary.h"
+﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+
+#include "OdinFunctionLibrary.h"
 
 #include "OdinCaptureMedia.h"
 
