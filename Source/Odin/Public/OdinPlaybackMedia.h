@@ -38,6 +38,6 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
   protected:
     void BeginDestroy() override;
 
-    UPROPERTY(BlueprintReadOnly)
+    UPROPERTY(BlueprintReadOnly, Category = "Room")
     UOdinRoom *Room;
 };

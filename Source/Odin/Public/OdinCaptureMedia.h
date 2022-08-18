@@ -24,7 +24,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
   protected:
     void BeginDestroy() override;
 
-    UPROPERTY(BlueprintReadOnly)
+    UPROPERTY(BlueprintReadOnly, Category = "Audio Capture")
     UAudioCapture *audio_capture_ = nullptr;
 
     FAudioGeneratorHandle audio_generator_handle_;
