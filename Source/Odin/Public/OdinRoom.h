@@ -296,14 +296,18 @@ struct ODIN_API FOdinApmSettings {
                       ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateReleaseLoudness = -90.0;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"),
+              Category = "Filters")
     bool bHighPassFilter = false;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"),
+              Category = "Filters")
     bool bPreAmplifier = false;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppresion"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppresion"),
+              Category = "Filters")
     TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
-        EOdinNoiseSuppressionLevel::None;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppressor"))
+        EOdinNoiseSuppressionLevel::OdinNS_None;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppressor"),
+              Category = "Filters")
     bool bTransientSuppresor = false;
 };
 
