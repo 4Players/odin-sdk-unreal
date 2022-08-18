@@ -58,19 +58,19 @@ void UOdinRoom::UpdateAPMConfig(const FOdinApmSettings &apm_config)
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
 
     switch (apm_config.noise_suppression_level) {
-        case EOdinNoiseSuppressionLevel::None: {
+        case EOdinNoiseSuppressionLevel::OdinNS_None: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_None;
         } break;
-        case EOdinNoiseSuppressionLevel::Low: {
+        case EOdinNoiseSuppressionLevel::OdinNS_Low: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_Low;
         } break;
-        case EOdinNoiseSuppressionLevel::Moderate: {
+        case EOdinNoiseSuppressionLevel::OdinNS_Moderate: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_Moderate;
         } break;
-        case EOdinNoiseSuppressionLevel::High: {
+        case EOdinNoiseSuppressionLevel::OdinNS_High: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_High;
         } break;
-        case EOdinNoiseSuppressionLevel::VeryHigh: {
+        case EOdinNoiseSuppressionLevel::OdinNS_VeryHigh: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_VeryHigh;
         } break;
     }
