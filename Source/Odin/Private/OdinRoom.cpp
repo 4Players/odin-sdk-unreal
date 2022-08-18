@@ -6,6 +6,7 @@
 
 #include "Async/Async.h"
 #include "Async/AsyncWork.h"
+#include "Engine/World.h"
 
 #include "OdinRoom.AsyncTasks.h"
 

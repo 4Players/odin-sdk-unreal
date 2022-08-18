@@ -4,6 +4,11 @@
 
 #include "OdinJsonValue.h"
 
+#include "Policies/CondensedJsonPrintPolicy.h"
+#include "Serialization/JsonReader.h"
+#include "Serialization/JsonSerializer.h"
+
+
 typedef TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>
                                                              FCondensedJsonStringWriterFactory;
 typedef TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>> FCondensedJsonStringWriter;
