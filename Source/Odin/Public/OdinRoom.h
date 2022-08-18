@@ -241,23 +241,23 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
 
 UENUM(BlueprintType)
 enum EOdinNoiseSuppressionLevel {
-    None UMETA(DisplayName = "Disabled"),
+    OdinNS_None UMETA(DisplayName = "Disabled"),
     /**
      * Use low suppression (6 dB)
      */
-    Low UMETA(DisplayName = "Low"),
+    OdinNS_Low UMETA(DisplayName = "Low"),
     /**
      * Use moderate suppression (12 dB)
      */
-    Moderate UMETA(DisplayName = "Moderate"),
+    OdinNS_Moderate UMETA(DisplayName = "Moderate"),
     /**
      * Use high suppression (18 dB)
      */
-    High UMETA(DisplayName = "High"),
+    OdinNS_High UMETA(DisplayName = "High"),
     /**
      * Use very high suppression (21 dB)
      */
-    VeryHigh UMETA(DisplayName = "VeryHigh"),
+    OdinNS_VeryHigh UMETA(DisplayName = "VeryHigh"),
 };
 
 USTRUCT(BlueprintType)
