@@ -2,9 +2,14 @@
 
 #include "Odin.h"
 #include "CoreMinimal.h"
+#include "Features/IModularFeatures.h"
 #include "Interfaces/IPluginManager.h"
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
+
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#include "HAL/PlatformProcess.h"
+#endif
 
 #include "OdinCore/include/odin.h"
 
