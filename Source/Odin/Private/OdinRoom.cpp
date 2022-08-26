@@ -42,7 +42,7 @@ void UOdinRoom::SetPositionScale(float Scale)
     (new FAutoDeleteAsyncTask<UpdateScalingTask>(this->room_handle_, Scale))->StartBackgroundTask();
 }
 
-void UOdinRoom::UpdateAPMConfig(const FOdinApmSettings &apm_config)
+void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
 {
     this->current_apm_settings_              = apm_config;
     auto odin_apm_config                     = OdinApmConfig{};
