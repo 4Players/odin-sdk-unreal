@@ -262,7 +262,7 @@ enum EOdinNoiseSuppressionLevel {
 
 USTRUCT(BlueprintType)
 struct ODIN_API FOdinApmSettings {
-    GENERATED_USTRUCT_BODY()
+    GENERATED_BODY()
 
     /**
      * Enables or disables voice activity detection
@@ -272,28 +272,24 @@ struct ODIN_API FOdinApmSettings {
     bool bVoiceActivityDetection = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
-              meta = (DisplayName = "Attack Probability", EditCondition = "bVoiceActivityDetection",
-                      ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
+              meta = (DisplayName = "Attack Probability", ClampMin = "0.0", ClampMax = "1.0", UIMin = "0.0", UIMax = "1.0"))
     float fVadAttackProbability = 0.9f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
-              meta = (DisplayName   = "Release Probability",
-                      EditCondition = "bVoiceActivityDetection", ClampMin = "0.0", ClampMax = "1.0",
+              meta = (DisplayName   = "Release Probability", ClampMin = "0.0", ClampMax = "1.0",
                       UIMin = "0.0", UIMax = "1.0"))
     float fVadReleaseProbability = 0.8f;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Enable Volume Gate", DefaultValue = "false"))
+              meta = (DisplayName = "Enable Volume Gate"))
     bool bEnableVolumeGate = false;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Attack Loudness (dBFS)", EditCondition = "bEnableVolumeGate",
-                      ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
+              meta = (DisplayName = "Attack Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateAttackLoudness = -90.0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Release Loudness (dBFS)", EditCondition = "bEnableVolumeGate",
-                      ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
+              meta = (DisplayName = "Release Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0", UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateReleaseLoudness = -90.0;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"),
@@ -394,7 +390,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
               meta     = (DisplayName = "Updates APM Settings for Capture Medias",
                       HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Room|Functions")
-    void UpdateAPMConfig(const FOdinApmSettings &apm_config);
+    void UpdateAPMConfig(FOdinApmSettings apm_config);
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Destroy the internal room and disconnect",
