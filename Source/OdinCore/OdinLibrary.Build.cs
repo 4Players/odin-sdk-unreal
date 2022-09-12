@@ -13,31 +13,28 @@ public class OdinLibrary : ModuleRules
         if (Target.Platform == UnrealTargetPlatform.Win64)
         {
             string modulePath = Path.Combine(ModuleDirectory, "x64", "Win");
-            PublicAdditionalLibraries.Add(Path.Combine(modulePath, "odin.lib")); ;
+            string libPath = Path.Combine(modulePath, "odin.lib");
+            string dllPath = Path.Combine(modulePath, "odin.dll");
+
+            PublicAdditionalLibraries.Add(libPath);
             PublicDelayLoadDLLs.Add("odin.dll");
-            RuntimeDependencies.Add("$(TargetOutputDir)/odin.dll", "$(PluginDir)/Source/OdinCore/x64/Win/odin.dll");
+            RuntimeDependencies.Add(dllPath);
         }
         else if (Target.Platform == UnrealTargetPlatform.Mac)
         {
             string odinDylibPath = Path.Combine(ModuleDirectory, "x64", "Mac", "libodin.dylib");
+
             PublicAdditionalLibraries.Add(odinDylibPath);
             PublicDelayLoadDLLs.Add(odinDylibPath);
-            RuntimeDependencies.Add("$(TargetOutputDir)/libodin.dylib", odinDylibPath);
             RuntimeDependencies.Add(odinDylibPath);
         }
-        //else if (Target.Platform == UnrealTargetPlatform.LinuxArm64)
-        //{
-        //    string odinSoPath = Path.Combine(ModuleDirectory, "arm64", "Linux", "libodin.so");
-        //    PublicAdditionalLibraries.Add(odinSoPath);
-        //    PublicDelayLoadDLLs.Add(odinSoPath);
-        //    RuntimeDependencies.Add("$(TargetOutputDir)/libodin.so", odinSoPath);
-        //}
         else if (Target.Platform == UnrealTargetPlatform.Linux)
         {
             string odinSoPath = Path.Combine(ModuleDirectory, "x64", "Linux", "libodin.so");
+
             PublicAdditionalLibraries.Add(odinSoPath);
             PublicDelayLoadDLLs.Add(odinSoPath);
-            RuntimeDependencies.Add("$(TargetOutputDir)/libodin.so", odinSoPath);
+            RuntimeDependencies.Add(odinSoPath);
         }
         else if (Target.Platform == UnrealTargetPlatform.Android)
         {
@@ -46,5 +43,14 @@ public class OdinLibrary : ModuleRules
             string PluginPath = Utils.MakePathRelativeTo(ModuleDirectory, Target.RelativeEnginePath);
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(PluginPath, "OdinLibrarySDK_UPL.xml"));
         }
+#if UE_5_0_OR_LATER
+        else if (Target.Platform == UnrealTargetPlatform.LinuxArm64)
+        {
+            string odinSoPath = Path.Combine(ModuleDirectory, "arm64", "Linux", "libodin.so");
+            PublicAdditionalLibraries.Add(odinSoPath);
+            PublicDelayLoadDLLs.Add(odinSoPath);
+            RuntimeDependencies.Add(odinSoPath);
+        }
+#endif
     }
 }
