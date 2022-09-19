@@ -23,10 +23,23 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
         this);
 }
 
+UOdinRoom::~UOdinRoom()
+{
+    odin_room_set_event_callback(this->room_handle_, nullptr, nullptr);
+}
+
 void UOdinRoom::BeginDestroy()
 {
     this->Destroy();
     Super::BeginDestroy();
+}
+
+void UOdinRoom::FinishDestroy()
+{
+    if (this->room_handle_) {
+        odin_room_set_event_callback(room_handle_, nullptr, nullptr);
+    }
+    Super::FinishDestroy();
 }
 
 UOdinRoom *UOdinRoom::ConstructRoom(UObject                *WorldContextObject,
@@ -88,7 +101,6 @@ void UOdinRoom::Destroy()
         this->capture_medias_.Empty();
     }
     (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
-    this->room_handle_ = 0;
 }
 
 void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia *media)
