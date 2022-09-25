@@ -13,15 +13,16 @@ class ODIN_API UOdinTokenGenerator : public UObject
 
   public:
     UFUNCTION(BlueprintPure,
-              meta = (DisplayName = "Construct a Token Generator", HidePin = "WorldContextObject",
-                      DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Token")
+              meta     = (DisplayName = "Construct Token Generator",
+                      ToolTip     = "Creates a new generator for signed authentication tokens",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+              Category = "Odin|Authentication")
     static UOdinTokenGenerator *ConstructTokenGenerator(UObject       *WorldContextObject,
                                                         const FString &AccessKey);
 
     void SetAccessKey(const FString &AccesssKey);
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Token")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Authentication")
     FString GenerateRoomToken(const FString &RoomId, const FString &UserId);
 
   private:

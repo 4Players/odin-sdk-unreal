@@ -32,7 +32,8 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
 
     UFUNCTION(BlueprintCallable,
               meta = (DeprecatedFunction,
-                      DeprecationMessage = "Media IDs are retired from the public API. Use Media Objects or Media Handles instead."))
+                      DeprecationMessage =
+                          "Media IDs are deprecated! Use media objects/handles instead."))
     int32 GetMediaId();
 
   protected:
