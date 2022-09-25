@@ -17,13 +17,14 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     GENERATED_BODY()
 
   public:
-    UFUNCTION(BlueprintCallable, Category = "Odin|Function|Sound")
+    UFUNCTION(BlueprintCallable, meta = (Category    = "Odin|Sound",
+                                         DisplayName = "Assign Odin Synth Component to Media"))
     void Odin_AssignSynthToMedia(UOdinPlaybackMedia *media);
 
     /** This function is used to modify the Attenuation Settings on the targeted Odin Synth
      * instance. It is worth noting that Attenuation Settings are only passed to new Active Sounds
      * on start, so modified Attenuation data should be set before sound playback. */
-    UFUNCTION(BlueprintCallable, Category = "Odin|Components|Sound")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
     void AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings);
 
   protected:

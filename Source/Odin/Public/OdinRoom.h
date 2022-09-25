@@ -37,9 +37,12 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
-    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
-                                         WorldContext      = "WorldContextObject",
-                                         AutoCreateRefTerm = "userData,url,onSuccess"))
+    UFUNCTION(BlueprintCallable,
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+                      DisplayName  = "Join Room",
+                      ToolTip      = "Joins the room specified in a given authentication token",
+                      WorldContext = "WorldContextObject",
+                      AutoCreateRefTerm = "userData,url,onSuccess"))
     static UOdinRoomJoin *JoinRoom(UObject *WorldContextObject, UOdinRoom *room, const FString url,
                                    const FString token, const TArray<uint8> &userData,
                                    FOdinRoomJoinError          onError,
@@ -68,7 +71,9 @@ class ODIN_API UOdinRoomAddMedia : public UBlueprintAsyncActionBase
     GENERATED_BODY()
   public:
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
+                      DisplayName  = "Add Media to Room",
+                      ToolTip      = "Adds a capture media handle to the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomAddMedia *AddMedia(UObject *WorldContextObject, UOdinRoom *room,
                                        UOdinCaptureMedia *media, FOdinRoomAddMediaError onError,
@@ -96,11 +101,11 @@ class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
-    UFUNCTION(
-        BlueprintCallable,
-        meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
-                WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess",
-                DisplayName = "Remove the media from the room and destroy the internal media"))
+    UFUNCTION(BlueprintCallable,
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
+                      DisplayName  = "Remove Media from Room",
+                      ToolTip      = "Removes a capture media handle from the room and destroys it",
+                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomRemoveMedia *RemoveMedia(UObject *WorldContextObject, UOdinRoom *room,
                                              UOdinCaptureMedia                 *media,
                                              FOdinRoomRemoveMediaError          onError,
@@ -130,6 +135,8 @@ class ODIN_API UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
   public:
     UFUNCTION(BlueprintCallable,
               meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+                      DisplayName = "Update Peer Position",
+                      ToolTip = "Updates the two-dimensional position of the own peer in the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomUpdatePosition *UpdatePosition(UObject *WorldContextObject, UOdinRoom *room,
                                                    FVector2D                             position,
@@ -158,7 +165,9 @@ class ODIN_API UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
     GENERATED_BODY()
   public:
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Custom Data",
+                      DisplayName  = "Update Peer User Data",
+                      ToolTip      = "Updates the custom user data of the own peer in the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomUpdatePeerUserData *
     UpdatePeerUserData(UObject *WorldContextObject, UOdinRoom *room, const TArray<uint8> &data,
@@ -187,7 +196,9 @@ class ODIN_API UOdinRoomUpdateRoomUserData : public UBlueprintAsyncActionBase
     GENERATED_BODY()
   public:
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Custom Data",
+                      DisplayName  = "Update Room User Data",
+                      ToolTip      = "Updates the custom user data of the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomUpdateRoomUserData *
     UpdateRoomUserData(UObject *WorldContextObject, UOdinRoom *room, const TArray<uint8> &data,
@@ -216,7 +227,9 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
     GENERATED_BODY()
   public:
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
+              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Custom Data",
+                      DisplayName  = "Send Message",
+                      ToolTip      = "Sends arbitrary data to a list of target peers in the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomSendMessage *SendMessage(UObject *WorldContextObject, UOdinRoom *room,
                                              const TArray<int64>               &targets,
@@ -301,11 +314,11 @@ struct ODIN_API FOdinApmSettings {
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"),
               Category = "Filters")
     bool bPreAmplifier = false;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppresion"),
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppression"),
               Category = "Filters")
     TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
         EOdinNoiseSuppressionLevel::OdinNS_None;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppressor"),
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppression"),
               Category = "Filters")
     bool bTransientSuppresor = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
@@ -380,29 +393,36 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     ~UOdinRoom();
 
     UFUNCTION(BlueprintCallable, BlueprintPure,
-              meta     = (DisplayName = "Construct a Room", HidePin = "WorldContextObject",
-                      DefaultToSelf     = "WorldContextObject",
+              meta     = (DisplayName = "Construct Local Room Handle",
+                      ToolTip     = "Creates a new local room handle in an unconnected state",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
                       AutoCreateRefTerm = "InitialAPMSettings"),
               Category = "Odin|Room")
     static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
                                     const FOdinApmSettings &InitialAPMSettings);
 
-    UFUNCTION(BlueprintCallable,
-              meta     = (DisplayName = "Updates Position Scale", HidePin = "WorldContextObject",
-                      DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Room|Functions")
+    UFUNCTION(
+        BlueprintCallable,
+        meta =
+            (DisplayName = "Set Room Position Scale",
+             ToolTip = "Sets the multiplicative scale for all coordinates used in position updates",
+             HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+             Category = "Odin|Room"))
     void SetPositionScale(float Scale);
 
     UFUNCTION(BlueprintCallable,
-              meta     = (DisplayName = "Updates APM Settings for Capture Medias",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Room|Functions")
+              meta = (DisplayName = "Set Room APM Config",
+                      ToolTip     = "Updates audio processing settings for capture media handles",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                      Category = "Odin|Room"))
     void UpdateAPMConfig(FOdinApmSettings apm_config);
 
-    UFUNCTION(BlueprintCallable,
-              meta     = (DisplayName = "Destroy the internal room and disconnect",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Room|Functions")
+    UFUNCTION(
+        BlueprintCallable,
+        meta = (DisplayName = "Destroy Local Room Handle",
+                ToolTip = "Closes the connection to the server and destroys the local room handle",
+                HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                Category = "Odin|Room"))
     void Destroy();
 
     void BindCaptureMedia(UOdinCaptureMedia *media);
@@ -413,13 +433,8 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
         return this->room_handle_;
     }
 
-    // UFUNCTION(BlueprintCallable,
-    //          meta     = (DisplayName = "Remove Media from Room",
-    //                  HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
-    //          Category = "Odin|Room|Functions")
-    // void RemoveMedia(int32 mediaId);
-
-    UFUNCTION(BlueprintCallable, Category = Sound, meta = (DisplayName = "Current APM Settings"))
+    UFUNCTION(BlueprintCallable,
+              meta = (DisplayName = "Get Current Room APM Config", Category = "Odin|Room"))
     FOdinApmSettings GetCurrentApmSettings() const
     {
         return this->current_apm_settings_;
@@ -432,8 +447,8 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
   private:
     OdinRoomHandle room_handle_;
 
-    UPROPERTY(BlueprintGetter = GetCurrentApmSettings, Category = Sound,
-              meta = (DisplayName = "Current APM Settings"))
+    UPROPERTY(BlueprintGetter = GetCurrentApmSettings, Category = "Odin|Room",
+              meta = (DisplayName = "Current Room APM Config"))
     FOdinApmSettings current_apm_settings_;
 
     FCriticalSection capture_medias_cs_;

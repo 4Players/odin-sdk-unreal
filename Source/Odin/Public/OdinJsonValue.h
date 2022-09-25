@@ -36,33 +36,33 @@ class ODIN_API UOdinJsonValue : public UObject
     UFUNCTION(BlueprintPure,
               meta = (DisplayName = "Construct Json Number Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Json")
+              Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueNumber(UObject *WorldContextObject, float Number);
 
     UFUNCTION(BlueprintPure,
               meta = (DisplayName = "Construct Json String Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Json")
+              Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueString(UObject       *WorldContextObject,
                                                     const FString &StringValue);
 
     UFUNCTION(BlueprintPure,
               meta     = (DisplayName = "Construct Json Bool Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Json")
+              Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueBool(UObject *WorldContextObject, bool InValue);
 
     UFUNCTION(BlueprintPure,
               meta = (DisplayName = "Construct Json Array Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Json")
+              Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueArray(UObject *WorldContextObject,
                                                    const TArray<UOdinJsonValue *> &InArray);
 
     UFUNCTION(BlueprintPure,
               meta = (DisplayName = "Construct Json Object Value", HidePin = "WorldContextObject",
                       DefaultToSelf = "WorldContextObject"),
-              Category = "Odin|Json")
+              Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueObject(UObject         *WorldContextObject,
                                                     UOdinJsonObject *JsonObject);
 
@@ -73,28 +73,28 @@ class ODIN_API UOdinJsonValue : public UObject
 
     void SetRootValue(TSharedPtr<FJsonValue> &JsonValue);
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     EOJson::Type GetType() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     FString GetTypeString() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     bool IsNull() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     float AsNumber() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     FString AsString() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     bool AsBool() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     TArray<UOdinJsonValue *> AsArray() const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     UOdinJsonObject *AsObject();
 
   private:
