@@ -8,7 +8,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.0.1"
+#define ODIN_VERSION "1.1.0"
 
 /**
  * Supported channel layouts in audio functions.
@@ -427,6 +427,10 @@ typedef struct OdinApmConfig {
      * Enable or disable the transient suppressor
      */
     bool transient_suppressor;
+    /**
+     * Enable or disable the gain controller
+     */
+    bool gain_controller;
 } OdinApmConfig;
 
 /**
