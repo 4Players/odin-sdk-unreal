@@ -70,6 +70,7 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.high_pass_filter             = apm_config.bHighPassFilter;
     odin_apm_config.pre_amplifier                = apm_config.bPreAmplifier;
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
+    odin_apm_config.gain_controller              = apm_config.bGainController;
 
     switch (apm_config.noise_suppression_level) {
         case EOdinNoiseSuppressionLevel::OdinNS_None: {
