@@ -308,6 +308,9 @@ struct ODIN_API FOdinApmSettings {
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppressor"),
               Category = "Filters")
     bool bTransientSuppresor = false;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
+              Category = "Filters")
+    bool bGainController = false;
 };
 
 UCLASS(ClassGroup     = Odin, BlueprintType,
