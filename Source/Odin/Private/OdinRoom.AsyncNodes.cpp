@@ -44,7 +44,7 @@ void UOdinRoomJoin::Activate()
 }
 
 UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject *WorldContextObject, UOdinRoom *room,
-                                               UOdinCaptureMedia              *captureMedia,
+                                               UOdinCaptureMedia *             captureMedia,
                                                FOdinRoomAddMediaError          onError,
                                                const FOdinRoomAddMediaSuccess &onSuccess)
 {

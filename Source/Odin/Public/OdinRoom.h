@@ -107,7 +107,7 @@ class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
                       ToolTip      = "Removes a capture media handle from the room and destroys it",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomRemoveMedia *RemoveMedia(UObject *WorldContextObject, UOdinRoom *room,
-                                             UOdinCaptureMedia                 *media,
+                                             UOdinCaptureMedia *                media,
                                              FOdinRoomRemoveMediaError          onError,
                                              const FOdinRoomRemoveMediaSuccess &onSuccess);
 
@@ -232,8 +232,8 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
                       ToolTip      = "Sends arbitrary data to a list of target peers in the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomSendMessage *SendMessage(UObject *WorldContextObject, UOdinRoom *room,
-                                             const TArray<int64>               &targets,
-                                             const TArray<uint8>               &data,
+                                             const TArray<int64> &              targets,
+                                             const TArray<uint8> &              data,
                                              FOdinRoomSendMessageError          onError,
                                              const FOdinRoomSendMessageSuccess &onSuccess);
 
@@ -398,7 +398,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                       HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
                       AutoCreateRefTerm = "InitialAPMSettings"),
               Category = "Odin|Room")
-    static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
+    static UOdinRoom *ConstructRoom(UObject *               WorldContextObject,
                                     const FOdinApmSettings &InitialAPMSettings);
 
     UFUNCTION(

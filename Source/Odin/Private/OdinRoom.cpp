@@ -42,7 +42,7 @@ void UOdinRoom::FinishDestroy()
     Super::FinishDestroy();
 }
 
-UOdinRoom *UOdinRoom::ConstructRoom(UObject                *WorldContextObject,
+UOdinRoom *UOdinRoom::ConstructRoom(UObject *               WorldContextObject,
                                     const FOdinApmSettings &InitialAPMSettings)
 {
     auto room = NewObject<UOdinRoom>();
