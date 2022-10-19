@@ -77,7 +77,7 @@ class AddMediaTask : public FNonAbandonableTask
     friend class FAutoDeleteAsyncTask<AddMediaTask>;
 
     UOdinCaptureMedia *Media;
-    UOdinRoom         *Room;
+    UOdinRoom *        Room;
 
     FAddMediaResponsePin     Response;
     FOdinRoomAddMediaError   OnError;
@@ -127,7 +127,7 @@ class RemoveMediaTask : public FNonAbandonableTask
     friend class FAutoDeleteAsyncTask<RemoveMediaTask>;
 
     UOdinCaptureMedia *Media;
-    UOdinRoom         *Room;
+    UOdinRoom *        Room;
 
     FRemoveMediaResponsePin     Response;
     FOdinRoomRemoveMediaError   OnError;
