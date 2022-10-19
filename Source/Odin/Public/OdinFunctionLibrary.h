@@ -25,7 +25,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     static FString GenerateAccessKey();
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Error Handling")
-    static FString FormatError(int32 code);
+    static FString FormatError(int32 code, bool ueTrace);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Custom Data")
     static FString BytesToString(const TArray<uint8> &data);
