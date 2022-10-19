@@ -33,8 +33,11 @@ FString UOdinFunctionLibrary::GenerateAccessKey()
     return ANSI_TO_TCHAR(buf);
 }
 
-FString UOdinFunctionLibrary::FormatError(int32 code)
+FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)
 {
+    if (ueTrace || !FGenericPlatformMisc::GetEnvironmentVariable(L"ODIN_LOG").IsEmpty())
+        FDebug::DumpStackTraceToLog(ELogVerbosity::All);
+
     std::string result;
     result.resize(128);
     auto r = odin_error_format(code, (char *)result.data(), result.size());
