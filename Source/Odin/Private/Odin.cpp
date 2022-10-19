@@ -19,7 +19,7 @@ DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
 {
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_IOS || PLATFORM_LINUX
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
     FString LibraryPath;
     FString libraryName;
@@ -36,14 +36,18 @@ void FOdinModule::StartupModule()
     LibraryPath =
         FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Win"));
     libraryName = "odin.dll";
-#elif PLATFORM_MAC
-    LibraryPath =
-        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Mac"));
-    libraryName = "libodin.dylib";
 #elif PLATFORM_LINUX
     LibraryPath =
         FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Linux"));
     libraryName = "libodin.so";
+#elif PLATFORM_MAC
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Mac"));
+    libraryName = "libodin.dylib";
+#elif PLATFORM_IOS
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("iOS"));
+    libraryName = "libodin.dylib";
 #endif
 
     FPlatformProcess::PushDllDirectory(*LibraryPath);
@@ -65,7 +69,7 @@ void FOdinModule::ShutdownModule()
 {
     odin_shutdown();
 
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_IOS || PLATFORM_LINUX
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;
 #endif
