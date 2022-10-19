@@ -25,13 +25,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSendMessageResponsePin, bool, succe
 UENUM(BlueprintType)
 enum EOdinRoomConnectionState {
     Disconnected,
+    Disconnecting,
     Connecting,
     Connected,
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomJoinError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE_FourParams(FOdinRoomJoinSuccess, FString, roomId, const TArray<uint8> &,
-                                    roomUserData, FString, customer, int64, ownPeerId);
+DECLARE_DYNAMIC_DELEGATE_FiveParams(FOdinRoomJoinSuccess, FString, roomId, const TArray<uint8> &,
+                                    roomUserData, FString, customer, int64, ownPeerId, FString,
+                                    ownUserId);
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
 {
@@ -356,19 +358,20 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaRemoved onMediaRemoved;
 
-    // TODO(alexander): Do we want to move this to the media object instead?
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaActiveStateChanged, int64, peerId,
                                                   UOdinMediaBase *const, media, bool, active,
                                                   UOdinRoom *, room);
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaActiveStateChanged onMediaActiveStateChanged;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMessageReceived, int64, peerId,
                                                    const TArray<uint8> &, data, UOdinRoom *, room);
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMessageReceived onMessageReceived;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinPeerJoined, int64, peerId,
-                                                   const TArray<uint8> &, userData, UOdinRoom *,
-                                                   room);
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinPeerJoined, int64, peerId, FString, userId,
+                                                  const TArray<uint8> &, userData, UOdinRoom *,
+                                                  room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerJoined onPeerJoined;
 
@@ -461,7 +464,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 
     FCriticalSection joined_callbacks_cs_;
     TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,
-                          int64 ownPeerId)>>
+                          int64 ownPeerId, FString ownUserId)>>
         joined_callbacks_;
 
     void HandleOdinEvent(const struct OdinEvent *event);
