@@ -28,11 +28,18 @@ void UOdinTokenGenerator::SetAccessKey(const FString &AccessKey)
     this->TokenGenerator = odin_token_generator_create(TCHAR_TO_ANSI(*AccessKey));
 }
 
-FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FString &UserId)
+FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FString &UserId,
+                                               EOdinTokenAudience TokenAudience)
 {
     char buf[512] = {0};
-    odin_token_generator_create_token(this->TokenGenerator, TCHAR_TO_ANSI(*RoomId),
-                                      TCHAR_TO_ANSI(*UserId), buf, sizeof buf);
+    OdinTokenOptions options  = OdinTokenOptions();
+    options.customer          = "<no customer>";
+    options.audience          = TokenAudience == EOdinTokenAudience::SingleServer
+                                    ? OdinTokenAudience_Sfu
+                                    : OdinTokenAudience_Gateway;
+    options.lifetime          = 300;
+    odin_token_generator_create_token_ex(this->TokenGenerator, TCHAR_TO_ANSI(*RoomId),
+                                         TCHAR_TO_ANSI(*UserId), &options, buf, sizeof buf);
 
     return ANSI_TO_TCHAR(buf);
 }
