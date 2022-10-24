@@ -35,7 +35,7 @@ FString UOdinFunctionLibrary::GenerateAccessKey()
 
 FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)
 {
-    if (ueTrace || !FGenericPlatformMisc::GetEnvironmentVariable(L"ODIN_LOG").IsEmpty())
+    if (ueTrace)
         FDebug::DumpStackTraceToLog(ELogVerbosity::All);
 
     std::string result;
