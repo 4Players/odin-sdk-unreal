@@ -6,6 +6,12 @@
 
 #include "OdinTokenGenerator.generated.h"
 
+UENUM(BlueprintType)
+enum EOdinTokenAudience {
+    Default,
+    SingleServer,
+};
+
 UCLASS(ClassGroup = Utility, meta = (BlueprintSpawnableComponent))
 class ODIN_API UOdinTokenGenerator : public UObject
 {
@@ -23,7 +29,8 @@ class ODIN_API UOdinTokenGenerator : public UObject
     void SetAccessKey(const FString &AccesssKey);
 
     UFUNCTION(BlueprintCallable, Category = "Odin|Authentication")
-    FString GenerateRoomToken(const FString &RoomId, const FString &UserId);
+    FString GenerateRoomToken(const FString &RoomId, const FString &UserId,
+                              EOdinTokenAudience TokenAudience);
 
   private:
     struct OdinTokenGenerator *TokenGenerator = nullptr;
