@@ -44,10 +44,10 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
                       DisplayName  = "Join Room",
                       ToolTip      = "Joins the room specified in a given authentication token",
                       WorldContext = "WorldContextObject",
-                      AutoCreateRefTerm = "userData,url,onSuccess"))
+                      AutoCreateRefTerm = "initialPeerUserData,url,onSuccess"))
     static UOdinRoomJoin *JoinRoom(UObject *WorldContextObject, UOdinRoom *room, const FString url,
-                                   const FString token, const TArray<uint8> &userData,
-                                   FOdinRoomJoinError          onError,
+                                   const FString token, const TArray<uint8> &initialPeerUserData,
+                                   FVector2D initialPosition, FOdinRoomJoinError onError,
                                    const FOdinRoomJoinSuccess &onSuccess);
 
     void Activate() override;
@@ -60,7 +60,8 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
 
     FString              Url;
     FString              Token;
-    TArray<uint8>        UserData;
+    TArray<uint8>        InitialPeerUserData;
+    FVector2D            InitialPosition;
     FOdinRoomJoinError   OnError;
     FOdinRoomJoinSuccess OnSuccess;
 };
@@ -109,7 +110,7 @@ class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
                       ToolTip      = "Removes a capture media handle from the room and destroys it",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomRemoveMedia *RemoveMedia(UObject *WorldContextObject, UOdinRoom *room,
-                                             UOdinCaptureMedia *                media,
+                                             UOdinCaptureMedia                 *media,
                                              FOdinRoomRemoveMediaError          onError,
                                              const FOdinRoomRemoveMediaSuccess &onSuccess);
 
@@ -234,8 +235,8 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
                       ToolTip      = "Sends arbitrary data to a list of target peers in the room",
                       WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess"))
     static UOdinRoomSendMessage *SendMessage(UObject *WorldContextObject, UOdinRoom *room,
-                                             const TArray<int64> &              targets,
-                                             const TArray<uint8> &              data,
+                                             const TArray<int64>               &targets,
+                                             const TArray<uint8>               &data,
                                              FOdinRoomSendMessageError          onError,
                                              const FOdinRoomSendMessageSuccess &onSuccess);
 
@@ -401,7 +402,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                       HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
                       AutoCreateRefTerm = "InitialAPMSettings"),
               Category = "Odin|Room")
-    static UOdinRoom *ConstructRoom(UObject *               WorldContextObject,
+    static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
                                     const FOdinApmSettings &InitialAPMSettings);
 
     UFUNCTION(
@@ -412,6 +413,13 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
              HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
              Category = "Odin|Room"))
     void SetPositionScale(float Scale);
+
+    UFUNCTION(BlueprintCallable,
+              meta = (DisplayName = "Get Room Connection Stats",
+                      ToolTip     = "Get statistics for a room connection",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                      Category = "Odin|Debug"))
+    FOdinConnectionStats ConnectionStats();
 
     UFUNCTION(BlueprintCallable,
               meta = (DisplayName = "Set Room APM Config",

@@ -19,19 +19,22 @@ class JoinRoomTask : public FNonAbandonableTask
     OdinRoomHandle RoomHandle;
     FString        Url;
     FString        RoomToken;
-    TArray<uint8>  UserData;
+    TArray<uint8>  InitialPeerUserData;
+    FVector2D      InitialPosition;
 
     FJoinRoomResponsePin Response;
     FOdinRoomJoinError   OnError;
     FOdinRoomJoinSuccess OnSuccess;
 
     JoinRoomTask(OdinRoomHandle roomHandle, FString url, FString room_token,
-                 TArray<uint8> user_data, FJoinRoomResponsePin response, FOdinRoomJoinError onError,
+                 TArray<uint8> initial_peer_user_data, FVector2D initial_position,
+                 FJoinRoomResponsePin response, FOdinRoomJoinError onError,
                  FOdinRoomJoinSuccess onSuccess)
         : RoomHandle(roomHandle)
         , Url(url)
         , RoomToken(room_token)
-        , UserData(user_data)
+        , InitialPeerUserData(initial_peer_user_data)
+        , InitialPosition(initial_position)
         , OnError(onError)
         , OnSuccess(onSuccess)
     {
@@ -41,11 +44,23 @@ class JoinRoomTask : public FNonAbandonableTask
     {
         auto update_user_data_result =
             odin_room_update_user_data(RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Peer,
-                                       UserData.GetData(), UserData.Num());
+                                       InitialPeerUserData.GetData(), InitialPeerUserData.Num());
         if (odin_is_error(update_user_data_result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnError = OnError, Response = Response, update_user_data_result]() {
                     OnError.ExecuteIfBound(update_user_data_result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+            return;
+        }
+
+        auto update_position_result =
+            odin_room_update_position(RoomHandle, InitialPosition.X, InitialPosition.Y);
+        if (odin_is_error(update_user_data_result)) {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnError = OnError, Response = Response, update_position_result]() {
+                    OnError.ExecuteIfBound(update_position_result);
                     Response.Broadcast(false);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
@@ -82,7 +97,7 @@ class AddMediaTask : public FNonAbandonableTask
     friend class FAutoDeleteAsyncTask<AddMediaTask>;
 
     UOdinCaptureMedia *Media;
-    UOdinRoom *        Room;
+    UOdinRoom         *Room;
 
     FAddMediaResponsePin     Response;
     FOdinRoomAddMediaError   OnError;
@@ -132,7 +147,7 @@ class RemoveMediaTask : public FNonAbandonableTask
     friend class FAutoDeleteAsyncTask<RemoveMediaTask>;
 
     UOdinCaptureMedia *Media;
-    UOdinRoom *        Room;
+    UOdinRoom         *Room;
 
     FRemoveMediaResponsePin     Response;
     FOdinRoomRemoveMediaError   OnError;

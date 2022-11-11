@@ -11,16 +11,18 @@
 
 UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UOdinRoom *room,
                                        const FString url, const FString token,
-                                       const TArray<uint8> &user_data, FOdinRoomJoinError onError,
+                                       const TArray<uint8> &initial_peer_user_data,
+                                       FVector2D initial_position, FOdinRoomJoinError onError,
                                        const FOdinRoomJoinSuccess &onSuccess)
 {
-    auto action       = NewObject<UOdinRoomJoin>();
-    action->Room      = room;
-    action->Url       = url;
-    action->Token     = token;
-    action->UserData  = user_data;
-    action->OnError   = onError;
-    action->OnSuccess = onSuccess;
+    auto action                 = NewObject<UOdinRoomJoin>();
+    action->Room                = room;
+    action->Url                 = url;
+    action->Token               = token;
+    action->InitialPeerUserData = initial_peer_user_data;
+    action->InitialPosition     = initial_position;
+    action->OnError             = onError;
+    action->OnSuccess           = onSuccess;
     action->RegisterWithGameInstance(WorldContextObject);
 
     FScopeLock lock(&room->joined_callbacks_cs_);
@@ -39,14 +41,14 @@ UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UOdinRoom *r
 void UOdinRoomJoin::Activate()
 {
     (new FAutoDeleteAsyncTask<JoinRoomTask>(this->Room->room_handle_, this->Url, this->Token,
-                                            this->UserData, this->OnResponse, this->OnError,
-                                            this->OnSuccess))
+                                            this->InitialPeerUserData, this->InitialPosition,
+                                            this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
     this->SetReadyToDestroy();
 }
 
 UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject *WorldContextObject, UOdinRoom *room,
-                                               UOdinCaptureMedia *             captureMedia,
+                                               UOdinCaptureMedia              *captureMedia,
                                                FOdinRoomAddMediaError          onError,
                                                const FOdinRoomAddMediaSuccess &onSuccess)
 {
