@@ -55,6 +55,31 @@ void UOdinRoom::SetPositionScale(float Scale)
     (new FAutoDeleteAsyncTask<UpdateScalingTask>(this->room_handle_, Scale))->StartBackgroundTask();
 }
 
+FOdinConnectionStats UOdinRoom::ConnectionStats()
+{
+    OdinConnectionStats stats  = OdinConnectionStats();
+    auto                result = odin_room_connection_stats(this->room_handle_, &stats);
+
+    if (odin_is_error(result)) {
+        UE_LOG(LogTemp, Warning, TEXT("odin_room_connection_stats result: %d"), result);
+    } else {
+        FOdinConnectionStats RoomStats;
+        RoomStats.udp_tx_datagrams  = stats.udp_tx_datagrams;
+        RoomStats.udp_tx_acks       = stats.udp_tx_acks;
+        RoomStats.udp_tx_bytes      = stats.udp_tx_bytes;
+        RoomStats.udp_rx_datagrams  = stats.udp_rx_datagrams;
+        RoomStats.udp_rx_acks       = stats.udp_rx_acks;
+        RoomStats.udp_rx_bytes      = stats.udp_rx_bytes;
+        RoomStats.cwnd              = stats.cwnd;
+        RoomStats.congestion_events = stats.congestion_events;
+        RoomStats.rtt               = stats.rtt;
+
+        return RoomStats;
+    }
+
+    return {};
+}
+
 void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
 {
     this->current_apm_settings_              = apm_config;
