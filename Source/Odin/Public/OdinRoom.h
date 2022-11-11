@@ -277,6 +277,62 @@ enum EOdinNoiseSuppressionLevel {
 };
 
 USTRUCT(BlueprintType)
+struct ODIN_API FOdinConnectionStats {
+    GENERATED_BODY()
+
+    /**
+     * The amount of outgoing UDP datagrams observed
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats",
+              meta = (DisplayName = "Outgoing UDP datagrams"))
+    int64 udp_tx_datagrams;
+    /**
+     * The amount of outgoing acknowledgement frames observed
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing ACK frames"))
+    int64 udp_tx_acks;
+    /**
+     * The total amount of bytes which have been transferred inside outgoing UDP datagrams
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing bytes"))
+    int64 udp_tx_bytes;
+    /**
+     * The amount of incoming UDP datagrams observed
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats",
+              meta = (DisplayName = "Incoming UDP datagrams"))
+    int64 udp_rx_datagrams;
+    /**
+     * The amount of incoming acknowledgement frames observed
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming ACK frames"))
+    int64 udp_rx_acks;
+    /**
+     * The total amount of bytes which have been transferred inside incoming UDP datagrams
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming bytes"))
+    int64 udp_rx_bytes;
+    /**
+     * Current congestion window of the connection
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats",
+              meta = (DisplayName = "Congestion window of connection"))
+    int64 cwnd;
+    /**
+     * Congestion events on the connection
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats",
+              meta = (DisplayName = "Congestion events of connection"))
+    int64 congestion_events;
+    /**
+     * Current best estimate of the connection latency (round-trip-time) in milliseconds
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Stats",
+              meta = (DisplayName = "Estimated round-trip-time"))
+    float rtt;
+};
+
+USTRUCT(BlueprintType)
 struct ODIN_API FOdinApmSettings {
     GENERATED_BODY()
 
