@@ -21,6 +21,30 @@ int32 UOdinPlaybackMedia::GetMediaId()
     return media_id;
 }
 
+FOdinAudioStreamStats UOdinPlaybackMedia::AudioStreamStats()
+{
+    OdinAudioStreamStats stats  = OdinAudioStreamStats();
+    auto                 result = odin_audio_stats(this->stream_handle_, &stats);
+
+    if (odin_is_error(result)) {
+        UE_LOG(LogTemp, Warning, TEXT("odin_audio_stats result: %d"), result);
+    } else {
+        FOdinAudioStreamStats audio_stats;
+        audio_stats.packets_total             = stats.packets_total;
+        audio_stats.packets_processed         = stats.packets_processed;
+        audio_stats.packets_arrived_too_early = stats.packets_arrived_too_early;
+        audio_stats.packets_arrived_too_late  = stats.packets_arrived_too_late;
+        audio_stats.packets_dropped           = stats.packets_dropped;
+        audio_stats.packets_invalid           = stats.packets_invalid;
+        audio_stats.packets_repeated          = stats.packets_repeated;
+        audio_stats.packets_lost              = stats.packets_lost;
+
+        return audio_stats;
+    }
+
+    return {};
+}
+
 void UOdinPlaybackMedia::BeginDestroy()
 {
     if (this->stream_handle_) {
