@@ -52,13 +52,5 @@ public class OdinLibrary : ModuleRules
             string PluginPath = Utils.MakePathRelativeTo(ModuleDirectory, Target.RelativeEnginePath);
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(PluginPath, "OdinLibrarySDK_UPL.xml"));
         }
-        else if (Target.Platform == UnrealTargetPlatform.IOS)
-        {
-            string odinDylibPath = Path.Combine(ModuleDirectory, "arm64", "iOS", "libodin.dylib");
-
-            PublicAdditionalLibraries.Add(odinDylibPath);
-            PublicDelayLoadDLLs.Add(odinDylibPath);
-            RuntimeDependencies.Add(odinDylibPath);
-        }
     }
 }
