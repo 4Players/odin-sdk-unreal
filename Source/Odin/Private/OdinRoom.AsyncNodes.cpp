@@ -96,6 +96,7 @@ UOdinRoomUpdatePosition::UpdatePosition(UObject *WorldContextObject, UOdinRoom *
                                         const FOdinRoomUpdatePositionSuccess &onSuccess)
 {
     auto action       = NewObject<UOdinRoomUpdatePosition>();
+    action->Room      = room;
     action->Position  = position;
     action->OnError   = onError;
     action->OnSuccess = onSuccess;
@@ -181,6 +182,7 @@ UOdinRoomSendMessage::SendMessage(UObject *WorldContextObject, UOdinRoom *room,
                                   const FOdinRoomSendMessageSuccess &onSuccess)
 {
     auto action       = NewObject<UOdinRoomSendMessage>();
+    action->Room      = room;
     action->Data      = data;
     action->Targets   = targets;
     action->OnError   = onError;
