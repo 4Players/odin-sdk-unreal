@@ -2,6 +2,8 @@
 
 #include "OdinFunctionLibrary.h"
 
+#include "Odin.h"
+#include "OdinAudioCapture.h"
 #include "OdinCaptureMedia.h"
 
 #include <string>
@@ -52,3 +54,14 @@ FString UOdinFunctionLibrary::BytesToString(const TArray<uint8> &data)
 {
     return ::BytesToString(data.GetData(), data.Num());
 }
+
+UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture()
+{
+    UOdinAudioCapture* OdinAudioCapture = NewObject<UOdinAudioCapture>();
+    if(OdinAudioCapture->OpenDefaultAudioStream()) {
+        return OdinAudioCapture;
+    }
+    UE_LOG(Odin, Error, TEXT("Failed to open a default audio stream to the audio capture device."));
+    return nullptr;
+}
+

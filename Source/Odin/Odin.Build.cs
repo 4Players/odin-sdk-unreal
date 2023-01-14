@@ -26,7 +26,7 @@ public class Odin : ModuleRules
         "Json",
         "JsonUtilities",
         "OdinLibrary",
-        "Projects",
+        "Projects", "AudioCaptureCore",
       }
       );
   }
