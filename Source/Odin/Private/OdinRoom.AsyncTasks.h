@@ -115,7 +115,10 @@ class AddMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        auto result = odin_room_add_media(Room->RoomHandle(), Media->GetMediaHandle());
+        OdinRoomHandle room_handle = Room ? Room->RoomHandle() : 0;
+        OdinMediaStreamHandle media_handle = Media ? Media->GetMediaHandle() : 0;
+        
+        auto result = odin_room_add_media(room_handle, media_handle);
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -165,9 +168,14 @@ class RemoveMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        Room->UnbindCaptureMedia(Media);
-
-        auto result = Media->ResetOdinStream();
+        //TODO(Nico) refactor error check this tmp to prevent audio_generator errors
+        OdinReturnCode result = -1;
+        if (Room && Media) {
+            Room->UnbindCaptureMedia(Media);
+            result = Media->ResetOdinStream();
+        } else {
+            UE_LOG(Odin, Error, TEXT("RemoveMediaTask invalid pins for room/media input."));
+        }
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
