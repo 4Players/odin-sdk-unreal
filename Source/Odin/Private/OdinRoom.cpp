@@ -122,14 +122,15 @@ void UOdinRoom::Destroy()
     {
         FScopeLock lock(&this->capture_medias_cs_);
         for (auto media : this->capture_medias_) {
-            media->Reset();
+            if(media.IsValid())
+                media->Reset();
         }
         this->capture_medias_.Empty();
     }
     (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
 }
 
-void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia *media)
+void UOdinRoom::BindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media)
 {
     {
         FScopeLock lock(&this->capture_medias_cs_);
@@ -141,7 +142,7 @@ void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia *media)
     }
 }
 
-void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia *media)
+void UOdinRoom::UnbindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media)
 {
     {
         FScopeLock lock(&this->capture_medias_cs_);
@@ -216,7 +217,7 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
         case OdinEventTag::OdinEvent_MediaRemoved: {
             auto            media_handle = event->media_removed.media_handle;
             auto            peer_id      = event->media_removed.peer_id;
-            UOdinMediaBase *base_media   = nullptr;
+            TWeakObjectPtr<UOdinMediaBase>     base_media   = nullptr;
             if (medias_.RemoveAndCopyValue(media_handle, base_media)) {
                 auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
                 FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -228,11 +229,12 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             auto   peer_id      = event->media_active_state_changed.peer_id;
             auto   media_handle = event->media_active_state_changed.media_handle;
             auto   active       = event->media_active_state_changed.active;
-            auto **media        = medias_.Find(media_handle);
+            auto   media        = medias_.Find(media_handle);
             if (media) {
                 FFunctionGraphTask::CreateAndDispatchWhenReady(
                     [=]() {
-                        this->onMediaActiveStateChanged.Broadcast(peer_id, *media, active, this);
+                        this->onMediaActiveStateChanged.Broadcast(peer_id, media->Get(), active,
+                                                                  this);
                     },
                     TStatId(), nullptr, ENamedThreads::GameThread);
             }

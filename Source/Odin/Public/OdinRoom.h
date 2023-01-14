@@ -492,8 +492,8 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                 Category = "Odin|Room"))
     void Destroy();
 
-    void BindCaptureMedia(UOdinCaptureMedia *media);
-    void UnbindCaptureMedia(UOdinCaptureMedia *media);
+    void BindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media);
+    void UnbindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media);
 
     OdinRoomHandle RoomHandle() const
     {
@@ -520,11 +520,11 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 
     FCriticalSection capture_medias_cs_;
     UPROPERTY(transient)
-    TArray<UOdinCaptureMedia *> capture_medias_;
+    TArray<TWeakObjectPtr<UOdinCaptureMedia>> capture_medias_;
 
     FCriticalSection medias_cs_;
     UPROPERTY(transient)
-    TMap<uint64, UOdinMediaBase *> medias_;
+    TMap<uint64, TWeakObjectPtr<UOdinMediaBase>> medias_;
 
     FCriticalSection joined_callbacks_cs_;
     TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,
