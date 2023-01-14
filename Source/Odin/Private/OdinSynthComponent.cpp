@@ -36,6 +36,9 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UOdinPlaybackMedia *media)
 
 void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings)
 {
+    bAllowSpatialization = true;
+    Deactivate();
+
     bOverrideAttenuation = true;
     AttenuationOverrides = InAttenuationSettings;
 
@@ -43,6 +46,8 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
     if (audioComponent) {
         audioComponent->AdjustAttenuation(InAttenuationSettings);
     }
+
+    Activate(true);
 }
 
 #if ENGINE_MAJOR_VERSION >= 5
