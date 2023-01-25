@@ -18,7 +18,10 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
     odin_room_set_event_callback(
         this->room_handle_,
         [](OdinRoomHandle roomHandle, const struct OdinEvent *event, void *user_data) {
-            reinterpret_cast<UOdinRoom *>(user_data)->HandleOdinEvent(event);
+            UOdinRoom* room = reinterpret_cast<UOdinRoom *>(user_data);
+            if(room && room->IsValidLowLevel()) {
+                room->HandleOdinEvent(event);
+            }
         },
         this);
 }
@@ -30,16 +33,16 @@ UOdinRoom::~UOdinRoom()
 
 void UOdinRoom::BeginDestroy()
 {
-    this->Destroy();
     Super::BeginDestroy();
+    this->Destroy();
 }
 
 void UOdinRoom::FinishDestroy()
 {
+    Super::FinishDestroy();
     if (this->room_handle_) {
         odin_room_set_event_callback(room_handle_, nullptr, nullptr);
     }
-    Super::FinishDestroy();
 }
 
 UOdinRoom *UOdinRoom::ConstructRoom(UObject *               WorldContextObject,
@@ -122,7 +125,7 @@ void UOdinRoom::Destroy()
     {
         FScopeLock lock(&this->capture_medias_cs_);
         for (auto media : this->capture_medias_) {
-            if(media.IsValid())
+            if(nullptr != media)
                 media->Reset();
         }
         this->capture_medias_.Empty();
@@ -130,7 +133,7 @@ void UOdinRoom::Destroy()
     (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
 }
 
-void UOdinRoom::BindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media)
+void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia * media)
 {
     {
         FScopeLock lock(&this->capture_medias_cs_);
@@ -142,7 +145,7 @@ void UOdinRoom::BindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media)
     }
 }
 
-void UOdinRoom::UnbindCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> media)
+void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia * media)
 {
     {
         FScopeLock lock(&this->capture_medias_cs_);
@@ -167,14 +170,21 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
                 FString    roomId       = UTF8_TO_TCHAR(event->joined.room_id);
                 FString    roomCustomer = UTF8_TO_TCHAR(event->joined.customer);
                 FString    own_user_id  = UTF8_TO_TCHAR(event->joined.own_user_id);
-                FScopeLock lock(&joined_callbacks_cs_);
-                for (auto &callback : this->joined_callbacks_) {
-                    callback(roomId, roomCustomer, user_data, own_peer_id, own_user_id);
+                if(IsValidLowLevel() && joined_callbacks_cs_.TryLock()) {
+                    for (auto &callback : this->joined_callbacks_) {
+                        
+                        callback(roomId, roomCustomer, user_data, own_peer_id, own_user_id);
+                    }
+                    this->joined_callbacks_.Reset();
+                    joined_callbacks_cs_.Unlock();
                 }
-                this->joined_callbacks_.Reset();
             }
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onRoomJoined.Broadcast(own_peer_id, user_data, this); }, TStatId(),
+                [=]() {
+                    if(IsValidLowLevel())
+                        this->onRoomJoined.Broadcast(own_peer_id, user_data, this);
+                        
+                }, TStatId(),
                 nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_PeerJoined: {
@@ -183,13 +193,23 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             TArray<uint8> user_data{event->peer_joined.peer_user_data,
                                     (int)event->peer_joined.peer_user_data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onPeerJoined.Broadcast(peer_id, user_id, user_data, this); },
+                [=]() {
+                    if(IsValidLowLevel()) {
+                        this->onPeerJoined.Broadcast(peer_id, user_id, user_data, this);
+                        
+                    }
+                },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_PeerLeft: {
             auto peer_id = event->peer_left.peer_id;
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onPeerLeft.Broadcast(peer_id, this); }, TStatId(), nullptr,
+                [=]() {
+                    if(IsValidLowLevel()) {
+                        this->onPeerLeft.Broadcast(peer_id, this);
+                        
+                    }
+                }, TStatId(), nullptr,
                 ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_PeerUserDataChanged: {
@@ -197,7 +217,12 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             TArray<uint8> user_data{event->peer_user_data_changed.peer_user_data,
                                     (int)event->peer_user_data_changed.peer_user_data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onPeerUserDataChanged.Broadcast(peer_id, user_data, this); },
+                [=]() {
+                    if(IsValidLowLevel()) {
+                        this->onPeerUserDataChanged.Broadcast(peer_id, user_data, this);
+                        
+                    }
+                },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_MediaAdded: {
@@ -205,23 +230,32 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             auto peer_id      = event->media_added.peer_id;
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [=]() {
-                    const auto obj            = UOdinJsonObject::ConstructJsonObject(GetWorld());
-                    auto       playback_media = NewObject<UOdinPlaybackMedia>();
-                    playback_media->SetMediaHandle(media_handle);
-                    playback_media->SetRoom(this);
-                    medias_.Add(media_handle, playback_media);
-                    this->onMediaAdded.Broadcast(peer_id, playback_media, obj, this);
+                    if(IsValidLowLevel()) {
+                        const auto obj            = UOdinJsonObject::ConstructJsonObject(GetWorld());
+                        auto       playback_media = NewObject<UOdinPlaybackMedia>();
+                        playback_media->SetMediaHandle(media_handle);
+                        playback_media->SetRoom(this);
+                        medias_.Add(media_handle, playback_media);
+                        this->onMediaAdded.Broadcast(peer_id, playback_media, obj, this);
+                        
+                    }
+                    
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_MediaRemoved: {
             auto            media_handle = event->media_removed.media_handle;
             auto            peer_id      = event->media_removed.peer_id;
-            TWeakObjectPtr<UOdinMediaBase>     base_media   = nullptr;
+            UOdinMediaBase *base_media   = nullptr;
             if (medias_.RemoveAndCopyValue(media_handle, base_media)) {
                 auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
                 FFunctionGraphTask::CreateAndDispatchWhenReady(
-                    [=]() { this->onMediaRemoved.Broadcast(peer_id, playback_media, this); },
+                    [=]() {
+                        if(IsValidLowLevel()) {
+                            this->onMediaRemoved.Broadcast(peer_id, playback_media, this);
+                            
+                        }
+                    },
                     TStatId(), nullptr, ENamedThreads::GameThread);
             }
         } break;
@@ -229,12 +263,14 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             auto   peer_id      = event->media_active_state_changed.peer_id;
             auto   media_handle = event->media_active_state_changed.media_handle;
             auto   active       = event->media_active_state_changed.active;
-            auto   media        = medias_.Find(media_handle);
+            auto **media        = medias_.Find(media_handle);
             if (media) {
                 FFunctionGraphTask::CreateAndDispatchWhenReady(
                     [=]() {
-                        this->onMediaActiveStateChanged.Broadcast(peer_id, media->Get(), active,
+                        if(IsValidLowLevel()) {
+                            this->onMediaActiveStateChanged.Broadcast(peer_id, *media, active,
                                                                   this);
+                        }
                     },
                     TStatId(), nullptr, ENamedThreads::GameThread);
             }
@@ -243,7 +279,11 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             auto          peer_id = event->message_received.peer_id;
             TArray<uint8> data{event->message_received.data, (int)event->message_received.data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onMessageReceived.Broadcast(peer_id, data, this); }, TStatId(),
+                [=]() {
+                    if(IsValidLowLevel()) {
+                        this->onMessageReceived.Broadcast(peer_id, data, this);
+                    }
+                }, TStatId(),
                 nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEventTag::OdinEvent_RoomConnectionStateChanged: {
@@ -264,8 +304,13 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             }
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() { this->onConnectionStateChanged.Broadcast(state, this); }, TStatId(),
+                [=]() {
+                    if(IsValidLowLevel()) {
+                        this->onConnectionStateChanged.Broadcast(state, this);
+                    }
+                }, TStatId(),
                 nullptr, ENamedThreads::GameThread);
         } break;
     }
 }
+
