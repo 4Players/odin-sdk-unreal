@@ -101,7 +101,6 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
     odin_apm_config.gain_controller              = apm_config.bGainController;
 
-    //TODO side-effect
     if (odin_apm_config.echo_canceller) {
         if (!submix_listener_) {
             submix_listener_ = NewObject<UOdinSubmixListener>();
