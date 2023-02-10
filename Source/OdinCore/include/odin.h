@@ -2,13 +2,15 @@
 
 #pragma once
 
+/** @file */
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.3.0"
+#define ODIN_VERSION "1.3.1-beta.7"
 
 /**
  * Supported channel layouts in audio functions.
@@ -450,7 +452,7 @@ typedef struct OdinApmConfig {
      */
     float voice_activity_detection_release_probability;
     /**
-     * Enables or disables voice activity detection (VAD)
+     * Enables or disables the input volume gate
      */
     bool volume_gate;
     /**
