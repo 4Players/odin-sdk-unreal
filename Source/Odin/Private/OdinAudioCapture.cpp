@@ -1,11 +1,9 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
+﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
 
 #include "OdinAudioCapture.h"
 
 #include "AudioDeviceNotificationSubsystem.h"
 #include "Odin.h"
-
 
 void UOdinAudioCapture::PostInitProperties()
 {
@@ -38,7 +36,6 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
         OnDefaultDeviceChanged.Broadcast();
     }
 }
-
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
 {
@@ -215,7 +212,6 @@ void UOdinAudioCapture::Tick(float DeltaTime)
         }
     }
 }
-
 
 void UOdinAudioCapture::RestartStream()
 {
