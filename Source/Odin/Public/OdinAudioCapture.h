@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AudioCapture.h"
+#include "AudioDeviceNotificationSubsystem.h"
 #include "OdinAudioCapture.generated.h"
 
 
@@ -31,8 +32,10 @@ DECLARE_DYNAMIC_DELEGATE_TwoParams(FGetCaptureDeviceDelegate, const TArray<FOdin
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChangeCaptureDeviceDelegate, bool,
                                   bSuccess);
 
-UCLASS(ClassGroup=(Custom), meta=(BlueprintSpawnableComponent))
-class ODIN_API UOdinAudioCapture : public UAudioCapture
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCaptureDeviceChange);
+
+UCLASS(ClassGroup=(Odin), meta=(BlueprintSpawnableComponent))
+class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObject
 {
     GENERATED_BODY()
 
@@ -92,12 +95,111 @@ public:
     void AsyncChangeCaptureDeviceByName(FName                        DeviceName,
                                         FChangeCaptureDeviceDelegate OnChangeCompleted);
 
+    /**
+     * @brief Get whether the stream is currently open.
+     * @return Returns true if capturing audio
+     */
+    UFUNCTION(BlueprintPure, Category = "AudioCapture")
+    bool IsStreamOpen() const;
+
+    /**
+     * @brief Get the stream time of the audio capture stream.
+     * @return Time the stream was active.
+     */
+    UFUNCTION(BlueprintPure, Category = "AudioCapture")
+    double GetStreamTime() const;
+
+    /**
+     * @brief Will be called, if Odin recognizes that the selected capture device does not supply
+     * data anymore, i.e. if a microphone was unplugged. Odin will wait for AllowedTimeWithoutStreamUpdate
+     * seconds, before trying a stream restart.
+     */
+    UPROPERTY(BlueprintAssignable, Category="AudioCapture")
+    FCaptureDeviceChange OnCaptureDeviceReset;
+
+    /**
+     * @brief Will be called, if the Default Device is the currently selected and if the Default Device
+     * was switched by the system.
+     */
+    UPROPERTY(BlueprintAssignable, Category="AudioCapture")
+    FCaptureDeviceChange OnDefaultDeviceChanged;
+
+#pragma region FTickableGameObject
+    virtual void Tick(float DeltaTime) override;
+
+    virtual ETickableTickType GetTickableTickType() const override
+    {
+        return ETickableTickType::Always;
+    }
+
+    virtual TStatId GetStatId() const override
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(UOdinAudioCapture, STATGROUP_Tickables);
+    }
+
+    virtual bool IsTickableWhenPaused() const override
+    {
+        return true;
+    }
+
+    virtual bool IsTickableInEditor() const override
+    {
+        return false;
+    }
+#pragma endregion
+
 protected:
+    virtual void PostInitProperties() override;
+
+    void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole, FString DeviceId);
+
+    /**
+     * @brief Actual capture device implementation. Will take a device check function as input.
+     * This function should take a FOdinCaptureDeviceInfo as input and return a bool. It should
+     * return true, if the input is the device we'd like to change to.
+     * 
+     * @tparam DeviceCheck Function taking a FOdinCaptureDeviceInfo as input and returning bool. 
+     * @param DeviceCheckFunction This is used to check, whether the currently looked at device is the device we'd like to change to.
+     * @return True, if the device was changed successfully
+     */
+    template <typename DeviceCheck>
+    bool ChangeCaptureDevice(const DeviceCheck& DeviceCheckFunction);
+    
+    /**
+     * @brief Restart the stream, using CurrentSelectedDeviceIndex as the new input.
+     */
+    void RestartStream();
+
     /**
      * @brief The index of the currently selected device. -1 and 0 both refer to the Default Device.
      */
     UPROPERTY(BlueprintReadOnly, Category="AudioCapture")
     int32 CurrentSelectedDeviceIndex = INDEX_NONE;
 
-    void RestartStream();
+    /**
+     * @brief The amount of time in seconds the capture object waits for a stream to resume, before restarting with default device.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AudioCapture")
+    float AllowedTimeWithoutStreamUpdate = 0.25f;
+
+    /**
+     * @brief The amount of time in seconds a capture device is allowed to try and set up the stream.
+     * This is especially helpful for i.e. Bluetooth-Connected Headsets.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="AudioCapture")
+    float AllowedTimeForStreamSetup = 3.0f;
+
+    
+    
+    /**
+     * @brief Will be filled in, once a device was selected by the user.
+     * We can't have access to this before the custom selection, because - at least the Windows RtAudio
+     * implementation - AudioDeviceInterface does not provide us with a Device Id or Url of the
+     * Default Device.
+     */
+    FOdinCaptureDeviceInfo CustomSelectedDevice;
+
+    double LastStreamTime = -1.0f;
+    float TimeWithoutStreamUpdate = 0.0f;
+    
 };

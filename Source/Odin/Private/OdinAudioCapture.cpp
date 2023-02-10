@@ -2,7 +2,42 @@
 
 
 #include "OdinAudioCapture.h"
+
+#include "AudioDeviceNotificationSubsystem.h"
 #include "Odin.h"
+
+
+void UOdinAudioCapture::PostInitProperties()
+{
+    Super::PostInitProperties();
+    if (GetWorld()) {
+        UAudioDeviceNotificationSubsystem* AudioDeviceNotificationSubsystem =
+            UAudioDeviceNotificationSubsystem::Get();
+        if(AudioDeviceNotificationSubsystem) {
+            AudioDeviceNotificationSubsystem->DefaultCaptureDeviceChangedNative.AddUObject(
+            this, &UOdinAudioCapture::HandleDefaultDeviceChanged);
+        } else {
+            UE_LOG(Odin, Warning, TEXT("Could not retrieve Audio Device Notification Subsystem, "
+                                       "can't detect changes of default capture device."));
+        }
+        
+    }
+}
+
+void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole,
+                                                   FString                 DeviceId)
+{
+    FString    RoleAsString = UEnum::GetValueAsString(AudioDeviceChangedRole);
+    const bool bIsEmpty     = CustomSelectedDevice.DeviceId.IsEmpty();
+    if (INDEX_NONE == CurrentSelectedDeviceIndex || bIsEmpty) {
+        UE_LOG(Odin, Display,
+               TEXT(
+                   "Recognized change in default capture device, reconnecting to new default device."
+               ));
+        RestartStream();
+        OnDefaultDeviceChanged.Broadcast();
+    }
+}
 
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
@@ -56,26 +91,15 @@ void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& Cur
 
 void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess)
 {
-    TArray<FOdinCaptureDeviceInfo> allDevices;
-    GetCaptureDevicesAvailable(allDevices);
-
-    bSuccess = false;
-
-    // look for the index of the selected device.
-    for (int32 i = 0; i < allDevices.Num(); ++i) {
-        FOdinCaptureDeviceInfo deviceInfo = allDevices[i];
-        if (deviceInfo.DeviceId == NewDeviceId) {
-            CurrentSelectedDeviceIndex = i;
-            bSuccess                   = true;
-            break;
-        }
-    }
-
-    if (bSuccess) {
-        RestartStream();
-    } else {
+    auto DeviceCheck = [NewDeviceId](FOdinCaptureDeviceInfo OdinCaptureDeviceInfo)-> bool {
+        return NewDeviceId == OdinCaptureDeviceInfo.DeviceId;
+    };
+    bSuccess = ChangeCaptureDevice(DeviceCheck);
+    if (!bSuccess) {
         UE_LOG(Odin, Warning,
-               TEXT("Did not find Capture Device with name %s, Capture Device was not changed."));
+               TEXT("Did not find Capture Device with Device Id %s, Capture Device was not changed."
+               ),
+               *NewDeviceId);
     }
 }
 
@@ -96,25 +120,14 @@ void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                    
 
 void UOdinAudioCapture::ChangeCaptureDeviceByName(FName DeviceName, bool& bSuccess)
 {
-    TArray<FOdinCaptureDeviceInfo> allDevices;
-    GetCaptureDevicesAvailable(allDevices);
-
-    bSuccess = false;
-    // look for the name of the selected device.
-    for (int32 i = 0; i < allDevices.Num(); ++i) {
-        FOdinCaptureDeviceInfo deviceInfo = allDevices[i];
-        if (deviceInfo.AudioCaptureInfo.DeviceName == DeviceName) {
-            CurrentSelectedDeviceIndex = i;
-            bSuccess                   = true;
-            break;
-        }
-    }
-
-    if (bSuccess) {
-        RestartStream();
-    } else {
+    auto DeviceCheck = [DeviceName](FOdinCaptureDeviceInfo OdinCaptureDeviceInfo)-> bool {
+        return DeviceName == OdinCaptureDeviceInfo.AudioCaptureInfo.DeviceName;
+    };
+    bSuccess = ChangeCaptureDevice(DeviceCheck);
+    if (!bSuccess) {
         UE_LOG(Odin, Warning,
-               TEXT("Did not find Capture Device with name %s, Capture Device was not changed."));
+               TEXT("Did not find Capture Device with name %s, Capture Device was not changed."),
+               *DeviceName.ToString());
     }
 }
 
@@ -132,6 +145,77 @@ void UOdinAudioCapture::AsyncChangeCaptureDeviceByName(FName DeviceName,
         });
     });
 }
+
+template <typename DeviceCheck>
+bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFunction)
+{
+    TArray<FOdinCaptureDeviceInfo> allDevices;
+    GetCaptureDevicesAvailable(allDevices);
+
+    bool bSuccess = false;
+
+    // look for the name of the selected device.
+    for (int32 i = 0; i < allDevices.Num(); ++i) {
+        const FOdinCaptureDeviceInfo OdinCaptureDeviceInfo = allDevices[i];
+        if (DeviceCheckFunction(OdinCaptureDeviceInfo)) {
+            CurrentSelectedDeviceIndex = i;
+            CustomSelectedDevice       = OdinCaptureDeviceInfo;
+            bSuccess                   = true;
+            break;
+        }
+    }
+
+    if (bSuccess) {
+        UE_LOG(Odin, VeryVerbose, TEXT("Selected index: %d with device id: %s"),
+               CurrentSelectedDeviceIndex, *CustomSelectedDevice.DeviceId);
+        RestartStream();
+    }
+    return bSuccess;
+}
+
+bool UOdinAudioCapture::IsStreamOpen() const
+{
+    return AudioCapture.IsStreamOpen();
+}
+
+double UOdinAudioCapture::GetStreamTime() const
+{
+    double streamTime;
+    AudioCapture.GetStreamTime(streamTime);
+    return streamTime;
+}
+
+void UOdinAudioCapture::Tick(float DeltaTime)
+{
+    // Check if the stream is still active.
+    // We have to use the stream time, because AudioCapture.IsCapturing() or AudioCapture.IsStreamOpen()
+    // do NOT recognize that the underlying capture device was removed.
+    if (AudioCapture.IsCapturing()) {
+        double CurrentStreamTime;
+        AudioCapture.GetStreamTime(CurrentStreamTime);
+        if (CurrentStreamTime != LastStreamTime) {
+            TimeWithoutStreamUpdate = 0.0f;
+            LastStreamTime          = CurrentStreamTime;
+        } else {
+            TimeWithoutStreamUpdate += DeltaTime;
+
+            const bool bIsStreamSettingUp = CurrentStreamTime < AllowedTimeForStreamSetup;
+            const bool bIsStreamOffline = TimeWithoutStreamUpdate > AllowedTimeWithoutStreamUpdate;
+            if (bIsStreamOffline && !bIsStreamSettingUp) {
+                UE_LOG(Odin, Warning,
+                       TEXT(
+                           "Recognized disconnected Capture Device, restarting Capture Stream with Default Device..."
+                       ));
+                TimeWithoutStreamUpdate    = 0.0f;
+                LastStreamTime             = 0.0f;
+                CurrentSelectedDeviceIndex = INDEX_NONE;
+                RestartStream();
+                OnCaptureDeviceReset.Broadcast();
+            }
+        }
+    }
+}
+
 
 void UOdinAudioCapture::RestartStream()
 {
