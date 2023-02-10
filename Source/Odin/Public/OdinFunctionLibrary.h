@@ -30,7 +30,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Custom Data")
     static FString BytesToString(const TArray<uint8> &data);
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Audio Capture")
-    static class UOdinAudioCapture* CreateOdinAudioCapture();
+    UFUNCTION(BlueprintCallable, Category = "Odin|Audio Capture", meta=(WorldContext = "WorldContextObject"))
+    static class UOdinAudioCapture* CreateOdinAudioCapture(UObject *WorldContextObject);
 
     };
