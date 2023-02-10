@@ -9,6 +9,7 @@
 #include "OdinJsonObject.h"
 
 #include "OdinPlaybackMedia.h"
+#include "OdinSubmixListener.h"
 
 #include <memory>
 
@@ -367,6 +368,9 @@ struct ODIN_API FOdinApmSettings {
                       UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateReleaseLoudness = -90.0;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Echo Canceller"),
+              Category = "Filters")
+    bool bEchoCanceller = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"),
               Category = "Filters")
     bool bHighPassFilter = false;
@@ -532,6 +536,9 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
         joined_callbacks_;
 
     void HandleOdinEvent(const struct OdinEvent *event);
+
+    UPROPERTY(transient)
+    UOdinSubmixListener *submix_listener_;
 
     friend class UOdinRoomJoin;
     friend class UOdinRoomAddMedia;

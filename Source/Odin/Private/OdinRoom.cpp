@@ -9,6 +9,7 @@
 #include "Engine/World.h"
 
 #include "OdinRoom.AsyncTasks.h"
+#include "Odin.h"
 
 UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
     : Super(PCIP)
@@ -94,11 +95,22 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.volume_gate                  = apm_config.bEnableVolumeGate;
     odin_apm_config.volume_gate_attack_loudness  = apm_config.fVolumeGateAttackLoudness;
     odin_apm_config.volume_gate_release_loudness = apm_config.fVolumeGateReleaseLoudness;
-    odin_apm_config.echo_canceller               = false;
+    odin_apm_config.echo_canceller               = apm_config.bEchoCanceller;
     odin_apm_config.high_pass_filter             = apm_config.bHighPassFilter;
     odin_apm_config.pre_amplifier                = apm_config.bPreAmplifier;
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
     odin_apm_config.gain_controller              = apm_config.bGainController;
+
+    //TODO side-effect
+    if (odin_apm_config.echo_canceller) {
+        if (!submix_listener_) {
+            submix_listener_ = NewObject<UOdinSubmixListener>();
+            submix_listener_->SetRoom(this->room_handle_);
+        }
+        submix_listener_->StartSubmixListener();
+    } else if (submix_listener_) {
+        submix_listener_->StopSubmixListener();
+    }
 
     switch (apm_config.noise_suppression_level) {
         case EOdinNoiseSuppressionLevel::OdinNS_None: {
@@ -249,6 +261,7 @@ void UOdinRoom::HandleOdinEvent(const struct OdinEvent *event)
             UOdinMediaBase *base_media   = nullptr;
             if (medias_.RemoveAndCopyValue(media_handle, base_media)) {
                 auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
+                UE_LOG(Odin, Warning, TEXT("Removed media"));
                 FFunctionGraphTask::CreateAndDispatchWhenReady(
                     [=]() {
                         if(IsValidLowLevel()) {
