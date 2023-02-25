@@ -2,9 +2,12 @@
 
 #include "OdinAudioCapture.h"
 
+#if UE_5_0_OR_LATER
 #include "AudioDeviceNotificationSubsystem.h"
+#endif // UE_5_0_OR_LATER
 #include "Odin.h"
 
+#if UE_5_0_OR_LATER
 void UOdinAudioCapture::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -36,6 +39,28 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
         OnDefaultDeviceChanged.Broadcast();
     }
 }
+
+#else
+void UOdinAudioCapture::PostInitProperties()
+{
+    Super::PostInitProperties();
+    if (GetWorld()) {
+        UE_LOG(Odin, Verbose, TEXT("Could not retrieve Audio Device Notification Subsystem, can't detect changes of default capture device."));
+    }
+}
+
+void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
+{
+    const bool bIsEmpty     = CustomSelectedDevice.DeviceId.IsEmpty();
+    if (INDEX_NONE == CurrentSelectedDeviceIndex || bIsEmpty) {
+        UE_LOG(Odin, Display,
+               TEXT("Recognized change in default capture device, reconnecting to new default "
+                    "device."));
+        RestartStream();
+        OnDefaultDeviceChanged.Broadcast();
+    }
+}
+#endif // UE_5_0_OR_LATER
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
 {
@@ -175,11 +200,11 @@ bool UOdinAudioCapture::IsStreamOpen() const
     return AudioCapture.IsStreamOpen();
 }
 
-double UOdinAudioCapture::GetStreamTime() const
+float UOdinAudioCapture::GetStreamTime() const
 {
     double streamTime;
     AudioCapture.GetStreamTime(streamTime);
-    return streamTime;
+    return (float)streamTime;
 }
 
 void UOdinAudioCapture::Tick(float DeltaTime)
