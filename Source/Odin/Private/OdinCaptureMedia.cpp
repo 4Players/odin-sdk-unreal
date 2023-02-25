@@ -29,7 +29,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
     this->stream_handle_ = odin_audio_stream_create(
         OdinAudioStreamConfig{(uint32_t)sample_rate, (uint8_t)channel_count});
 
-    if (audio_capture) {
+    if (audio_capture && audio_capture->IsValidLowLevel()) {
         TFunction<void(const float *InAudio, int32 NumSamples)> fp = [this](const float *InAudio,
                                                                             int32 NumSamples) {
             if (this->stream_handle_) {

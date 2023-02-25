@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "AudioCapture.h"
+#if UE_5_0_OR_LATER
 #include "AudioDeviceNotificationSubsystem.h"
+#endif // UE_5_0_OR_LATER
 #include "OdinAudioCapture.generated.h"
 
 
@@ -107,7 +109,7 @@ public:
      * @return Time the stream was active.
      */
     UFUNCTION(BlueprintPure, Category = "AudioCapture")
-    double GetStreamTime() const;
+    float GetStreamTime() const;
 
     /**
      * @brief Will be called, if Odin recognizes that the selected capture device does not supply
@@ -150,9 +152,11 @@ public:
 
 protected:
     virtual void PostInitProperties() override;
-
+#if UE_5_0_OR_LATER
     void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole, FString DeviceId);
-
+#else
+    void HandleDefaultDeviceChanged(FString DeviceId);
+#endif
     /**
      * @brief Actual capture device implementation. Will take a device check function as input.
      * This function should take a FOdinCaptureDeviceInfo as input and return a bool. It should
@@ -199,7 +203,7 @@ protected:
      */
     FOdinCaptureDeviceInfo CustomSelectedDevice;
 
-    double LastStreamTime = -1.0f;
+    float LastStreamTime = -1.0f;
     float TimeWithoutStreamUpdate = 0.0f;
     
 };
