@@ -43,9 +43,9 @@ FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)
 
     std::string result;
     result.resize(128);
-    auto r = odin_error_format(code, result.data(), result.size());
+    auto r = odin_error_format(code, (char*)result.data(), result.size());
     while (r > result.size()) {
-        r = odin_error_format(code, result.data(), result.size());
+        r = odin_error_format(code, (char*)result.data(), result.size());
     }
     result.resize(r);
     return result.c_str();
