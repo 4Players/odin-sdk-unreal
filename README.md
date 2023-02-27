@@ -1,10 +1,10 @@
-# 4Players ODIN Unreal SDK
+# 4Players ODIN Unreal Engine 4/5 SDK
 
 ODIN is a cross-platform software development kit (SDK) that enables developers to integrate real-time chat technology into multiplayer games, apps and websites.
 
 The ODIN SDK for Unreal enables you to add real-time VoIP communication to your Unreal Engine 4/5 game, thus making it more social and interactive.
 
-[Online Documentation](https://developers.4players.io/odin)
+[Online Documentation](https://www.4players.io/developers)
 
 ## Prerequisites
 
