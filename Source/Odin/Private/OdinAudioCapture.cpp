@@ -2,12 +2,12 @@
 
 #include "OdinAudioCapture.h"
 
-#if UE_5_0_OR_LATER
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AudioDeviceNotificationSubsystem.h"
-#endif // UE_5_0_OR_LATER
+#endif // ENGINE_MAJOR_VERSION >= 5
 #include "Odin.h"
 
-#if UE_5_0_OR_LATER
+#if ENGINE_MAJOR_VERSION >= 5
 void UOdinAudioCapture::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -40,7 +40,7 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
     }
 }
 
-#else
+#else // ENGINE_MAJOR_VERSION >= 5
 void UOdinAudioCapture::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -60,7 +60,7 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
         OnDefaultDeviceChanged.Broadcast();
     }
 }
-#endif // UE_5_0_OR_LATER
+#endif // ENGINE_MAJOR_VERSION >= 5
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
 {
@@ -215,7 +215,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
     if (AudioCapture.IsCapturing()) {
         double CurrentStreamTime;
         AudioCapture.GetStreamTime(CurrentStreamTime);
-        if (CurrentStreamTime != LastStreamTime) {
+        if (!FMath::IsNearlyEqual(CurrentStreamTime, LastStreamTime)) {
             TimeWithoutStreamUpdate = 0.0f;
             LastStreamTime          = CurrentStreamTime;
         } else {
