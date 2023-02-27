@@ -4,9 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "AudioCapture.h"
-#if UE_5_0_OR_LATER
+#if ENGINE_MAJOR_VERSION >= 5
 #include "AudioDeviceNotificationSubsystem.h"
-#endif // UE_5_0_OR_LATER
+#endif // ENGINE_MAJOR_VERSION >= 5
 #include "OdinAudioCapture.generated.h"
 
 
@@ -152,11 +152,11 @@ public:
 
 protected:
     virtual void PostInitProperties() override;
-#if UE_5_0_OR_LATER
+#if ENGINE_MAJOR_VERSION >= 5
     void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole, FString DeviceId);
-#else
+#else // ENGINE_MAJOR_VERSION >= 5
     void HandleDefaultDeviceChanged(FString DeviceId);
-#endif
+#endif // ENGINE_MAJOR_VERSION >= 5
     /**
      * @brief Actual capture device implementation. Will take a device check function as input.
      * This function should take a FOdinCaptureDeviceInfo as input and return a bool. It should
@@ -203,7 +203,7 @@ protected:
      */
     FOdinCaptureDeviceInfo CustomSelectedDevice;
 
-    float LastStreamTime = -1.0f;
-    float TimeWithoutStreamUpdate = 0.0f;
+    double LastStreamTime = -1.0f;
+    double TimeWithoutStreamUpdate = 0.0f;
     
 };
