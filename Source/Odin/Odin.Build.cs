@@ -9,6 +9,7 @@ public class Odin : ModuleRules
     public Odin(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = ModuleRules.PCHUsageMode.UseExplicitOrSharedPCHs;
+        PrecompileForTargets = PrecompileTargetsType.Any;
 
         // List of all paths to include files that are exposed to other modules
         PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "Public"));
