@@ -7,7 +7,7 @@
 #include "Misc/Paths.h"
 #include "Modules/ModuleManager.h"
 
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_IOS || PLATFORM_LINUX
 #include "HAL/PlatformProcess.h"
 #endif
 
@@ -19,14 +19,15 @@ DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
 {
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_IOS || PLATFORM_LINUX
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
     FString LibraryPath;
     FString libraryName;
 
     FString PlatformArchitecture;
-
-#if PLATFORM_CPU_X86_FAMILY
+#if PLATFORM_MAC || PLATFORM_IOS
+    PlatformArchitecture = "universal";
+#elif PLATFORM_CPU_X86_FAMILY
     PlatformArchitecture = "x64";
 #elif PLATFORM_CPU_ARM_FAMILY
     PlatformArchitecture = "arm64";
@@ -42,7 +43,11 @@ void FOdinModule::StartupModule()
     libraryName = "libodin.so";
 #elif PLATFORM_MAC
     LibraryPath =
-        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Mac"));
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("macOS"));
+    libraryName = "libodin.dylib";
+#elif PLATFORM_IOS
+    LibraryPath =
+        FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("iOS"));
     libraryName = "libodin.dylib";
 #endif
 
@@ -65,7 +70,7 @@ void FOdinModule::ShutdownModule()
 {
     odin_shutdown();
 
-#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_MAC || PLATFORM_IOS || PLATFORM_LINUX
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;
 #endif
