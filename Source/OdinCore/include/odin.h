@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.3.1"
+#define ODIN_VERSION "1.4.0-beta.1"
 
 /**
  * Supported channel layouts in audio functions.
@@ -581,14 +581,25 @@ size_t odin_error_format(OdinReturnCode error, char *buf, size_t buf_len);
 bool odin_is_error(OdinReturnCode code);
 
 /**
- * Starts the internal ODIN client runtime and verifies that the correct API header file is used.
- * This is ref-counted so you need matching calls of startup and shutdown in your application. A
- * lot of the functions in the API require a running ODIN runtime. With the only exception being
- * the `access_key` and `token_generator` related functions.
+ * Starts the internal ODIN client runtime using recommended settings for audio output and verifies
+ * that the correct API header file is used. This is ref-counted so you need matching calls of startup
+ * and shutdown in your application. A lot of the functions in the API require a running ODIN runtime.
+ * With the only exception being the `access_key` and `token_generator` related functions.
  *
  * Note: Use `ODIN_VERSION` to pass the `version` argument.
  */
 bool odin_startup(const char *version);
+
+/**
+ * Starts the internal ODIN client runtime and allows passing the sample rate and channel layout
+ * for audio output. This is ref-counted so you need matching calls of startup and shutdown in your
+ * application.
+ *
+ * Note: Make sure to use the same settings on consecutive calls of this function.
+ */
+bool odin_startup_ex(const char *version,
+                     uint32_t output_sample_rate,
+                     enum OdinChannelLayout output_channel_layout);
 
 /**
  * Terminates the internal ODIN runtime. This function _should_ be called before shutting down
@@ -620,7 +631,9 @@ OdinReturnCode odin_room_destroy(OdinRoomHandle room);
  * _once_ before joining a room.
  */
 OdinReturnCode odin_room_set_event_callback(OdinRoomHandle room,
-                                            void (*callback)(OdinRoomHandle room, const struct OdinEvent *event, void *extra_data),
+                                            void (*callback)(OdinRoomHandle room,
+                                                             const struct OdinEvent *event,
+                                                             void *extra_data),
                                             void *extra_data);
 
 /**
@@ -758,8 +771,7 @@ OdinReturnCode odin_audio_push_data(OdinMediaStreamHandle stream, const float *b
  */
 OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream,
                                     float *out_buffer,
-                                    size_t out_buffer_len,
-                                    enum OdinChannelLayout out_channel_layout);
+                                    size_t out_buffer_len);
 
 /**
  * Retrieves statistics for the specified `OdinMediaStreamHandle`.
@@ -774,10 +786,6 @@ OdinReturnCode odin_audio_stats(OdinMediaStreamHandle stream, struct OdinAudioSt
  * accordingly. After the call the `out_buffer_len` will contain the amount of samples that have
  * actually been read and mixed into `out_buffer`.
  *
- * `out_channel_layout` specifies the target channel layout of the `out_buffer`. This is either:
- *  - Mono, all samples are sequential
- *  - Stereo, channels are interleaved
- *
  * If enabled this will also apply any audio processing to the output stream and feed back required
  * data to the internal audio processing pipeline which requires a final mix.
  */
@@ -785,17 +793,13 @@ OdinReturnCode odin_audio_mix_streams(OdinRoomHandle room,
                                       const OdinMediaStreamHandle *streams,
                                       size_t stream_count,
                                       float *out_buffer,
-                                      size_t *out_buffer_len,
-                                      enum OdinChannelLayout out_channel_layout);
+                                      size_t out_buffer_len);
 
 /**
  * Processes the reverse audio stream, also known as the loopback data to be used in the ODIN echo
  * canceller. This should only be done if you are _NOT_ using `odin_audio_mix_streams`.
  */
-OdinReturnCode odin_audio_process_reverse(OdinRoomHandle room,
-                                          float *buffer,
-                                          size_t buffer_len,
-                                          enum OdinChannelLayout out_channel_layout);
+OdinReturnCode odin_audio_process_reverse(OdinRoomHandle room, float *buffer, size_t buffer_len);
 
 /**
  * Creates a new ODIN resampler instance. This is intended for situations where your audio pipeline
