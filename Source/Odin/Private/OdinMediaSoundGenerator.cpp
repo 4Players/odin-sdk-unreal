@@ -12,7 +12,7 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float *OutAudio, int32 NumSamples
         return NumSamples;
     }
 
-    auto read = odin_audio_read_data(stream_handle_, OutAudio, NumSamples, OdinChannelLayout_Mono);
+    auto read = odin_audio_read_data(stream_handle_, OutAudio, NumSamples);
     if (odin_is_error(read)) {
         return NumSamples;
     } else {

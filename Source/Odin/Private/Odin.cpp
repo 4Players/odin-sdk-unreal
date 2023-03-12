@@ -63,7 +63,7 @@ void FOdinModule::StartupModule()
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
 #endif
-    odin_startup(ODIN_VERSION);
+    odin_startup_ex(ODIN_VERSION, 48000, OdinChannelLayout_Mono);
 }
 
 void FOdinModule::ShutdownModule()

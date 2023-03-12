@@ -3,6 +3,7 @@
 #pragma once
 
 #include "OdinSubmixListener.h"
+
 using namespace Audio;
 
 UOdinSubmixListener::UOdinSubmixListener(const class FObjectInitializer &PCIP)
@@ -31,7 +32,7 @@ void UOdinSubmixListener::StartSubmixListener()
     if (samplerate != OdinSampleRate) {
         UE_LOG(Odin, Warning, TEXT("Creating resampler. Samplerate of %d mismatch %d"),
                AudioDevice->SampleRate, OdinSampleRate);
-        //resampler_handle = odin_resampler_create(samplerate, OdinSampleRate, OdinChannels);
+        // resampler_handle = odin_resampler_create(samplerate, OdinSampleRate, OdinChannels);
     }
 
     AudioDevice->RegisterSubmixBufferListener(this);
@@ -62,14 +63,13 @@ void UOdinSubmixListener::OnNewSubmixBuffer(const USoundSubmix *OwningSubmix, fl
 
     FScopeLock Lock(&submix_cs_);
 
-     Audio::TSampleBuffer<float> buffer(AudioData, InNumSamples, InNumChannels, InSampleRate);
-     if (buffer.GetNumChannels() !=  OdinChannels)
+    Audio::TSampleBuffer<float> buffer(AudioData, InNumSamples, InNumChannels, InSampleRate);
+    if (buffer.GetNumChannels() != OdinChannels)
         buffer.MixBufferToChannels(OdinChannels);
 
-     float *pbuffer = buffer.GetArrayView().GetData();
-     OdinReturnCode result =
-         odin_audio_process_reverse(current_room_handle, pbuffer, buffer.GetNumSamples(),
-                                   /*InNumChannels*/ OdinChannelLayout_Mono);
+    float         *pbuffer = buffer.GetArrayView().GetData();
+    OdinReturnCode result =
+        odin_audio_process_reverse(current_room_handle, pbuffer, buffer.GetNumSamples());
 
     if (odin_is_error(result)) {
         UE_LOG(Odin, Verbose, TEXT("odin_audio_process_reverse result: %d"), result);
