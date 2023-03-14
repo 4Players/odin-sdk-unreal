@@ -20,7 +20,7 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     // Returns the number of samples to render per callback
     int32 GetDesiredNumSamplesToRenderPerCallback() const override final
     {
-        return 1920 // 20ms 48kHz stereo;
+        return 1920; // 20ms 48kHz stereo
     }
 
     // Optional. Called on audio generator thread right when the generator begins generating.
