@@ -31,7 +31,7 @@ void UOdinTokenGenerator::SetAccessKey(const FString &AccessKey)
 FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FString &UserId,
                                                EOdinTokenAudience TokenAudience)
 {
-    char buf[512] = {0};
+    char             buf[512] = {0};
     OdinTokenOptions options  = OdinTokenOptions();
     options.customer          = "<no customer>";
     options.audience          = TokenAudience == EOdinTokenAudience::SingleServer
