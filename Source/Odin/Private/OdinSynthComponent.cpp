@@ -9,7 +9,7 @@
 
 bool UOdinSynthComponent::Init(int32 &SampleRate)
 {
-    NumChannels = 1;
+    NumChannels = 2;
     SampleRate  = 48000;
     return true;
 }
@@ -58,6 +58,11 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
                                                              int32 InNumChannels)
 #endif
 {
+    // TODO: use information from UE5 InParams if needed
+    // int32 InSampleRate, InNumChannels, NumFramesPerCallback
+    // uint64 InstanceID
+    // FString GraphName
+    // bool bIsPreviewSound
     this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
     if (this->playback_media_ != 0) {
         sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());

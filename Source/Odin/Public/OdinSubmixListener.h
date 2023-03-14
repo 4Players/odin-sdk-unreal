@@ -23,7 +23,7 @@ class ODIN_API UOdinSubmixListener : public UObject, public ISubmixBufferListene
 
   protected:
     int32 OdinSampleRate = 48000;
-    int32 OdinChannels = 1;
+    int32 OdinChannels   = 2;
 
   private:
     FCriticalSection    submix_cs_;
