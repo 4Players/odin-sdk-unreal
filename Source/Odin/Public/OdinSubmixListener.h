@@ -28,9 +28,9 @@ class ODIN_API UOdinSubmixListener : public UObject, public ISubmixBufferListene
   private:
     FCriticalSection    submix_cs_;
     bool                bInitialized;
-    OdinRoomHandle current_room_handle;
+    OdinRoomHandle      current_room_handle;
     OdinResamplerHandle resampler_handle;
 
     void OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, float* AudioData, int32 InNumSamples,
-                            int32 InNumChannels, const int32 InSampleRate, double) override;
+                           int32 InNumChannels, const int32 InSampleRate, double) override;
 };

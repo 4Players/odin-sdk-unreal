@@ -115,9 +115,9 @@ class AddMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        OdinRoomHandle room_handle = Room ? Room->RoomHandle() : 0;
+        OdinRoomHandle        room_handle  = Room ? Room->RoomHandle() : 0;
         OdinMediaStreamHandle media_handle = Media ? Media->GetMediaHandle() : 0;
-        
+
         auto result = odin_room_add_media(room_handle, media_handle);
 
         if (odin_is_error(result)) {
@@ -168,7 +168,7 @@ class RemoveMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        //TODO(Nico) refactor error check this tmp to prevent audio_generator errors
+        // TODO(Nico) refactor error check this tmp to prevent audio_generator errors
         OdinReturnCode result = -1;
         if (Room && Media) {
             Room->UnbindCaptureMedia(Media);
