@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.4.0-beta.1"
+#define ODIN_VERSION "1.4.0"
 
 /**
  * Supported channel layouts in audio functions.
