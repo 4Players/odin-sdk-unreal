@@ -10,21 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.4.1"
-
-/**
- * Supported channel layouts in audio functions.
- */
-typedef enum OdinChannelLayout {
-    /**
-     * Samples are sequential
-     */
-    OdinChannelLayout_Mono,
-    /**
-     * Channels are interleaved
-     */
-    OdinChannelLayout_Stereo,
-} OdinChannelLayout;
+#define ODIN_VERSION "1.5.0"
 
 /**
  * Known types of a media stream.
@@ -161,6 +147,20 @@ typedef struct OdinTokenGenerator OdinTokenGenerator;
  * Note: Use `odin_error_format` to get a human readable string to represent error codes.
  */
 typedef uint32_t OdinReturnCode;
+
+/**
+ * Audio stream configuration.
+ */
+typedef struct OdinAudioStreamConfig {
+    /**
+     * The number of samples per second in hertz (between 8000 and 192000)
+     */
+    uint32_t sample_rate;
+    /**
+     * The number of channels for the new audio stream (between 1 and 2)
+     */
+    uint8_t channel_count;
+} OdinAudioStreamConfig;
 
 /**
  * Internal handle identifier for an ODIN room to interact with.
@@ -490,20 +490,6 @@ typedef struct OdinApmConfig {
 } OdinApmConfig;
 
 /**
- * Audio stream configuration.
- */
-typedef struct OdinAudioStreamConfig {
-    /**
-     * The number of samples per second in hertz (between 8000 and 192000)
-     */
-    uint32_t sample_rate;
-    /**
-     * The number of channels for the new audio stream (between 1 and 2)
-     */
-    uint8_t channel_count;
-} OdinAudioStreamConfig;
-
-/**
  * Audio stream statistics.
  */
 typedef struct OdinAudioStreamStats {
@@ -597,9 +583,7 @@ bool odin_startup(const char *version);
  *
  * Note: Make sure to use the same settings on consecutive calls of this function.
  */
-bool odin_startup_ex(const char *version,
-                     uint32_t output_sample_rate,
-                     enum OdinChannelLayout output_channel_layout);
+bool odin_startup_ex(const char *version, struct OdinAudioStreamConfig output_config);
 
 /**
  * Terminates the internal ODIN runtime. This function _should_ be called before shutting down
@@ -723,12 +707,12 @@ OdinReturnCode odin_room_add_media(OdinRoomHandle room, OdinMediaStreamHandle me
 OdinReturnCode odin_room_configure_apm(OdinRoomHandle room, struct OdinApmConfig config);
 
 /**
- * Creates a new audio stream, which can be added to a room and send data over it.
+ * Creates a new audio input stream, which can be added to a room and send data over it.
  */
 OdinMediaStreamHandle odin_audio_stream_create(struct OdinAudioStreamConfig config);
 
 /**
- * Creates a new video stream, which can be added to a room and send data over it.
+ * Creates a new video input stream, which can be added to a room and send data over it.
  *
  * Note: Video streams are not supported yet.
  */
@@ -764,10 +748,8 @@ enum OdinMediaStreamType odin_media_stream_type(OdinMediaStreamHandle stream);
 OdinReturnCode odin_audio_push_data(OdinMediaStreamHandle stream, const float *buf, size_t buf_len);
 
 /**
- * Reads audio data from the specified `OdinMediaStreamHandle`. This will return audio data in
- * 48kHz interleaved.
- *
- * Note: `out_channel_layout` is reserved for future use.
+ * Reads audio data from the specified `OdinMediaStreamHandle`. This will return audio data in the
+ * format specified when calling `odin_startup_ex` or 48 kHz interleaved by default.
  */
 OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream,
                                     float *out_buffer,
@@ -782,9 +764,9 @@ OdinReturnCode odin_audio_stats(OdinMediaStreamHandle stream, struct OdinAudioSt
 
 /**
  * Reads up to `out_buffer_len` samples from the given streams and mixes them into the `out_buffer`.
- * All audio streams will be read based on a 48khz sample rate so make sure to allocate the buffer
- * accordingly. After the call the `out_buffer_len` will contain the amount of samples that have
- * actually been read and mixed into `out_buffer`.
+ * All audio streams will be read based on the sample rate you chose when initializing the ODIN runtime
+ * so make sure to allocate the buffer accordingly. After the call the `out_buffer_len` will contain
+ * the amount of samples that have actually been read and mixed into `out_buffer`.
  *
  * If enabled this will also apply any audio processing to the output stream and feed back required
  * data to the internal audio processing pipeline which requires a final mix.

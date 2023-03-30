@@ -63,7 +63,11 @@ void FOdinModule::StartupModule()
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
 #endif
-    odin_startup_ex(ODIN_VERSION, 48000, OdinChannelLayout_Stereo);
+    auto sample_rate   = 48000;
+    auto channel_count = 2;
+
+    odin_startup_ex(ODIN_VERSION,
+                    OdinAudioStreamConfig{(uint32_t)sample_rate, (uint8_t)channel_count});
 }
 
 void FOdinModule::ShutdownModule()
