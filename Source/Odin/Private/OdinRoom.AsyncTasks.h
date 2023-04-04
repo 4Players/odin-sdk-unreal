@@ -169,7 +169,7 @@ class RemoveMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        // TODO(Nico) refactor error check this tmp to prevent audio_generator errors
+        // TODO: refactor to prevent potential sound generator errors
         OdinReturnCode result = -1;
         if (Room && Media) {
             Room->UnbindCaptureMedia(Media);

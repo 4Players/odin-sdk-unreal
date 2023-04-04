@@ -136,7 +136,7 @@ void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                    
         ChangeCaptureDeviceById(NewDeviceId, bSuccess);
 
         AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess]() {
-            // We execute the delegate along with the param
+            // We execute the delegate along with the param.
             OnChangeCompleted.Execute(bSuccess);
         });
     });
@@ -253,7 +253,7 @@ void UOdinAudioCapture::RestartStream()
     // OpenCaptureStream automatically closes the capture stream, if it's already active.
     if (AudioCapture.OpenCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
         // If we opened the capture stream successfully, get the capture device info and initialize
-        // the UAudioGenerator
+        // the UAudioGenerator.
         Audio::FCaptureDeviceInfo Info;
         if (AudioCapture.GetCaptureDeviceInfo(Info)) {
             Init(Info.PreferredSampleRate, Info.InputChannels);
