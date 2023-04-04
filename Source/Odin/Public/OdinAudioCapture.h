@@ -2,8 +2,9 @@
 
 #pragma once
 
-#include "CoreMinimal.h"
 #include "AudioCapture.h"
+#include "CoreMinimal.h"
+#include "Tickable.h"
 #if ENGINE_MAJOR_VERSION >= 5
 #include "AudioDeviceNotificationSubsystem.h"
 #endif // ENGINE_MAJOR_VERSION >= 5

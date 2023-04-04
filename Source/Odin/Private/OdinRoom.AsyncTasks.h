@@ -8,6 +8,7 @@
 #include "Async/AsyncWork.h"
 
 // #include "OdinRoom.AsyncTasks.generated.h"
+#include "Odin.h"
 #include "OdinRoom.h"
 
 #include <functional>
