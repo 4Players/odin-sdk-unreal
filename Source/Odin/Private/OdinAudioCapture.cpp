@@ -2,6 +2,9 @@
 
 #include "OdinAudioCapture.h"
 
+#include "Async/Async.h"
+#include "Async/TaskGraphInterfaces.h"
+
 #if ENGINE_MAJOR_VERSION >= 5
 #include "AudioDeviceNotificationSubsystem.h"
 #endif // ENGINE_MAJOR_VERSION >= 5
