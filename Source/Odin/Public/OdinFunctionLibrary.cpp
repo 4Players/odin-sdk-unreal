@@ -63,9 +63,8 @@ UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldCo
         World = WorldContextObject->GetWorld();
     } else {
         UE_LOG(Odin, Warning,
-               TEXT(
-                   "No World Context provided when creating Odin Audio Capture. Audio Capture will not be able to react to capture devices being removed."
-               ));
+               TEXT("No World Context provided when creating Odin Audio Capture. Audio Capture "
+                    "will not be able to react to capture devices being removed."));
     }
     UOdinAudioCapture* OdinAudioCapture = NewObject<UOdinAudioCapture>(World);
     if (OdinAudioCapture->OpenDefaultAudioStream()) {

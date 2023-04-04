@@ -17,7 +17,7 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     // Called when a new buffer is required.
     int32 OnGenerateAudio(float *OutAudio, int32 NumSamples) override final;
 
-    // Returns the number of samples to render per callback
+    // Returns the number of samples to render per callback.
     int32 GetDesiredNumSamplesToRenderPerCallback() const override final
     {
         return 1920; // 20ms 48kHz stereo
