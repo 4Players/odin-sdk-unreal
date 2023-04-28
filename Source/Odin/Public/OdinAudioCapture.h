@@ -153,6 +153,9 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
 #pragma endregion
 
   protected:
+
+    virtual void BeginDestroy() override;
+    
     virtual void PostInitProperties() override;
 #if ENGINE_MAJOR_VERSION >= 5
     void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole,

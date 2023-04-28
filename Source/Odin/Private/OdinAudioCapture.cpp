@@ -10,7 +10,14 @@
 #endif // ENGINE_MAJOR_VERSION >= 5
 #include "Odin.h"
 
+void UOdinAudioCapture::BeginDestroy()
+{
+    Super::BeginDestroy();
+    StopCapturingAudio();
+}
+
 #if ENGINE_MAJOR_VERSION >= 5
+
 void UOdinAudioCapture::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -213,7 +220,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
     // Check if the stream is still active.
     // We have to use the stream time, because AudioCapture.IsCapturing() or
     // AudioCapture.IsStreamOpen() do NOT recognize that the underlying capture device was removed.
-    if (AudioCapture.IsCapturing()) {
+    if (IsValidLowLevel() && AudioCapture.IsCapturing()) {
         double CurrentStreamTime;
         AudioCapture.GetStreamTime(CurrentStreamTime);
         if (!FMath::IsNearlyEqual(CurrentStreamTime, LastStreamTime)) {
