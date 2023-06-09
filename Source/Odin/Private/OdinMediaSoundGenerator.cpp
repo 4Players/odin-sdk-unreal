@@ -22,6 +22,10 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float *OutAudio, int32 NumSamples
 
 void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle streamHandle)
 {
+    if (streamHandle != 0) {
+        odin_audio_reset(streamHandle);
+    }
+
     stream_handle_ = streamHandle;
 }
 
