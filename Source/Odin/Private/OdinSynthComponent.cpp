@@ -1,9 +1,10 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinSynthComponent.h"
 
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
+#include "Odin.h"
 
 #include "OdinMediaSoundGenerator.h"
 
@@ -11,6 +12,7 @@ bool UOdinSynthComponent::Init(int32 &SampleRate)
 {
     NumChannels = 2;
     SampleRate  = 48000;
+
     return true;
 }
 

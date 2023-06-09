@@ -1,7 +1,8 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinCaptureMedia.h"
 
+#include "Odin.h"
 #include "OdinCore/include/odin.h"
 
 UOdinCaptureMedia::UOdinCaptureMedia(const class FObjectInitializer &PCIP)

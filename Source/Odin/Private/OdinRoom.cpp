@@ -1,4 +1,4 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinRoom.h"
 
@@ -8,8 +8,8 @@
 #include "Async/AsyncWork.h"
 #include "Engine/World.h"
 
-#include "OdinRoom.AsyncTasks.h"
 #include "Odin.h"
+#include "OdinRoom.AsyncTasks.h"
 
 UOdinRoom::UOdinRoom(const class FObjectInitializer& PCIP)
     : Super(PCIP)
@@ -86,8 +86,8 @@ FOdinConnectionStats UOdinRoom::ConnectionStats()
 
 void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
 {
-    this->current_apm_settings_ = apm_config;
-    auto odin_apm_config = OdinApmConfig{};
+    this->current_apm_settings_              = apm_config;
+    auto odin_apm_config                     = OdinApmConfig{};
     odin_apm_config.voice_activity_detection = apm_config.bVoiceActivityDetection;
     odin_apm_config.voice_activity_detection_attack_probability = apm_config.fVadAttackProbability;
     odin_apm_config.voice_activity_detection_release_probability =

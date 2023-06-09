@@ -1,4 +1,4 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -26,7 +26,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     FCriticalSection capture_generator_delegate_;
     UPROPERTY(BlueprintReadOnly, Category = "Audio Capture")
-    UAudioCapture *audio_capture_ = nullptr;
+    TWeakObjectPtr<UAudioCapture> audio_capture_ = nullptr;
 
     FAudioGeneratorHandle audio_generator_handle_;
 };

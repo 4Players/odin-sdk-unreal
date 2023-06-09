@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -19,10 +19,13 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 
     UFUNCTION(BlueprintCallable, BlueprintPure,
               meta = (Category = "Odin|Sound", DisplayName = "Construct Local Media"))
-    static UOdinCaptureMedia *Odin_CreateMedia(UAudioCapture *audioCapture);
+    static UOdinCaptureMedia *Odin_CreateMedia(UPARAM(ref) UAudioCapture *&audioCapture);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Authentication")
     static FString GenerateAccessKey();
+
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Error Handling")
+    static FString FormatOdinError(int64 code, bool ueTrace);
 
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Error Handling")
     static FString FormatError(int32 code, bool ueTrace);

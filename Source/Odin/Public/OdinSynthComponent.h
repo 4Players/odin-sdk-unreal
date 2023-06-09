@@ -1,4 +1,4 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -19,11 +19,13 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
   public:
     UFUNCTION(BlueprintCallable, meta = (Category    = "Odin|Sound",
                                          DisplayName = "Assign Odin Synth Component to Media"))
-    void Odin_AssignSynthToMedia(UOdinPlaybackMedia *media);
+    void Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia *&media);
 
-    /** This function is used to modify the Attenuation Settings on the targeted Odin Synth
-     * instance. It is worth noting that Attenuation Settings are only passed to new Active Sounds
-     * on start, so modified Attenuation data should be set before sound playback. */
+    /**
+     * This function is used to modify the Attenuation Settings on the targeted ODIN Synth instance.
+     * It is worth noting that Attenuation Settings are only passed to new Active Sounds on start,
+     * so modified Attenuation data should be set before sound playback.
+     */
     UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
     void AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings);
 
@@ -39,6 +41,7 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     virtual ISoundGeneratorPtr CreateSoundGenerator(int32 InSampleRate,
                                                     int32 InNumChannels) override;
 #endif
+
   private:
     UPROPERTY()
     UOdinPlaybackMedia *playback_media_ = nullptr;

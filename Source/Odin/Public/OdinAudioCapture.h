@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -114,8 +114,8 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
     float GetStreamTime() const;
 
     /**
-     * @brief Will be called, if Odin recognizes that the selected capture device does not supply
-     * data anymore, i.e. if a microphone was unplugged. Odin will wait for
+     * @brief Will be called, if ODIN recognizes that the selected capture device does not supply
+     * data anymore, i.e. if a microphone was unplugged. ODIN will wait for
      * AllowedTimeWithoutStreamUpdate seconds, before trying a stream restart.
      */
     UPROPERTY(BlueprintAssignable, Category = "AudioCapture")
@@ -153,9 +153,8 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
 #pragma endregion
 
   protected:
-
     virtual void BeginDestroy() override;
-    
+
     virtual void PostInitProperties() override;
 #if ENGINE_MAJOR_VERSION >= 5
     void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole,
