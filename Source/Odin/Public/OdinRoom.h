@@ -289,51 +289,51 @@ struct ODIN_API FOdinConnectionStats {
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Outgoing UDP datagrams"))
-    int64 udp_tx_datagrams;
+    int64 udp_tx_datagrams = 0;
     /**
      * The amount of outgoing acknowledgement frames observed
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing ACK frames"))
-    int64 udp_tx_acks;
+    int64 udp_tx_acks = 0;
     /**
      * The total amount of bytes which have been transferred inside outgoing UDP datagrams
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing bytes"))
-    int64 udp_tx_bytes;
+    int64 udp_tx_bytes = 0;
     /**
      * The amount of incoming UDP datagrams observed
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Incoming UDP datagrams"))
-    int64 udp_rx_datagrams;
+    int64 udp_rx_datagrams = 0;
     /**
      * The amount of incoming acknowledgement frames observed
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming ACK frames"))
-    int64 udp_rx_acks;
+    int64 udp_rx_acks = 0;
     /**
      * The total amount of bytes which have been transferred inside incoming UDP datagrams
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming bytes"))
-    int64 udp_rx_bytes;
+    int64 udp_rx_bytes = 0;
     /**
      * Current congestion window of the connection
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Congestion window of connection"))
-    int64 cwnd;
+    int64 cwnd = 0;
     /**
      * Congestion events on the connection
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Congestion events of connection"))
-    int64 congestion_events;
+    int64 congestion_events = 0;
     /**
      * Current best estimate of the connection latency (round-trip-time) in milliseconds
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Estimated round-trip-time"))
-    float rtt;
+    float rtt = 0;
 };
 
 USTRUCT(BlueprintType)

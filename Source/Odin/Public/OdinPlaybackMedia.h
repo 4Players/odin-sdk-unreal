@@ -22,44 +22,44 @@ struct ODIN_API FOdinAudioStreamStats {
      * The total number of packets seen by the medias jitter buffer.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets total"))
-    int32 packets_total;
+    int32 packets_total = 0;
     /**
      * The number of packets processed by the medias jitter buffer.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets processed"))
-    int32 packets_processed;
+    int32 packets_processed = 0;
     /**
      * The number of packets dropped because they seemed to arrive too early.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Packets arrived too early"))
-    int32 packets_arrived_too_early;
+    int32 packets_arrived_too_early = 0;
     /**
      * The number of packets dropped because they seemed to arrive too late.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats",
               meta = (DisplayName = "Packets arrived too late"))
-    int32 packets_arrived_too_late;
+    int32 packets_arrived_too_late = 0;
     /**
      * The number of packets dropped due to a jitter buffer reset.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets dropped"))
-    int32 packets_dropped;
+    int32 packets_dropped = 0;
     /**
      * The number of packets marked as invalid.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets invalid"))
-    int32 packets_invalid;
+    int32 packets_invalid = 0;
     /**
      * The number of packets marked as duplicates.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets repeated"))
-    int32 packets_repeated;
+    int32 packets_repeated = 0;
     /**
      * The number of packets marked as lost during transmission.
      */
     UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Packets lost"))
-    int32 packets_lost;
+    int32 packets_lost = 0;
 };
 
 UCLASS(BlueprintType, ClassGroup = Odin)
