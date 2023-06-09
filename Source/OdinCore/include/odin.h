@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.5.0"
+#define ODIN_VERSION "1.5.4"
 
 /**
  * Known types of a media stream.
@@ -754,6 +754,13 @@ OdinReturnCode odin_audio_push_data(OdinMediaStreamHandle stream, const float *b
 OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream,
                                     float *out_buffer,
                                     size_t out_buffer_len);
+
+/**
+ * Resets the specified `OdinMediaStreamHandle` to its initial state, restoring it to its default
+ * configuration. This operation resets the internal Opus encoder/decoder, ensuring a clean state.
+ * Additionally, it clears internal buffers, providing a fresh start.
+ */
+OdinReturnCode odin_audio_reset(OdinMediaStreamHandle stream);
 
 /**
  * Retrieves statistics for the specified `OdinMediaStreamHandle`.
