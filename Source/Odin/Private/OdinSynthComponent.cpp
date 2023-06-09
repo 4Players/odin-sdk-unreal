@@ -43,6 +43,13 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia
     }
 }
 
+void UOdinSynthComponent::Reset()
+{
+    if (this->playback_media_ != nullptr) {
+        odin_audio_reset(this->playback_media_->GetMediaHandle());
+    }
+}
+
 void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings)
 {
     bAllowSpatialization = true;
@@ -67,11 +74,6 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
                                                              int32 InNumChannels)
 #endif
 {
-    // TODO: use information from UE5 InParams if needed
-    // int32 InSampleRate, InNumChannels, NumFramesPerCallback
-    // uint64 InstanceID
-    // FString GraphName
-    // bool bIsPreviewSound
     this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
     if (this->playback_media_ != nullptr) {
         sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());
