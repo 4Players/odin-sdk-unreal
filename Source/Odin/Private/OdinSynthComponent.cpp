@@ -4,8 +4,9 @@
 
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
-#include "Odin.h"
+#include "Runtime/Launch/Resources/Version.h"
 
+#include "Odin.h"
 #include "OdinMediaSoundGenerator.h"
 
 bool UOdinSynthComponent::Init(int32 &SampleRate)

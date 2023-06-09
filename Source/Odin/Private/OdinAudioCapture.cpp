@@ -4,10 +4,12 @@
 
 #include "Async/Async.h"
 #include "Async/TaskGraphInterfaces.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #if ENGINE_MAJOR_VERSION >= 5
 #include "AudioDeviceNotificationSubsystem.h"
-#endif // ENGINE_MAJOR_VERSION >= 5
+#endif
+
 #include "Odin.h"
 
 void UOdinAudioCapture::BeginDestroy()
@@ -49,7 +51,8 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
     }
 }
 
-#else  // ENGINE_MAJOR_VERSION >= 5
+#else
+
 void UOdinAudioCapture::PostInitProperties()
 {
     Super::PostInitProperties();
@@ -71,7 +74,8 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
         OnDefaultDeviceChanged.Broadcast();
     }
 }
-#endif // ENGINE_MAJOR_VERSION >= 5
+
+#endif
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
 {

@@ -154,14 +154,15 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
 
   protected:
     virtual void BeginDestroy() override;
-
     virtual void PostInitProperties() override;
+
 #if ENGINE_MAJOR_VERSION >= 5
     void HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole,
                                     FString                 DeviceId);
-#else  // ENGINE_MAJOR_VERSION >= 5
+#else
     void HandleDefaultDeviceChanged(FString DeviceId);
-#endif // ENGINE_MAJOR_VERSION >= 5
+#endif
+
     /**
      * @brief Actual capture device implementation. Will take a device check function as input.
      * This function should take a FOdinCaptureDeviceInfo as input and return a bool. It should
