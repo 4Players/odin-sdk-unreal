@@ -47,10 +47,10 @@ FOdinAudioStreamStats UOdinPlaybackMedia::AudioStreamStats()
 
 void UOdinPlaybackMedia::BeginDestroy()
 {
+    Super::BeginDestroy();
     if (this->stream_handle_) {
         odin_media_stream_destroy(this->stream_handle_);
         this->stream_handle_ = 0;
     }
-    this->Room = nullptr;
-    Super::BeginDestroy();
+    Room.Reset();
 }

@@ -113,7 +113,7 @@ void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& Cur
     TArray<FOdinCaptureDeviceInfo> allDevices;
     GetCaptureDevicesAvailable(allDevices);
     if (allDevices.Num() > 0) {
-        if (CurrentSelectedDeviceIndex >= 0 && CurrentSelectedDeviceIndex < allDevices.Num()) {
+        if (allDevices.IsValidIndex(CurrentSelectedDeviceIndex)) {
             CurrentDevice = allDevices[CurrentSelectedDeviceIndex];
         } else {
             CurrentDevice = allDevices[0];
@@ -123,6 +123,7 @@ void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& Cur
 
 void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess)
 {
+    // a lambda for finding a device by DeviceId
     auto DeviceCheck = [NewDeviceId](FOdinCaptureDeviceInfo OdinCaptureDeviceInfo) -> bool {
         return NewDeviceId == OdinCaptureDeviceInfo.DeviceId;
     };
@@ -151,6 +152,7 @@ void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                    
 
 void UOdinAudioCapture::ChangeCaptureDeviceByName(FName DeviceName, bool& bSuccess)
 {
+    // a lambda for finding a device by DeviceName
     auto DeviceCheck = [DeviceName](FOdinCaptureDeviceInfo OdinCaptureDeviceInfo) -> bool {
         return DeviceName == OdinCaptureDeviceInfo.AudioCaptureInfo.DeviceName;
     };
@@ -232,7 +234,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
             const bool bIsStreamSettingUp = CurrentStreamTime < AllowedTimeForStreamSetup;
             const bool bIsStreamOffline = TimeWithoutStreamUpdate > AllowedTimeWithoutStreamUpdate;
             if (bIsStreamOffline && !bIsStreamSettingUp) {
-                UE_LOG(Odin, Warning,
+                UE_LOG(Odin, Log,
                        TEXT("Recognized disconnected Capture Device, restarting Capture Stream "
                             "with Default Device..."));
                 TimeWithoutStreamUpdate    = 0.0f;

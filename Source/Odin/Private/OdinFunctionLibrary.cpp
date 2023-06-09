@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinFunctionLibrary.h"
 
@@ -21,7 +21,7 @@ UOdinFunctionLibrary* UOdinFunctionLibrary::getOdinFunctionLibrary()
     return g_odinFunctionLibrary;
 }
 
-UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UAudioCapture* audioCapture)
+UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UPARAM(ref) UAudioCapture*& audioCapture)
 {
     auto capture_media = NewObject<UOdinCaptureMedia>();
     capture_media->SetAudioCapture(audioCapture);
@@ -33,6 +33,11 @@ FString UOdinFunctionLibrary::GenerateAccessKey()
     char buf[128] = {0};
     odin_access_key_generate(buf, sizeof(buf));
     return ANSI_TO_TCHAR(buf);
+}
+
+FString UOdinFunctionLibrary::FormatOdinError(int64 code, bool ueTrace)
+{
+    return FormatError(code, ueTrace);
 }
 
 FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)

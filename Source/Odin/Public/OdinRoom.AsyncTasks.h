@@ -1,4 +1,4 @@
-/* Copyright (c) 2022 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -36,6 +36,7 @@ class JoinRoomTask : public FNonAbandonableTask
         , RoomToken(room_token)
         , InitialPeerUserData(initial_peer_user_data)
         , InitialPosition(initial_position)
+        , Response(response)
         , OnError(onError)
         , OnSuccess(onSuccess)
     {
@@ -97,8 +98,8 @@ class AddMediaTask : public FNonAbandonableTask
 {
     friend class FAutoDeleteAsyncTask<AddMediaTask>;
 
-    UOdinCaptureMedia *Media;
-    UOdinRoom         *Room;
+    TWeakObjectPtr<UOdinCaptureMedia> Media;
+    TWeakObjectPtr<UOdinRoom>         Room;
 
     FAddMediaResponsePin     Response;
     FOdinRoomAddMediaError   OnError;
@@ -116,8 +117,11 @@ class AddMediaTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        OdinRoomHandle        room_handle  = Room ? Room->RoomHandle() : 0;
-        OdinMediaStreamHandle media_handle = Media ? Media->GetMediaHandle() : 0;
+        if (!(Room.IsValid() && Media.IsValid()))
+            return;
+
+        OdinRoomHandle        room_handle  = Room.IsValid() ? Room->RoomHandle() : 0;
+        OdinMediaStreamHandle media_handle = Media.IsValid() ? Media->GetMediaHandle() : 0;
 
         auto result = odin_room_add_media(room_handle, media_handle);
 
@@ -129,7 +133,7 @@ class AddMediaTask : public FNonAbandonableTask
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } else {
-            Room->BindCaptureMedia(Media);
+            Room->BindCaptureMedia(Media.Get());
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnSuccess = OnSuccess, Response = Response, result]() {
@@ -174,8 +178,6 @@ class RemoveMediaTask : public FNonAbandonableTask
         if (Room && Media) {
             Room->UnbindCaptureMedia(Media);
             result = Media->ResetOdinStream();
-        } else {
-            UE_LOG(Odin, Error, TEXT("RemoveMediaTask invalid pins for room/media input."));
         }
 
         if (odin_is_error(result)) {

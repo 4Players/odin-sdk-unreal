@@ -28,11 +28,18 @@ void UOdinSynthComponent::BeginDestroy()
     Super::BeginDestroy();
 }
 
-void UOdinSynthComponent::Odin_AssignSynthToMedia(UOdinPlaybackMedia *media)
+void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia *&media)
 {
-    this->playback_media_ = media;
-    if (sound_generator_) {
-        sound_generator_->SetOdinStream(media->GetMediaHandle());
+    if (nullptr != media) {
+        this->playback_media_ = media;
+        if (sound_generator_) {
+            sound_generator_->SetOdinStream(media->GetMediaHandle());
+        }
+    } else {
+        UE_LOG(Odin, Error,
+               TEXT("UOdinSynthComponent::Odin_AssignSynthToMedia: Tried to assign null media to "
+                    "synth component on actor %s"),
+               *GetOwner()->GetName());
     }
 }
 
@@ -66,7 +73,7 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
     // FString GraphName
     // bool bIsPreviewSound
     this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
-    if (this->playback_media_ != 0) {
+    if (this->playback_media_ != nullptr) {
         sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());
     }
     return sound_generator_;

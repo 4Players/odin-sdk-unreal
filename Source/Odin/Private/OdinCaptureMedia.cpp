@@ -12,6 +12,12 @@ UOdinCaptureMedia::UOdinCaptureMedia(const class FObjectInitializer &PCIP)
 
 void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
 {
+    if (!audio_capture) {
+        UE_LOG(Odin, Error,
+               TEXT("UOdinCaptureMedia::SetAudioCapture - audio capture is null, microphone will "
+                    "not work."));
+    }
+
     this->audio_capture_ = audio_capture;
 
     if (this->stream_handle_) {
@@ -43,8 +49,8 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
 
 void UOdinCaptureMedia::Reset()
 {
-    if (this->audio_capture_) {
-        this->audio_capture_          = nullptr;
+    if (audio_capture_.IsValid()) {
+        audio_capture_.Reset();
         this->audio_generator_handle_ = {};
     }
 
@@ -57,7 +63,7 @@ void UOdinCaptureMedia::Reset()
 OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
 {
     FScopeLock lock(&this->capture_generator_delegate_);
-    if (this->audio_capture_ && this->audio_capture_->IsValidLowLevel())
+    if (audio_capture_.IsValid())
         this->audio_capture_->RemoveGeneratorDelegate(this->audio_generator_handle_);
 
     this->audio_generator_handle_ = {};
