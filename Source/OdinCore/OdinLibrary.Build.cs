@@ -26,7 +26,7 @@ public class OdinLibrary : ModuleRules
     }
     else if (Target.Platform == UnrealTargetPlatform.IOS)
     {
-      PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "arm64", "iOS", "libodin_static.a"));
+      PublicAdditionalLibraries.Add(Path.Combine(ModuleDirectory, "universal", "iOS", "libodin_static.a"));
     }
     else if (Target.Platform == UnrealTargetPlatform.Linux)
     {
