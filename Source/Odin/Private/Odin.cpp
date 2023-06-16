@@ -11,6 +11,10 @@
 #include "HAL/PlatformProcess.h"
 #endif
 
+#if PLATFORM_IOS
+#include "IOSAppDelegate.h"
+#endif
+
 #include "OdinCore/include/odin.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
@@ -19,6 +23,12 @@ DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
 {
+#if PLATFORM_IOS
+    [[IOSAppDelegate GetDelegate] SetFeature:EAudioFeature::Playback Active:true];
+    [[IOSAppDelegate GetDelegate] SetFeature:EAudioFeature::Record Active:true];
+    [[IOSAppDelegate GetDelegate] SetFeature:EAudioFeature::VoiceChat Active:true];
+#endif
+    
 #if PLATFORM_WINDOWS || PLATFORM_LINUX
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
     FString LibraryPath;
