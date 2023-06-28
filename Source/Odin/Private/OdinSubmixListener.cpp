@@ -4,6 +4,8 @@
 
 #include "OdinSubmixListener.h"
 
+#include "Odin.h"
+
 using namespace Audio;
 
 UOdinSubmixListener::UOdinSubmixListener(const class FObjectInitializer &PCIP)
