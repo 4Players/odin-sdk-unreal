@@ -4,6 +4,7 @@
 
 #include "Components/SynthComponent.h"
 #include "CoreMinimal.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 #include "OdinPlaybackMedia.h"
 

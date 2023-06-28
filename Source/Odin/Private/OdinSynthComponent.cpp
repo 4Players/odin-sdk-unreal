@@ -4,7 +4,6 @@
 
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
-#include "Runtime/Launch/Resources/Version.h"
 
 #include "Odin.h"
 #include "OdinMediaSoundGenerator.h"
