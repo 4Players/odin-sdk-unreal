@@ -26,7 +26,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     FCriticalSection capture_generator_delegate_;
     UPROPERTY(BlueprintReadOnly, Category = "Audio Capture")
-    TWeakObjectPtr<UAudioCapture> audio_capture_ = nullptr;
+    UAudioCapture* audio_capture_ = nullptr;
 
     FAudioGeneratorHandle audio_generator_handle_;
 };

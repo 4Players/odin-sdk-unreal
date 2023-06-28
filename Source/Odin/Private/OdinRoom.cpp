@@ -103,12 +103,12 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.gain_controller              = apm_config.bGainController;
 
     if (odin_apm_config.echo_canceller) {
-        if (!submix_listener_.IsValid()) {
+        if (submix_listener_ == nullptr) {
             submix_listener_ = NewObject<UOdinSubmixListener>();
             submix_listener_->SetRoom(this->room_handle_);
         }
         submix_listener_->StartSubmixListener();
-    } else if (submix_listener_.IsValid()) {
+    } else if (submix_listener_ != nullptr) {
         submix_listener_->StopSubmixListener();
     }
 
@@ -248,7 +248,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } break;
-        case OdinEvent_RoomUserDataChanged: {
+        case OdinEventTag::OdinEvent_RoomUserDataChanged: {
             auto          room_data_changed = event.room_user_data_changed;
             TArray<uint8> room_data{room_data_changed.room_user_data,
                                     (int)room_data_changed.room_user_data_len};
@@ -289,10 +289,10 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                     if (!this->IsValidLowLevel())
                         return;
 
-                    TWeakObjectPtr<UOdinMediaBase> base_media = nullptr;
+                    UOdinMediaBase* base_media = nullptr;
                     if (medias_.Contains(media_handle)) {
                         if (medias_.RemoveAndCopyValue(media_handle, base_media)
-                            && base_media.IsValid()) {
+                            && base_media != nullptr) {
                             auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
                             this->onMediaRemoved.Broadcast(peer_id, playback_media, this);
                         }
@@ -312,9 +312,9 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
 
                     if (!medias_.Contains(media_handle))
                         return;
-                    TWeakObjectPtr<UOdinMediaBase> media = *medias_.Find(media_handle);
-                    if (media.IsValid()) {
-                        this->onMediaActiveStateChanged.Broadcast(peer_id, media.Get(), active,
+                    UOdinMediaBase* media = *medias_.Find(media_handle);
+                    if (media) {
+                        this->onMediaActiveStateChanged.Broadcast(peer_id, media, active,
                                                                   this);
                     }
                 },

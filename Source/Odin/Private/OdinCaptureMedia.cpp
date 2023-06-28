@@ -49,8 +49,8 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
 
 void UOdinCaptureMedia::Reset()
 {
-    if (audio_capture_.IsValid()) {
-        audio_capture_.Reset();
+    if (nullptr != audio_capture_) {
+        audio_capture_ = nullptr;
         this->audio_generator_handle_ = {};
     }
 
@@ -63,7 +63,7 @@ void UOdinCaptureMedia::Reset()
 OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
 {
     FScopeLock lock(&this->capture_generator_delegate_);
-    if (audio_capture_.IsValid())
+    if (nullptr != audio_capture_)
         this->audio_capture_->RemoveGeneratorDelegate(this->audio_generator_handle_);
 
     this->audio_generator_handle_ = {};

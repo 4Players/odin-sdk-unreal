@@ -52,5 +52,5 @@ void UOdinPlaybackMedia::BeginDestroy()
         odin_media_stream_destroy(this->stream_handle_);
         this->stream_handle_ = 0;
     }
-    Room.Reset();
+    Room = nullptr;
 }

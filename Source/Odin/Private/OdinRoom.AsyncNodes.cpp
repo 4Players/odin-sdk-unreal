@@ -71,12 +71,12 @@ void UOdinRoomAddMedia::Activate()
     //     ->StartBackgroundTask();
     FFunctionGraphTask::CreateAndDispatchWhenReady(
         [=]() {
-            if (!(Room.IsValid() && CaptureMedia.IsValid()))
+            if (!(Room && CaptureMedia))
                 return;
 
-            OdinRoomHandle        room_handle = Room.IsValid() ? Room->RoomHandle() : 0;
+            OdinRoomHandle        room_handle = Room ? Room->RoomHandle() : 0;
             OdinMediaStreamHandle media_handle =
-                CaptureMedia.IsValid() ? CaptureMedia->GetMediaHandle() : 0;
+                CaptureMedia ? CaptureMedia->GetMediaHandle() : 0;
 
             auto result = odin_room_add_media(room_handle, media_handle);
 
@@ -86,7 +86,7 @@ void UOdinRoomAddMedia::Activate()
                 OnResponse.Broadcast(false);
 
             } else {
-                Room->BindCaptureMedia(CaptureMedia.Get());
+                Room->BindCaptureMedia(CaptureMedia);
 
                 OnSuccess.ExecuteIfBound(result);
                 OnResponse.Broadcast(true);
@@ -120,8 +120,8 @@ void UOdinRoomRemoveMedia::Activate()
     FFunctionGraphTask::CreateAndDispatchWhenReady(
         [=]() {
             OdinReturnCode result = -1;
-            if (Room.IsValid() && CaptureMedia.IsValid()) {
-                Room->UnbindCaptureMedia(CaptureMedia.Get());
+            if (Room && CaptureMedia) {
+                Room->UnbindCaptureMedia(CaptureMedia);
                 result = CaptureMedia->ResetOdinStream();
             }
 

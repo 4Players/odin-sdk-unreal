@@ -95,5 +95,5 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
     void BeginDestroy() override;
 
     UPROPERTY(BlueprintReadOnly, Category = "Room")
-    TWeakObjectPtr<UOdinRoom> Room;
+    UOdinRoom* Room;
 };
