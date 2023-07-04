@@ -267,7 +267,7 @@ void UOdinAudioCapture::RestartStream()
         // If we opened the capture stream successfully, get the capture device info and initialize
         // the UAudioGenerator.
         Audio::FCaptureDeviceInfo Info;
-        if (AudioCapture.GetCaptureDeviceInfo(Info)) {
+        if (AudioCapture.GetCaptureDeviceInfo(Info, CurrentSelectedDeviceIndex)) {
             Init(Info.PreferredSampleRate, Info.InputChannels);
             UE_LOG(Odin, Display, TEXT("Switched to input device %s"), *Info.DeviceName);
         }
