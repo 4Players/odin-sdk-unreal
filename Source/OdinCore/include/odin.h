@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.5.5"
+#define ODIN_VERSION "1.5.6"
 
 /**
  * Known types of a media stream.
