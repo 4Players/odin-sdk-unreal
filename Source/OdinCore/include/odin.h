@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.5.7"
+#define ODIN_VERSION "1.5.8"
 
 /**
  * Known types of a media stream.
@@ -789,6 +789,17 @@ OdinReturnCode odin_audio_mix_streams(OdinRoomHandle room,
  * canceller. This should only be done if you are _NOT_ using `odin_audio_mix_streams`.
  */
 OdinReturnCode odin_audio_process_reverse(OdinRoomHandle room, float *buffer, size_t buffer_len);
+
+/**
+ * Sets the delay estimate for the reverse stream used in the ODIN echo cancellation. This function
+ * is important in scenarios where the audio output and the audio input are not synchronized. An
+ * accurate delay value ensures that the echo canceller can correctly align the two audio streams,
+ * resulting in effective echo cancellation.
+ *
+ * Improper delay values may lead to poor echo cancellation and thus degrade the quality of the
+ * audio communication.
+ */
+OdinReturnCode odin_audio_set_stream_delay(OdinRoomHandle room, uint64_t delay_ms);
 
 /**
  * Creates a new ODIN resampler instance. This is intended for situations where your audio pipeline
