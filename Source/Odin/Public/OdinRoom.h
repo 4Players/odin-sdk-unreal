@@ -345,7 +345,7 @@ struct ODIN_API FOdinApmSettings {
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Enable Voice Activity Detection"))
-    bool bVoiceActivityDetection = false;
+    bool bVoiceActivityDetection = true;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Attack Probability", ClampMin = "0.0", ClampMax = "1.0",
@@ -383,13 +383,13 @@ struct ODIN_API FOdinApmSettings {
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppression"),
               Category = "Filters")
     TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
-        EOdinNoiseSuppressionLevel::OdinNS_None;
+        EOdinNoiseSuppressionLevel::OdinNS_Moderate;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppression"),
               Category = "Filters")
     bool bTransientSuppresor = false;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
               Category = "Filters")
-    bool bGainController = false;
+    bool bGainController = true;
 };
 
 UCLASS(ClassGroup     = Odin, BlueprintType,
