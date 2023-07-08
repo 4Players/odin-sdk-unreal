@@ -491,6 +491,13 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                       Category = "Odin|Room"))
     void UpdateAPMConfig(FOdinApmSettings apm_config);
 
+    UFUNCTION(BlueprintCallable,
+              meta = (DisplayName = "Set Room APM Stream Delay",
+                      ToolTip     = "Updates the delay estimate in ms for reverse stream used in echo cancellation",
+                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                      Category = "Odin|Room"))
+    void UpdateAPMStreamDelay(int64 DelayInMs);
+
     UFUNCTION(
         BlueprintCallable,
         meta = (DisplayName = "Destroy Local Room Handle",

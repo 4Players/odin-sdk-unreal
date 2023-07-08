@@ -133,6 +133,11 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_room_configure_apm(this->room_handle_, odin_apm_config);
 }
 
+void UOdinRoom::UpdateAPMStreamDelay(int64 DelayInMs)
+{
+    odin_audio_set_stream_delay(this->room_handle_, DelayInMs);
+}
+
 void UOdinRoom::Destroy()
 {
     {
