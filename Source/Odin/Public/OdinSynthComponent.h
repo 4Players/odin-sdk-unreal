@@ -39,6 +39,9 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
     void AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings);
 
+    void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+    void RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+
   protected:
     bool Init(int32 &SampleRate) override;
     void BeginDestroy() override;
@@ -46,7 +49,8 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
   protected:
 #if ENGINE_MAJOR_VERSION >= 5
     virtual ISoundGeneratorPtr
-    CreateSoundGenerator(const FSoundGeneratorInitParams &InParams) override;
+    CreateSoundGenerator(const FSoundGeneratorInitParams
+        &InParams) override;
 #else
     virtual ISoundGeneratorPtr CreateSoundGenerator(int32 InSampleRate,
                                                     int32 InNumChannels) override;
@@ -57,4 +61,5 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UOdinPlaybackMedia *playback_media_ = nullptr;
 
     TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
+    TArray<IAudioBufferListener*> AudioBufferListeners;
 };

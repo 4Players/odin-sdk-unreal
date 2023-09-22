@@ -7,6 +7,8 @@
 #include "DSP/Dsp.h"
 #include "Sound/SoundGenerator.h"
 
+class IAudioBufferListener;
+
 class OdinMediaSoundGenerator : public ISoundGenerator
 {
   public:
@@ -29,6 +31,11 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     // Optional. Called on audio generator thread right when the generator ends generating.
     void OnEndGenerate() override final;
 
+	void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+	void RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+
   private:
     OdinMediaStreamHandle stream_handle_ = 0;
+
+	TArray<IAudioBufferListener*> AudioBufferListeners;
 };

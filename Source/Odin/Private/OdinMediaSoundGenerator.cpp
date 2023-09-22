@@ -2,6 +2,7 @@
 
 #include "OdinMediaSoundGenerator.h"
 
+#include "SynthComponent.h"
 #include "OdinCore/include/odin.h"
 
 OdinMediaSoundGenerator::OdinMediaSoundGenerator() = default;
@@ -15,9 +16,12 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float *OutAudio, int32 NumSamples
     auto read = odin_audio_read_data(stream_handle_, OutAudio, NumSamples);
     if (odin_is_error(read)) {
         return NumSamples;
-    } else {
-        return read;
     }
+    for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners)
+    {
+        AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, 2);
+    }
+    return read;
 }
 
 void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle streamHandle)
@@ -32,3 +36,13 @@ void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle streamHandle)
 void OdinMediaSoundGenerator::OnBeginGenerate() {}
 
 void OdinMediaSoundGenerator::OnEndGenerate() {}
+
+void OdinMediaSoundGenerator::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
+{
+    AudioBufferListeners.AddUnique(InAudioBufferListener);
+}
+
+void OdinMediaSoundGenerator::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
+{
+    AudioBufferListeners.Remove(InAudioBufferListener);
+}

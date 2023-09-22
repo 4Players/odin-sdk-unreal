@@ -66,6 +66,20 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
     Activate(true);
 }
 
+void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
+{
+    AudioBufferListeners.AddUnique(InAudioBufferListener);
+    if(nullptr != sound_generator_)
+        sound_generator_->AddAudioBufferListener(InAudioBufferListener);
+}
+
+void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
+{
+    AudioBufferListeners.Remove(InAudioBufferListener);
+    if(nullptr !=  sound_generator_)
+        sound_generator_->RemoveAudioBufferListener(InAudioBufferListener);
+}
+
 #if ENGINE_MAJOR_VERSION >= 5
 ISoundGeneratorPtr
 UOdinSynthComponent::CreateSoundGenerator(const FSoundGeneratorInitParams &InParams)
@@ -77,6 +91,10 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
     this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
     if (this->playback_media_ != nullptr) {
         sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());
+        for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners)
+        {
+            sound_generator_->AddAudioBufferListener(AudioBufferListener);
+        }
     }
     return sound_generator_;
 }
