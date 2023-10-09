@@ -58,7 +58,7 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
     FJoinRoomResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
     FString              Url;
     FString              Token;
@@ -91,10 +91,10 @@ class ODIN_API UOdinRoomAddMedia : public UBlueprintAsyncActionBase
     FAddMediaResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
     UPROPERTY()
-    UOdinCaptureMedia* CaptureMedia;
+    UOdinCaptureMedia *CaptureMedia;
 
     FOdinRoomAddMediaError   OnError;
     FOdinRoomAddMediaSuccess OnSuccess;
@@ -123,10 +123,10 @@ class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
     FRemoveMediaResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
     UPROPERTY()
-    UOdinCaptureMedia* CaptureMedia;
+    UOdinCaptureMedia *CaptureMedia;
 
     FOdinRoomRemoveMediaError   OnError;
     FOdinRoomRemoveMediaSuccess OnSuccess;
@@ -155,9 +155,9 @@ class ODIN_API UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
     FUpdatePositionResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
-    FVector2D Position;
+    FVector Position;
 
     FOdinRoomUpdatePositionError   OnError;
     FOdinRoomUpdatePositionSuccess OnSuccess;
@@ -186,7 +186,7 @@ class ODIN_API UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
     FUpdatePeerUserDataResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
     TArray<uint8> Data;
 
@@ -250,7 +250,7 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
     FSendMessageResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom* Room;
+    UOdinRoom *Room;
 
     TArray<uint8> Data;
     TArray<int64> Targets;
@@ -534,11 +534,11 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 
     FCriticalSection capture_medias_cs_;
     UPROPERTY(transient)
-    TArray<UOdinCaptureMedia*> capture_medias_;
+    TArray<UOdinCaptureMedia *> capture_medias_;
 
     FCriticalSection medias_cs_;
     UPROPERTY(transient)
-    TMap<uint64, UOdinMediaBase*> medias_;
+    TMap<uint64, UOdinMediaBase *> medias_;
 
     FCriticalSection joined_callbacks_cs_;
 
@@ -549,7 +549,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     void HandleOdinEvent(const OdinEvent event);
 
     UPROPERTY(transient)
-    UOdinSubmixListener* submix_listener_;
+    UOdinSubmixListener *submix_listener_;
 
     friend class UOdinRoomJoin;
     friend class UOdinRoomAddMedia;

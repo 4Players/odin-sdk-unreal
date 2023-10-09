@@ -17,7 +17,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
     GENERATED_UCLASS_BODY()
 
   public:
-    void           SetAudioCapture(UAudioCapture *audio_capture);
+    void           SetAudioCapture(UAudioCapture* audio_capture);
     void           Reset();
     OdinReturnCode ResetOdinStream();
 

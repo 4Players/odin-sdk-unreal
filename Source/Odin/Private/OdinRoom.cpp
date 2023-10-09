@@ -319,8 +319,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                         return;
                     UOdinMediaBase* media = *medias_.Find(media_handle);
                     if (media) {
-                        this->onMediaActiveStateChanged.Broadcast(peer_id, media, active,
-                                                                  this);
+                        this->onMediaActiveStateChanged.Broadcast(peer_id, media, active, this);
                     }
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);

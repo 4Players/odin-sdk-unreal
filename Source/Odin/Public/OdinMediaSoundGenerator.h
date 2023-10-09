@@ -17,7 +17,7 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     void SetOdinStream(OdinMediaStreamHandle streamHandle);
 
     // Called when a new buffer is required.
-    int32 OnGenerateAudio(float *OutAudio, int32 NumSamples) override final;
+    int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override final;
 
     // Returns the number of samples to render per callback.
     int32 GetDesiredNumSamplesToRenderPerCallback() const override final
@@ -31,11 +31,11 @@ class OdinMediaSoundGenerator : public ISoundGenerator
     // Optional. Called on audio generator thread right when the generator ends generating.
     void OnEndGenerate() override final;
 
-	void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
-	void RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+    void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+    void RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
 
   private:
     OdinMediaStreamHandle stream_handle_ = 0;
 
-	TArray<IAudioBufferListener*> AudioBufferListeners;
+    TArray<IAudioBufferListener*> AudioBufferListeners;
 };

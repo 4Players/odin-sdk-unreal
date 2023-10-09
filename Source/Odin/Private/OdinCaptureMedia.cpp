@@ -50,7 +50,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture *audio_capture)
 void UOdinCaptureMedia::Reset()
 {
     if (nullptr != audio_capture_) {
-        audio_capture_ = nullptr;
+        audio_capture_                = nullptr;
         this->audio_generator_handle_ = {};
     }
 
