@@ -44,9 +44,8 @@ class JoinRoomTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        auto update_user_data_result =
-            odin_room_update_user_data(RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Peer,
-                                       InitialPeerUserData.GetData(), InitialPeerUserData.Num());
+        auto update_user_data_result = odin_room_update_peer_user_data(
+            RoomHandle, InitialPeerUserData.GetData(), InitialPeerUserData.Num());
         if (odin_is_error(update_user_data_result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnError = OnError, Response = Response, update_user_data_result]() {
@@ -150,6 +149,108 @@ class AddMediaTask : public FNonAbandonableTask
     }
 };
 
+class PauseMediaTask : public FNonAbandonableTask
+{
+    friend class FAutoDeleteAsyncTask<PauseMediaTask>;
+
+    TWeakObjectPtr<UOdinPlaybackMedia> Media;
+
+    FPauseMediaResponsePin     Response;
+    FOdinRoomPauseMediaError   OnError;
+    FOdinRoomPauseMediaSuccess OnSuccess;
+
+    PauseMediaTask(UOdinRoom *room, UOdinPlaybackMedia *media, FPauseMediaResponsePin response,
+                   FOdinRoomPauseMediaError onError, FOdinRoomPauseMediaSuccess onSuccess)
+        : Media(media)
+        , Response(response)
+        , OnError(onError)
+        , OnSuccess(onSuccess)
+    {
+    }
+
+    void DoWork()
+    {
+        if (!Media.IsValid())
+            return;
+
+        OdinMediaStreamHandle media_handle = Media.IsValid() ? Media->GetMediaHandle() : 0;
+
+        auto result = odin_media_stream_pause(media_handle);
+
+        if (odin_is_error(result)) {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnError = OnError, Response = Response, result]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        } else {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnSuccess = OnSuccess, Response = Response, result]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        }
+    }
+
+    FORCEINLINE TStatId GetStatId() const
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(PauseMediaTask, STATGROUP_ThreadPoolAsyncTasks);
+    }
+};
+
+class ResumeMediaTask : public FNonAbandonableTask
+{
+    friend class FAutoDeleteAsyncTask<ResumeMediaTask>;
+
+    TWeakObjectPtr<UOdinPlaybackMedia> Media;
+
+    FResumeMediaResponsePin     Response;
+    FOdinRoomResumeMediaError   OnError;
+    FOdinRoomResumeMediaSuccess OnSuccess;
+
+    ResumeMediaTask(UOdinRoom *room, UOdinPlaybackMedia *media, FResumeMediaResponsePin response,
+                    FOdinRoomResumeMediaError onError, FOdinRoomResumeMediaSuccess onSuccess)
+        : Media(media)
+        , Response(response)
+        , OnError(onError)
+        , OnSuccess(onSuccess)
+    {
+    }
+
+    void DoWork()
+    {
+        if (!Media.IsValid())
+            return;
+
+        OdinMediaStreamHandle media_handle = Media.IsValid() ? Media->GetMediaHandle() : 0;
+
+        auto result = odin_media_stream_resume(media_handle);
+
+        if (odin_is_error(result)) {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnError = OnError, Response = Response, result]() {
+                    OnError.ExecuteIfBound(result);
+                    Response.Broadcast(false);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        } else {
+            FFunctionGraphTask::CreateAndDispatchWhenReady(
+                [OnSuccess = OnSuccess, Response = Response, result]() {
+                    OnSuccess.ExecuteIfBound();
+                    Response.Broadcast(true);
+                },
+                TStatId(), nullptr, ENamedThreads::GameThread);
+        }
+    }
+
+    FORCEINLINE TStatId GetStatId() const
+    {
+        RETURN_QUICK_DECLARE_CYCLE_STAT(ResumeMediaTask, STATGROUP_ThreadPoolAsyncTasks);
+    }
+};
+
 class RemoveMediaTask : public FNonAbandonableTask
 {
     friend class FAutoDeleteAsyncTask<RemoveMediaTask>;
@@ -199,7 +300,7 @@ class RemoveMediaTask : public FNonAbandonableTask
 
     FORCEINLINE TStatId GetStatId() const
     {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
+        RETURN_QUICK_DECLARE_CYCLE_STAT(RemoveMediaTask, STATGROUP_ThreadPoolAsyncTasks);
     }
 };
 
@@ -304,8 +405,7 @@ class UpdatePeerUserDataTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        auto result = odin_room_update_user_data(
-            RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Peer, Data.GetData(), Data.Num());
+        auto result = odin_room_update_peer_user_data(RoomHandle, Data.GetData(), Data.Num());
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -328,58 +428,6 @@ class UpdatePeerUserDataTask : public FNonAbandonableTask
     FORCEINLINE TStatId GetStatId() const
     {
         RETURN_QUICK_DECLARE_CYCLE_STAT(UpdatePeerUserDataTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
-};
-
-class UpdateRoomUserDataTask : public FNonAbandonableTask
-{
-    friend class FAutoDeleteAsyncTask<UpdateRoomUserDataTask>;
-
-    OdinRoomHandle RoomHandle;
-
-    TArray<uint8> Data;
-
-    FUpdateRoomUserDataResponsePin     Response;
-    FOdinRoomUpdateRoomUserDataError   OnError;
-    FOdinRoomUpdateRoomUserDataSuccess OnSuccess;
-
-    UpdateRoomUserDataTask(OdinRoomHandle roomHandle, TArray<uint8> data,
-                           FUpdateRoomUserDataResponsePin     response,
-                           FOdinRoomUpdateRoomUserDataError   onError,
-                           FOdinRoomUpdateRoomUserDataSuccess onSuccess)
-        : RoomHandle(roomHandle)
-        , Data(data)
-        , Response(response)
-        , OnError(onError)
-        , OnSuccess(onSuccess)
-    {
-    }
-
-    void DoWork()
-    {
-        auto result = odin_room_update_user_data(
-            RoomHandle, OdinUserDataTarget::OdinUserDataTarget_Room, Data.GetData(), Data.Num());
-
-        if (odin_is_error(result)) {
-            FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [OnError = OnError, Response = Response, result]() {
-                    OnError.ExecuteIfBound(result);
-                    Response.Broadcast(false);
-                },
-                TStatId(), nullptr, ENamedThreads::GameThread);
-        } else {
-            FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [OnSuccess = OnSuccess, Response = Response]() {
-                    OnSuccess.ExecuteIfBound();
-                    Response.Broadcast(true);
-                },
-                TStatId(), nullptr, ENamedThreads::GameThread);
-        }
-    }
-
-    FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(UpdateRoomUserDataTask, STATGROUP_ThreadPoolAsyncTasks);
     }
 };
 
