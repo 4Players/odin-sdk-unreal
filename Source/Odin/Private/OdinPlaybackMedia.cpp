@@ -21,6 +21,13 @@ int32 UOdinPlaybackMedia::GetMediaId()
     return media_id;
 }
 
+int64 UOdinPlaybackMedia::GetPeerId()
+{
+    uint64_t peer_id;
+    odin_media_stream_peer_id(stream_handle_, &peer_id);
+    return peer_id;
+}
+
 FOdinAudioStreamStats UOdinPlaybackMedia::AudioStreamStats()
 {
     OdinAudioStreamStats stats  = OdinAudioStreamStats();
