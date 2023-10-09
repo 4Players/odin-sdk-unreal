@@ -49,7 +49,7 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
     static UOdinRoomJoin *JoinRoom(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room,
                                    const FString url, const FString token,
                                    const TArray<uint8> &initialPeerUserData,
-                                   FVector2D initialPosition, const FOdinRoomJoinError &onError,
+                                   FVector initialPosition, const FOdinRoomJoinError &onError,
                                    const FOdinRoomJoinSuccess &onSuccess);
 
     virtual void Activate() override;
@@ -63,7 +63,7 @@ class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
     FString              Url;
     FString              Token;
     TArray<uint8>        InitialPeerUserData;
-    FVector2D            InitialPosition;
+    FVector              InitialPosition;
     FOdinRoomJoinError   OnError;
     FOdinRoomJoinSuccess OnSuccess;
 };
@@ -98,6 +98,69 @@ class ODIN_API UOdinRoomAddMedia : public UBlueprintAsyncActionBase
 
     FOdinRoomAddMediaError   OnError;
     FOdinRoomAddMediaSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomPauseMediaError, int64, errorCode);
+DECLARE_DYNAMIC_DELEGATE(FOdinRoomPauseMediaSuccess);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinRoomPauseMedia : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(
+        BlueprintCallable,
+        meta =
+            (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
+             DisplayName = "Pause Playback Media",
+             ToolTip = "Pause the specified playback media handle, ceasing the reception of data",
+             WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinRoomPauseMedia *PauseMedia(UObject                          *WorldContextObject,
+                                           UPARAM(ref) UOdinPlaybackMedia  *&media,
+                                           const FOdinRoomPauseMediaError   &onError,
+                                           const FOdinRoomPauseMediaSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable)
+    FPauseMediaResponsePin OnResponse;
+
+    UPROPERTY()
+    UOdinPlaybackMedia *PlaybackMedia;
+
+    FOdinRoomPauseMediaError   OnError;
+    FOdinRoomPauseMediaSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomResumeMediaError, int64, errorCode);
+DECLARE_DYNAMIC_DELEGATE(FOdinRoomResumeMediaSuccess);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinRoomResumeMedia : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(
+        BlueprintCallable,
+        meta =
+            (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
+             DisplayName = "Resume Playback Media",
+             ToolTip =
+                 "Resume the specified playback media handle, re-initiating the reception of data",
+             WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinRoomResumeMedia *ResumeMedia(UObject                           *WorldContextObject,
+                                             UPARAM(ref) UOdinPlaybackMedia   *&media,
+                                             const FOdinRoomResumeMediaError   &onError,
+                                             const FOdinRoomResumeMediaSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable)
+    FResumeMediaResponsePin OnResponse;
+
+    UPROPERTY()
+    UOdinPlaybackMedia *PlaybackMedia;
+
+    FOdinRoomResumeMediaError   OnError;
+    FOdinRoomResumeMediaSuccess OnSuccess;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomRemoveMediaError, int64, errorCode);

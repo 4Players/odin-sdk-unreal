@@ -21,14 +21,14 @@ class JoinRoomTask : public FNonAbandonableTask
     FString        Url;
     FString        RoomToken;
     TArray<uint8>  InitialPeerUserData;
-    FVector2D      InitialPosition;
+    FVector        InitialPosition;
 
     FJoinRoomResponsePin Response;
     FOdinRoomJoinError   OnError;
     FOdinRoomJoinSuccess OnSuccess;
 
     JoinRoomTask(OdinRoomHandle roomHandle, FString url, FString room_token,
-                 TArray<uint8> initial_peer_user_data, FVector2D initial_position,
+                 TArray<uint8> initial_peer_user_data, FVector initial_position,
                  FJoinRoomResponsePin response, FOdinRoomJoinError onError,
                  FOdinRoomJoinSuccess onSuccess)
         : RoomHandle(roomHandle)
@@ -57,8 +57,8 @@ class JoinRoomTask : public FNonAbandonableTask
             return;
         }
 
-        auto update_position_result =
-            odin_room_update_position(RoomHandle, InitialPosition.X, InitialPosition.Y);
+        auto update_position_result = odin_room_update_position(
+            RoomHandle, InitialPosition.X, InitialPosition.Y, InitialPosition.Z);
         if (odin_is_error(update_user_data_result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnError = OnError, Response = Response, update_position_result]() {
@@ -209,13 +209,13 @@ class UpdatePositionTask : public FNonAbandonableTask
 
     OdinRoomHandle RoomHandle;
 
-    FVector2D Position;
+    FVector Position;
 
     FUpdatePositionResponsePin     Response;
     FOdinRoomUpdatePositionError   OnError;
     FOdinRoomUpdatePositionSuccess OnSuccess;
 
-    UpdatePositionTask(OdinRoomHandle roomHandle, FVector2D position,
+    UpdatePositionTask(OdinRoomHandle roomHandle, FVector position,
                        FUpdatePositionResponsePin response, FOdinRoomUpdatePositionError onError,
                        FOdinRoomUpdatePositionSuccess onSuccess)
         : RoomHandle(roomHandle)
@@ -228,7 +228,7 @@ class UpdatePositionTask : public FNonAbandonableTask
 
     void DoWork()
     {
-        auto result = odin_room_update_position(RoomHandle, Position.X, Position.Y);
+        auto result = odin_room_update_position(RoomHandle, Position.X, Position.Y, Position.Z);
 
         if (odin_is_error(result)) {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
@@ -237,7 +237,6 @@ class UpdatePositionTask : public FNonAbandonableTask
                     Response.Broadcast(false);
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
-
         } else {
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [OnSuccess = OnSuccess, Response = Response]() {
