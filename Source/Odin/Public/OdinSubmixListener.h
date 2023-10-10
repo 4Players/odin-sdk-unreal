@@ -2,7 +2,11 @@
 
 #pragma once
 
-#include "AudioMixerDevice.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#include "ISubmixBufferListener.h"
+#else
+#include "AudioDevice.h"
+#endif
 #include "Engine/GameEngine.h"
 #include "OdinCore/include/odin.h"
 

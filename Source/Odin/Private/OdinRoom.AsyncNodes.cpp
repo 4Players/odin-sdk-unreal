@@ -65,7 +65,7 @@ UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject                        *W
 void UOdinRoomAddMedia::Activate()
 {
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [=]() {
+        [this]() {
             if (!(Room && CaptureMedia))
                 return;
 
@@ -107,7 +107,7 @@ UOdinRoomPauseMedia *UOdinRoomPauseMedia::PauseMedia(UObject *WorldContextObject
 void UOdinRoomPauseMedia::Activate()
 {
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [=]() {
+        [this]() {
             if (!PlaybackMedia)
                 return;
 
@@ -144,7 +144,7 @@ UOdinRoomResumeMedia *UOdinRoomResumeMedia::ResumeMedia(
 void UOdinRoomResumeMedia::Activate()
 {
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [=]() {
+        [this]() {
             if (!PlaybackMedia)
                 return;
 
@@ -182,7 +182,7 @@ UOdinRoomRemoveMedia *UOdinRoomRemoveMedia::RemoveMedia(
 void UOdinRoomRemoveMedia::Activate()
 {
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [=]() {
+        [this]() {
             OdinReturnCode result = -1;
             if (Room && CaptureMedia) {
                 Room->UnbindCaptureMedia(CaptureMedia);

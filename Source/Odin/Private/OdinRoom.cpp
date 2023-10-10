@@ -196,7 +196,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             FString own_user_id  = UTF8_TO_TCHAR(event.joined.own_user_id);
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [roomId, roomCustomer, own_user_id, own_peer_id, user_data, this]() {
                     if (!this->IsValidLowLevel())
                         return;
                     if (joined_callbacks_cs_.TryLock()) {
@@ -219,7 +219,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                                     (int)event.peer_joined.peer_user_data_len};
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [peer_id, user_id, user_data, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -232,7 +232,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             auto peer_id = event.peer_left.peer_id;
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [peer_id, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -245,7 +245,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             TArray<uint8> user_data{event.peer_user_data_changed.peer_user_data,
                                     (int)event.peer_user_data_changed.peer_user_data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [peer_id, user_data, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -258,7 +258,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             TArray<uint8> room_data{room_data_changed.room_user_data,
                                     (int)room_data_changed.room_user_data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [room_data_changed, room_data, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -271,7 +271,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             auto media_handle = event.media_added.media_handle;
             auto peer_id      = event.media_added.peer_id;
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [media_handle, peer_id, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -290,7 +290,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             auto peer_id      = event.media_removed.peer_id;
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [media_handle, peer_id, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -311,7 +311,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             auto active       = event.media_active_state_changed.active;
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [peer_id, media_handle, active, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -328,7 +328,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
             auto          peer_id = event.message_received.peer_id;
             TArray<uint8> data{event.message_received.data, (int)event.message_received.data_len};
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [peer_id, data, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 
@@ -353,7 +353,7 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                 } break;
             }
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [=]() {
+                [state, this]() {
                     if (!this->IsValidLowLevel())
                         return;
 

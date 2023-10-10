@@ -250,6 +250,34 @@ void UOdinAudioCapture::Tick(float DeltaTime)
     }
 }
 
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+void UOdinAudioCapture::RestartStream()
+{
+    // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
+    // except for setting the Params.DeviceIndex.
+    Audio::FOnAudioCaptureFunction OnCapture = [this](const void* AudioData, int32 NumFrames,
+                                                      int32 InNumChannels, int32 InSampleRate,
+                                                      double StreamTime, bool bOverFlow) {
+        OnGeneratedAudio((const float*)AudioData, NumFrames * InNumChannels);
+    };
+
+    Audio::FAudioCaptureDeviceParams Params;
+    Params.DeviceIndex = CurrentSelectedDeviceIndex;
+    // OpenCaptureStream automatically closes the capture stream, if it's already active.
+    if (AudioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
+        // If we opened the capture stream successfully, get the capture device info and initialize
+        // the UAudioGenerator.
+        Audio::FCaptureDeviceInfo Info;
+        if (AudioCapture.GetCaptureDeviceInfo(Info, CurrentSelectedDeviceIndex)) {
+            Init(Info.PreferredSampleRate, Info.InputChannels);
+            UE_LOG(Odin, Display, TEXT("Switched to input device %s"), *Info.DeviceName);
+        }
+    }
+
+    // Restart the audio capture stream.
+    AudioCapture.StartStream();
+}
+#else
 void UOdinAudioCapture::RestartStream()
 {
     // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
@@ -276,3 +304,4 @@ void UOdinAudioCapture::RestartStream()
     // Restart the audio capture stream.
     AudioCapture.StartStream();
 }
+#endif

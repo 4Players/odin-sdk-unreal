@@ -4,7 +4,10 @@
 
 #include "OdinSubmixListener.h"
 
+#include "AudioDevice.h"
 #include "Odin.h"
+#include "SampleBuffer.h"
+#include "Sound/SoundSubmix.h"
 
 using namespace Audio;
 
@@ -65,7 +68,7 @@ void UOdinSubmixListener::OnNewSubmixBuffer(const USoundSubmix *OwningSubmix, fl
 
     FScopeLock Lock(&submix_cs_);
 
-    Audio::TSampleBuffer<float> buffer(AudioData, InNumSamples, InNumChannels, InSampleRate);
+    TSampleBuffer<float> buffer(AudioData, InNumSamples, InNumChannels, InSampleRate);
     if (buffer.GetNumChannels() != OdinChannels)
         buffer.MixBufferToChannels(OdinChannels);
 
