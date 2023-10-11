@@ -1,6 +1,6 @@
 {
 	"FileVersion": 2,
-	"Version": 279,
+	"Version": 284,
 	"WhitelistPlatforms": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android" ],
 	"VersionName": "1.6.0",
 	"FriendlyName": "4Players ODIN",
