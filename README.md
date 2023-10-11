@@ -53,7 +53,7 @@ Join our official Discord server to chat with us directly and become a part of t
 
 ### Twitter
 
-Have a quick question? Tweet us at [@4PlayersBiz](https://twitter.com/4PlayersBiz) and we’ll help you resolve any issues.
+Have a quick question? Tweet us at [@ODIN4Players](https://twitter.com/ODIN4Players) and we’ll help you resolve any issues.
 
 ### Email
 
