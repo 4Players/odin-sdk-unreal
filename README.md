@@ -2,7 +2,9 @@
 
 # 4Players ODIN Unreal Engine 4/5 SDK
 
-ODIN is a cross-platform software development kit (SDK) that enables developers to integrate real-time chat technology into multiplayer games, apps and websites.
+ODIN is a versatile cross-platform Software Development Kit (SDK) engineered to seamlessly integrate real-time voice chat into multiplayer games, applications, and websites. Regardless of whether you're employing a native application or your preferred web browser, ODIN simplifies the process of maintaining connections with your significant contacts. Through its intuitive interface and robust functionality, ODIN enhances interactive experiences, fostering real-time engagement and collaboration across various digital platforms.
+
+You can choose between a managed cloud and a self-hosted solution. Let [4Players GmbH](https://www.4players.io/) deal with the setup, administration and bandwidth costs or run our [server software](https://github.com/4Players/odin-server) on your own infrastructure allowing you complete control and customization of your deployment environment.
 
 The ODIN SDK for Unreal enables you to add real-time VoIP communication to your Unreal Engine 4/5 game, thus making it more social and interactive.
 
@@ -21,17 +23,23 @@ To check out the SDK and use it as a project plugin, clone the git repo into a w
 This repository uses [LFS](https://git-lfs.github.com) (large file storage) to manage pre-compiled binaries. Note that a standard clone of the repository might only retrieve the metadata about these files managed with LFS. In order to retrieve the actual data with LFS, please follow these steps:
 
 1. Clone the repository:  
-   `git clone https://github.com/4Players/odin-sdk-unreal.git`
+   ```
+   git clone https://github.com/4Players/odin-sdk-unreal.git
+   ```
 
-2. Cache the actual LFS data on your local machine:  
-   `git lfs fetch`
+2. Cache the actual LFS data on your local machine and replace the metadata in the binary files with their actual contents: 
+   ```
+   git lfs fetch
+   git lfs checkout
+   ```
+   ... or if you have a recent LFS version:
+   ```
+   git lfs pull
+   ```
 
-3. Replaces the metadata in the binary files with their actual contents:  
-   `git lfs checkout`
+Next, move or copy the files into a new **Odin** sub-folder under your projects **Plugins** folder. It should end up looking like `/MyProject/Plugins/Odin/`.
 
-Next, unzip the files into a new **Odin** sub-folder under your projects **Plugins** folder. It should end up looking like `/MyProject/Plugins/Odin/`.
-
-If you're new to plugins in UE4, you can find lots of information [right here](https://unrealcommunity.wiki/an-introduction-to-ue4-plugins-v1v672wq).
+If you're new to plugins in UE, you can find lots of information [right here](https://unrealcommunity.wiki/an-introduction-to-ue4-plugins-v1v672wq).
 
 ## Troubleshooting
 
