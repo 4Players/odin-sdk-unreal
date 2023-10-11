@@ -36,7 +36,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChangeCaptureDeviceDelegate, bool, bSuccess);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCaptureDeviceChange);
 
-UCLASS(ClassGroup = (Odin), meta = (BlueprintSpawnableComponent))
+UCLASS(ClassGroup = (Odin), Blueprintable, meta = (BlueprintSpawnableComponent))
 class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObject
 {
     GENERATED_BODY()
@@ -184,6 +184,11 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
      */
     void RestartStream();
 
+    void TryRunAsyncChangeDeviceRequest(FChangeCaptureDeviceDelegate OnChangeCompleted,
+                                        TFunction<void()>            ChangeDeviceFunction);
+    void FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted,
+                                     bool&                        bSuccess);
+
     /**
      * @brief The index of the currently selected device. -1 and 0 both refer to the Default Device.
      */
@@ -212,6 +217,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
      */
     FOdinCaptureDeviceInfo CustomSelectedDevice;
 
-    double LastStreamTime          = -1.0f;
-    double TimeWithoutStreamUpdate = 0.0f;
+    double LastStreamTime            = -1.0f;
+    double TimeWithoutStreamUpdate   = 0.0f;
+    bool   IsCurrentlyChangingDevice = false;
 };

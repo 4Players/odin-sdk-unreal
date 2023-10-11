@@ -12,7 +12,7 @@
 
 class OdinMediaSoundGenerator;
 
-UCLASS(ClassGroup = Synth, meta = (BlueprintSpawnableComponent))
+UCLASS(Blueprintable, ClassGroup = Synth, meta = (BlueprintSpawnableComponent))
 class ODIN_API UOdinSynthComponent : public USynthComponent
 {
     GENERATED_BODY()

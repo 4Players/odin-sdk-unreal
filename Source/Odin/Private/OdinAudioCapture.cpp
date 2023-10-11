@@ -106,7 +106,8 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
         // We schedule back to the main thread and pass in our params
         AsyncTask(ENamedThreads::GameThread, [Devices, CurrentDevice, Out]() {
             // We execute the delegate along with the param
-            Out.Execute(Devices, CurrentDevice);
+            if (Out.IsBound())
+                Out.Execute(Devices, CurrentDevice);
         });
     });
 }
@@ -142,14 +143,10 @@ void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSucc
 void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                      NewDeviceId,
                                                      FChangeCaptureDeviceDelegate OnChangeCompleted)
 {
-    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, [this, NewDeviceId, OnChangeCompleted]() {
+    TryRunAsyncChangeDeviceRequest(OnChangeCompleted, [this, NewDeviceId, OnChangeCompleted]() {
         bool bSuccess;
         ChangeCaptureDeviceById(NewDeviceId, bSuccess);
-
-        AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess]() {
-            // We execute the delegate along with the param.
-            OnChangeCompleted.Execute(bSuccess);
-        });
+        FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
     });
 }
 
@@ -170,14 +167,33 @@ void UOdinAudioCapture::ChangeCaptureDeviceByName(FName DeviceName, bool& bSucce
 void UOdinAudioCapture::AsyncChangeCaptureDeviceByName(
     FName DeviceName, FChangeCaptureDeviceDelegate OnChangeCompleted)
 {
-    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, [this, DeviceName, OnChangeCompleted]() {
+    TryRunAsyncChangeDeviceRequest(OnChangeCompleted, [this, DeviceName, OnChangeCompleted]() {
         bool bSuccess;
         ChangeCaptureDeviceByName(DeviceName, bSuccess);
+        FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
+    });
+}
 
-        AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess]() {
-            // We execute the delegate along with the param
+void UOdinAudioCapture::TryRunAsyncChangeDeviceRequest(
+    FChangeCaptureDeviceDelegate OnChangeCompleted, TFunction<void()> ChangeDeviceFunction)
+{
+    if (IsCurrentlyChangingDevice) {
+        if (OnChangeCompleted.IsBound())
+            OnChangeCompleted.Execute(false);
+        return;
+    }
+    IsCurrentlyChangingDevice = true;
+    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, ChangeDeviceFunction);
+}
+
+void UOdinAudioCapture::FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted,
+                                                    bool&                        bSuccess)
+{
+    AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, this]() {
+        IsCurrentlyChangingDevice = false;
+        // We execute the delegate along with the param
+        if (OnChangeCompleted.IsBound())
             OnChangeCompleted.Execute(bSuccess);
-        });
     });
 }
 
@@ -304,4 +320,5 @@ void UOdinAudioCapture::RestartStream()
     // Restart the audio capture stream.
     AudioCapture.StartStream();
 }
+
 #endif
