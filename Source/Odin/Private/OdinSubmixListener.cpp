@@ -3,11 +3,12 @@
 #pragma once
 
 #include "OdinSubmixListener.h"
-
-#include "AudioDevice.h"
 #include "Odin.h"
-#include "SampleBuffer.h"
 #include "Sound/SoundSubmix.h"
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+#include "ISubmixBufferListener.h"
+#endif
+#include "AudioDevice.h"
 
 using namespace Audio;
 
