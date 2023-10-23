@@ -149,6 +149,11 @@ void UOdinRoom::Destroy()
         this->capture_medias_.Empty();
     }
 
+    {
+        FScopeLock lock(&this->medias_cs_);
+        this->medias_.Empty();
+    }
+
     // (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
     odin_room_close(room_handle_);
     odin_room_set_event_callback(room_handle_, nullptr, nullptr);
@@ -295,11 +300,14 @@ void UOdinRoom::HandleOdinEvent(const OdinEvent event)
                         return;
 
                     UOdinMediaBase* base_media = nullptr;
-                    if (medias_.Contains(media_handle)) {
-                        if (medias_.RemoveAndCopyValue(media_handle, base_media)
-                            && base_media != nullptr) {
-                            auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
-                            this->onMediaRemoved.Broadcast(peer_id, playback_media, this);
+                    {
+                        FScopeLock lock(&this->medias_cs_);
+                        if (medias_.Contains(media_handle)) {
+                            if (medias_.RemoveAndCopyValue(media_handle, base_media)
+                                && base_media != nullptr) {
+                                auto playback_media = Cast<UOdinPlaybackMedia>(base_media);
+                                this->onMediaRemoved.Broadcast(peer_id, playback_media, this);
+                            }
                         }
                     }
                 },
