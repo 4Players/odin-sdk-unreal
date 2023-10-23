@@ -14,6 +14,7 @@
 void UOdinAudioCapture::BeginDestroy()
 {
     Super::BeginDestroy();
+    AudioCapture.CloseStream();
     StopCapturingAudio();
 }
 
