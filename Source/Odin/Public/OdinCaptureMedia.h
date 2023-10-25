@@ -17,16 +17,29 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
     GENERATED_UCLASS_BODY()
 
   public:
+    void           SetRoom(UOdinRoom* connected_room);
+    void           RemoveRoom();
     void           SetAudioCapture(UAudioCapture* audio_capture);
     void           Reset();
     OdinReturnCode ResetOdinStream();
 
   protected:
-    void BeginDestroy() override;
+    virtual void BeginDestroy() override;
 
-    FCriticalSection capture_generator_delegate_;
     UPROPERTY(BlueprintReadOnly, Category = "Audio Capture")
     UAudioCapture* audio_capture_ = nullptr;
 
+  private:
+    void HandleInputDeviceChanges();
+
+    FCriticalSection capture_generator_delegate_;
+
     FAudioGeneratorHandle audio_generator_handle_;
+
+    TWeakObjectPtr<UOdinRoom> connected_room_;
+
+    int32 stream_sample_rate_  = 48000;
+    int32 stream_num_channels_ = 1;
+
+    FThreadSafeBool bIsBeingReset = false;
 };

@@ -165,6 +165,7 @@ void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia* media)
     if (!media)
         return;
 
+    media->SetRoom(this);
     {
         FScopeLock lock(&this->capture_medias_cs_);
         this->capture_medias_.Add(media);
@@ -177,6 +178,10 @@ void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia* media)
 
 void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia* media)
 {
+    if (!media)
+        return;
+
+    media->RemoveRoom();
     {
         FScopeLock lock(&this->capture_medias_cs_);
         this->capture_medias_.Remove(media);

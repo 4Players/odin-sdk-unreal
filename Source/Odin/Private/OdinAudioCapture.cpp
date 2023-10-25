@@ -267,6 +267,25 @@ void UOdinAudioCapture::Tick(float DeltaTime)
     }
 }
 
+void UOdinAudioCapture::InitializeGenerator()
+{
+    TArray<FOdinCaptureDeviceInfo> Devices;
+    GetCaptureDevicesAvailable(Devices);
+    if (Devices.Num() > 0) {
+        FOdinCaptureDeviceInfo CurrentDevice;
+        if (CurrentSelectedDeviceIndex >= 0 && CurrentSelectedDeviceIndex < Devices.Num()) {
+            CurrentDevice = Devices[CurrentSelectedDeviceIndex];
+        } else {
+            CurrentDevice = Devices[0];
+        }
+        const FAudioCaptureDeviceInfo AudioCaptureDeviceInfo = CurrentDevice.AudioCaptureInfo;
+        Init(AudioCaptureDeviceInfo.SampleRate, AudioCaptureDeviceInfo.NumInputChannels);
+        UE_LOG(Odin, Display, TEXT("Switched to input device %s, Sample Rate: %d, Channels: %d"),
+               *AudioCaptureDeviceInfo.DeviceName.ToString(), AudioCaptureDeviceInfo.SampleRate,
+               AudioCaptureDeviceInfo.NumInputChannels);
+    }
+}
+
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 void UOdinAudioCapture::RestartStream()
 {
@@ -284,16 +303,13 @@ void UOdinAudioCapture::RestartStream()
     if (AudioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
         // If we opened the capture stream successfully, get the capture device info and initialize
         // the UAudioGenerator.
-        Audio::FCaptureDeviceInfo Info;
-        if (AudioCapture.GetCaptureDeviceInfo(Info, CurrentSelectedDeviceIndex)) {
-            Init(Info.PreferredSampleRate, Info.InputChannels);
-            UE_LOG(Odin, Display, TEXT("Switched to input device %s"), *Info.DeviceName);
-        }
+        InitializeGenerator();
     }
 
     // Restart the audio capture stream.
     AudioCapture.StartStream();
 }
+
 #else
 void UOdinAudioCapture::RestartStream()
 {
@@ -311,11 +327,7 @@ void UOdinAudioCapture::RestartStream()
     if (AudioCapture.OpenCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
         // If we opened the capture stream successfully, get the capture device info and initialize
         // the UAudioGenerator.
-        Audio::FCaptureDeviceInfo Info;
-        if (AudioCapture.GetCaptureDeviceInfo(Info, CurrentSelectedDeviceIndex)) {
-            Init(Info.PreferredSampleRate, Info.InputChannels);
-            UE_LOG(Odin, Display, TEXT("Switched to input device %s"), *Info.DeviceName);
-        }
+        InitializeGenerator();
     }
 
     // Restart the audio capture stream.

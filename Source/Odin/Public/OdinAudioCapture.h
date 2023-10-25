@@ -183,6 +183,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
      * @brief Restart the stream, using CurrentSelectedDeviceIndex as the new input.
      */
     void RestartStream();
+    void InitializeGenerator();
 
     void TryRunAsyncChangeDeviceRequest(FChangeCaptureDeviceDelegate OnChangeCompleted,
                                         TFunction<void()>            ChangeDeviceFunction);
