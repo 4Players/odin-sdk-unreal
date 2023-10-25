@@ -9,7 +9,7 @@
 
 class IAudioBufferListener;
 
-class OdinMediaSoundGenerator : public ISoundGenerator
+class ODIN_API OdinMediaSoundGenerator : public ISoundGenerator
 {
   public:
     OdinMediaSoundGenerator();
