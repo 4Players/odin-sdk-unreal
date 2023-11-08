@@ -71,6 +71,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
                     if (volume_adjusted_audio_size_ < NumSamples) {
                         delete[] volume_adjusted_audio_;
                         volume_adjusted_audio_      = new float[NumSamples];
+                        volume_adjusted_audio_size_ = NumSamples;
                     }
                     for (int i = 0; i < NumSamples; ++i) {
                         volume_adjusted_audio_[i] = InAudio[i] * GetVolumeMultiplierAdjusted();
