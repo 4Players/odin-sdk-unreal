@@ -79,10 +79,10 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     UPROPERTY(BlueprintGetter = GetVolumeMultiplier, BlueprintSetter = SetVolumeMultiplier,
               Category = "Odin|Audio Capture")
-    float volume_multiplier = 1.0f;
+    float volume_multiplier_ = 1.0f;
     UPROPERTY(BlueprintGetter = GetMaxVolumeMultiplier, BlueprintSetter = SetMaxVolumeMultiplier,
               Category = "Odin|Audio Capture")
-    float max_volume_multiplier = 3.0f;
+    float max_volume_multiplier_ = 3.0f;
 
   private:
     void  HandleInputDeviceChanges();
@@ -99,6 +99,6 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     FThreadSafeBool bIsBeingReset = false;
 
-    float* volume_adjusted_audio      = nullptr;
-    int32  volume_adjusted_audio_size = 0;
+    float* volume_adjusted_audio_      = nullptr;
+    int32  volume_adjusted_audio_size_ = 0;
 };

@@ -36,9 +36,6 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
         this->SetMediaHandle(0);
     }
 
-    stream_sample_rate_  = 48000;
-    stream_num_channels_ = 1;
-
     if (audio_capture) {
         stream_sample_rate_  = audio_capture->GetSampleRate();
         stream_num_channels_ = audio_capture->GetNumChannels();
@@ -71,16 +68,15 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
                 }
 
                 if (this->stream_handle_) {
-                    if (volume_adjusted_audio_size < NumSamples) {
-                        delete[] volume_adjusted_audio;
-                        volume_adjusted_audio = new float[NumSamples];
+                    if (volume_adjusted_audio_size_ < NumSamples) {
+                        delete[] volume_adjusted_audio_;
+                        volume_adjusted_audio_      = new float[NumSamples];
                     }
                     for (int i = 0; i < NumSamples; ++i) {
-                        volume_adjusted_audio[i] = InAudio[i] * GetVolumeMultiplierAdjusted();
+                        volume_adjusted_audio_[i] = InAudio[i] * GetVolumeMultiplierAdjusted();
                     }
 
-                    odin_audio_push_data(this->stream_handle_, volume_adjusted_audio, NumSamples);
-                    // UE_LOG(Odin, Log, TEXT("Pushing data, Num Samples: %d"), NumSamples);
+                    odin_audio_push_data(this->stream_handle_, volume_adjusted_audio_, NumSamples);
                 }
             };
         this->audio_generator_handle_ = audio_capture->AddGeneratorDelegate(audioGeneratorDelegate);
@@ -121,28 +117,28 @@ OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
 
 float UOdinCaptureMedia::GetVolumeMultiplier() const
 {
-    return volume_multiplier;
+    return volume_multiplier_;
 }
 
 void UOdinCaptureMedia::SetVolumeMultiplier(const float newValue)
 {
-    this->volume_multiplier = FMath::Clamp(newValue, 0.0f, GetMaxVolumeMultiplier());
+    this->volume_multiplier_ = FMath::Clamp(newValue, 0.0f, GetMaxVolumeMultiplier());
 }
 
 float UOdinCaptureMedia::GetMaxVolumeMultiplier() const
 {
-    return max_volume_multiplier;
+    return max_volume_multiplier_;
 }
 
 void UOdinCaptureMedia::SetMaxVolumeMultiplier(const float newValue)
 {
-    this->max_volume_multiplier = newValue;
+    this->max_volume_multiplier_ = newValue;
 }
 
 void UOdinCaptureMedia::BeginDestroy()
 {
     Reset();
-    delete[] volume_adjusted_audio;
+    delete[] volume_adjusted_audio_;
     Super::BeginDestroy();
 }
 
