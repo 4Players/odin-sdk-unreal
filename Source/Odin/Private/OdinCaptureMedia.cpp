@@ -47,33 +47,43 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
     UE_LOG(Odin, Log,
            TEXT("Initializing Audio Capture stream with Sample Rate: %d and Channels: %d"),
            stream_sample_rate_, stream_num_channels_);
-    this->stream_handle_ = odin_audio_stream_create(
-        OdinAudioStreamConfig{(uint32_t)stream_sample_rate_, (uint8_t)stream_num_channels_});
+    this->stream_handle_ = odin_audio_stream_create(OdinAudioStreamConfig{
+        static_cast<uint32_t>(stream_sample_rate_), static_cast<uint8_t>(stream_num_channels_)});
 
     if (audio_capture && audio_capture->IsValidLowLevel()) {
-        TFunction<void(const float* InAudio, int32 NumSamples)> fp = [this](const float* InAudio,
-                                                                            int32 NumSamples) {
-            if (bIsBeingReset)
-                return;
+        // Create generator delegate
+        TFunction<void(const float* InAudio, int32 NumSamples)> audioGeneratorDelegate =
+            [this](const float* InAudio, int32 NumSamples) {
+                if (bIsBeingReset) {
+                    return;
+                }
 
-            if (nullptr != audio_capture_
-                && (stream_sample_rate_ != audio_capture_->GetSampleRate()
-                    || stream_num_channels_ != audio_capture_->GetNumChannels())) {
-                UE_LOG(
-                    Odin, Display,
-                    TEXT("Incompatible sample rate, stream: %d, capture: %d. Restarting stream."),
-                    stream_sample_rate_, audio_capture_->GetSampleRate());
+                if (nullptr != audio_capture_
+                    && (stream_sample_rate_ != audio_capture_->GetSampleRate()
+                        || stream_num_channels_ != audio_capture_->GetNumChannels())) {
+                    UE_LOG(Odin, Display,
+                           TEXT("Incompatible sample rate, stream: %d, capture: %d. Restarting "
+                                "stream."),
+                           stream_sample_rate_, audio_capture_->GetSampleRate());
 
-                HandleInputDeviceChanges();
-                return;
-            }
+                    HandleInputDeviceChanges();
+                    return;
+                }
 
-            if (this->stream_handle_) {
-                odin_audio_push_data(this->stream_handle_, (float*)InAudio, NumSamples);
-                // UE_LOG(Odin, Log, TEXT("Pushing data, Num Samples: %d"), NumSamples);
-            }
-        };
-        this->audio_generator_handle_ = audio_capture->AddGeneratorDelegate(fp);
+                if (this->stream_handle_) {
+                    if (volume_adjusted_audio_size < NumSamples) {
+                        delete[] volume_adjusted_audio;
+                        volume_adjusted_audio = new float[NumSamples];
+                    }
+                    for (int i = 0; i < NumSamples; ++i) {
+                        volume_adjusted_audio[i] = InAudio[i] * GetVolumeMultiplierAdjusted();
+                    }
+
+                    odin_audio_push_data(this->stream_handle_, volume_adjusted_audio, NumSamples);
+                    // UE_LOG(Odin, Log, TEXT("Pushing data, Num Samples: %d"), NumSamples);
+                }
+            };
+        this->audio_generator_handle_ = audio_capture->AddGeneratorDelegate(audioGeneratorDelegate);
     }
 }
 
@@ -93,8 +103,9 @@ void UOdinCaptureMedia::Reset()
 OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
 {
     FScopeLock lock(&this->capture_generator_delegate_);
-    if (nullptr != audio_capture_)
+    if (nullptr != audio_capture_) {
         this->audio_capture_->RemoveGeneratorDelegate(this->audio_generator_handle_);
+    }
 
     this->audio_generator_handle_ = {};
 
@@ -108,9 +119,30 @@ OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
     return 0;
 }
 
+float UOdinCaptureMedia::GetVolumeMultiplier() const
+{
+    return volume_multiplier;
+}
+
+void UOdinCaptureMedia::SetVolumeMultiplier(const float newValue)
+{
+    this->volume_multiplier = FMath::Clamp(newValue, 0.0f, GetMaxVolumeMultiplier());
+}
+
+float UOdinCaptureMedia::GetMaxVolumeMultiplier() const
+{
+    return max_volume_multiplier;
+}
+
+void UOdinCaptureMedia::SetMaxVolumeMultiplier(const float newValue)
+{
+    this->max_volume_multiplier = newValue;
+}
+
 void UOdinCaptureMedia::BeginDestroy()
 {
     Reset();
+    delete[] volume_adjusted_audio;
     Super::BeginDestroy();
 }
 
@@ -118,6 +150,7 @@ void UOdinCaptureMedia::HandleInputDeviceChanges()
 {
     bIsBeingReset = true;
 
+    // Perform stream reset in game thread
     AsyncTask(ENamedThreads::GameThread, [this]() {
         if (!connected_room_.IsValid()) {
             UE_LOG(Odin, Error,
@@ -134,9 +167,15 @@ void UOdinCaptureMedia::HandleInputDeviceChanges()
 
         auto       capturePointer = audio_capture_;
         const auto roomPointer    = connected_room_.Get();
+
+        // disconnect current stream from connected room
         roomPointer->UnbindCaptureMedia(this);
+        // reset audio capture generator delegate and media stream
         this->ResetOdinStream();
+
+        // Create new capture media. Odin_CreateMedia also creates new audio capture generator
         UOdinCaptureMedia* NewCaptureMedia = UOdinFunctionLibrary::Odin_CreateMedia(capturePointer);
+        // perform Add Media To Room functionality
         const OdinRoomHandle        room_handle = roomPointer ? roomPointer->RoomHandle() : 0;
         const OdinMediaStreamHandle media_handle =
             NewCaptureMedia ? NewCaptureMedia->GetMediaHandle() : 0;
@@ -151,4 +190,9 @@ void UOdinCaptureMedia::HandleInputDeviceChanges()
             UE_LOG(Odin, Verbose, TEXT("Binding to New Capture Media."));
         }
     });
+}
+
+float UOdinCaptureMedia::GetVolumeMultiplierAdjusted() const
+{
+    return FMath::Pow(GetVolumeMultiplier(), 3);
 }
