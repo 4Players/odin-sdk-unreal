@@ -1,6 +1,6 @@
 {
 	"FileVersion": 2,
-	"Version": 310,
+	"Version": 311,
 	"WhitelistPlatforms": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android" ],
 	"VersionName": "1.7.0",
 	"FriendlyName": "4Players ODIN",
@@ -11,7 +11,7 @@
 	"DocsURL": "https://www.4players.io/odin/sdk/unreal/",
 	"MarketplaceURL": "com.epicgames.launcher://ue/marketplace/product/f45b045efc62416e9f6e6858519ab999",
 	"SupportURL": "",
-	"CanContainContent": true,
+	"CanContainContent": false,
 	"IsBetaVersion": false,
 	"IsExperimentalVersion": false,
 	"Installed": false,
