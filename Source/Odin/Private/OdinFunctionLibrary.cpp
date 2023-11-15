@@ -72,7 +72,7 @@ UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldCo
                     "will not be able to react to capture devices being removed."));
     }
     UOdinAudioCapture* OdinAudioCapture = NewObject<UOdinAudioCapture>(World);
-    if (OdinAudioCapture->OpenDefaultAudioStream()) {
+    if (OdinAudioCapture->RestartCapturing(false)) {
         return OdinAudioCapture;
     }
     UE_LOG(Odin, Error, TEXT("Failed to open a default audio stream to the audio capture device."));

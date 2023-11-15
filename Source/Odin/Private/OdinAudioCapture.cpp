@@ -107,8 +107,9 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
         // We schedule back to the main thread and pass in our params
         AsyncTask(ENamedThreads::GameThread, [Devices, CurrentDevice, Out]() {
             // We execute the delegate along with the param
-            if (Out.IsBound())
+            if (Out.IsBound()) {
                 Out.Execute(Devices, CurrentDevice);
+            }
         });
     });
 }
@@ -179,8 +180,9 @@ void UOdinAudioCapture::TryRunAsyncChangeDeviceRequest(
     FChangeCaptureDeviceDelegate OnChangeCompleted, TFunction<void()> ChangeDeviceFunction)
 {
     if (IsCurrentlyChangingDevice) {
-        if (OnChangeCompleted.IsBound())
+        if (OnChangeCompleted.IsBound()) {
             OnChangeCompleted.Execute(false);
+        }
         return;
     }
     IsCurrentlyChangingDevice = true;
@@ -193,8 +195,9 @@ void UOdinAudioCapture::FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate
     AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, this]() {
         IsCurrentlyChangingDevice = false;
         // We execute the delegate along with the param
-        if (OnChangeCompleted.IsBound())
+        if (OnChangeCompleted.IsBound()) {
             OnChangeCompleted.Execute(bSuccess);
+        }
     });
 }
 
@@ -286,7 +289,6 @@ void UOdinAudioCapture::InitializeGenerator()
     }
 }
 
-#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 void UOdinAudioCapture::RetrieveCurrentSelectedDeviceIndex()
 {
     Audio::FCaptureDeviceInfo Current;
@@ -322,47 +324,48 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
     }
     // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
     // except for setting the Params.DeviceIndex.
+
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+
     Audio::FOnAudioCaptureFunction OnCapture = [this](const void* AudioData, int32 NumFrames,
                                                       int32 InNumChannels, int32 InSampleRate,
                                                       double StreamTime, bool bOverFlow) {
-        OnGeneratedAudio((const float*)AudioData, NumFrames * InNumChannels);
+        if (!bIsCapturingPaused) {
+            OnGeneratedAudio((const float*)AudioData, NumFrames * InNumChannels);
+        }
     };
-
-    Audio::FAudioCaptureDeviceParams Params;
-    Params.DeviceIndex = CurrentSelectedDeviceIndex;
-    // OpenCaptureStream automatically closes the capture stream, if it's already active.
-    if (AudioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
-        // If we opened the capture stream successfully, get the capture device info and initialize
-        // the UAudioGenerator.
-        InitializeGenerator();
-    }
-
-    // Restart the audio capture stream.
-    AudioCapture.StartStream();
-}
-
 #else
-void UOdinAudioCapture::RestartStream()
-{
     // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
     // except for setting the Params.DeviceIndex.
     Audio::FOnCaptureFunction OnCapture = [this](const float* AudioData, int32 NumFrames,
                                                  int32 InNumChannels, int32 InSampleRate,
                                                  double StreamTime, bool bOverFlow) {
-        OnGeneratedAudio(AudioData, NumFrames * InNumChannels);
+        if (!bIsCapturingPaused) {
+            OnGeneratedAudio(AudioData, NumFrames * InNumChannels);
+        }
     };
+#endif
+
+    if (CurrentSelectedDeviceIndex < 0) {
+        RetrieveCurrentSelectedDeviceIndex();
+    }
 
     Audio::FAudioCaptureDeviceParams Params;
     Params.DeviceIndex = CurrentSelectedDeviceIndex;
+#if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
+    bool bSuccess = AudioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), 1024);
+#else
+    bool bSuccess = AudioCapture.OpenCaptureStream(Params, MoveTemp(OnCapture), 1024);
+#endif
     // OpenCaptureStream automatically closes the capture stream, if it's already active.
-    if (AudioCapture.OpenCaptureStream(Params, MoveTemp(OnCapture), 1024)) {
+    if (bSuccess) {
         // If we opened the capture stream successfully, get the capture device info and initialize
         // the UAudioGenerator.
         InitializeGenerator();
+        // Restart the audio capture stream.
+        if (bAutomaticallyStartCapture) {
+            AudioCapture.StartStream();
+        }
     }
-
-    // Restart the audio capture stream.
-    AudioCapture.StartStream();
+    return bSuccess;
 }
-
-#endif
