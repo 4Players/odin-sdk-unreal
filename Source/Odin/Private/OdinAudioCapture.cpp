@@ -46,7 +46,7 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
         UE_LOG(Odin, Display,
                TEXT("Recognized change in default capture device, reconnecting to new default "
                     "device."));
-        RestartStream();
+        RestartCapturing();
         OnDefaultDeviceChanged.Broadcast();
     }
 }
@@ -70,7 +70,7 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
         UE_LOG(Odin, Display,
                TEXT("Recognized change in default capture device, reconnecting to new default "
                     "device."));
-        RestartStream();
+        RestartCapturing();
         OnDefaultDeviceChanged.Broadcast();
     }
 }
@@ -220,7 +220,7 @@ bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFuncti
     if (bSuccess) {
         UE_LOG(Odin, VeryVerbose, TEXT("Selected index: %d with device id: %s"),
                CurrentSelectedDeviceIndex, *CustomSelectedDevice.DeviceId);
-        RestartStream();
+        RestartCapturing();
     }
     return bSuccess;
 }
@@ -260,7 +260,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
                 TimeWithoutStreamUpdate    = 0.0f;
                 LastStreamTime             = 0.0f;
                 CurrentSelectedDeviceIndex = INDEX_NONE;
-                RestartStream();
+                RestartCapturing();
                 OnCaptureDeviceReset.Broadcast();
             }
         }
@@ -287,8 +287,39 @@ void UOdinAudioCapture::InitializeGenerator()
 }
 
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
-void UOdinAudioCapture::RestartStream()
+void UOdinAudioCapture::RetrieveCurrentSelectedDeviceIndex()
 {
+    Audio::FCaptureDeviceInfo Current;
+    AudioCapture.GetCaptureDeviceInfo(Current);
+    UE_LOG(
+        Odin, Warning,
+        TEXT("Using Default Device during Restart Stream, name: %s, samplerate: %d, channels: %d"),
+        *Current.DeviceName, Current.PreferredSampleRate, Current.InputChannels);
+
+    TArray<Audio::FCaptureDeviceInfo> OutDevices;
+    AudioCapture.GetCaptureDevicesAvailable(OutDevices);
+    for (int i = 0; i < OutDevices.Num(); ++i) {
+        if (OutDevices[i].DeviceId == Current.DeviceId) {
+            CurrentSelectedDeviceIndex = i;
+        }
+    }
+}
+
+bool UOdinAudioCapture::GetIsPaused() const
+{
+    return bIsCapturingPaused;
+}
+
+void UOdinAudioCapture::SetIsPaused(bool newValue)
+{
+    bIsCapturingPaused = newValue;
+}
+
+bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
+{
+    if (AudioCapture.IsStreamOpen()) {
+        AudioCapture.CloseStream();
+    }
     // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
     // except for setting the Params.DeviceIndex.
     Audio::FOnAudioCaptureFunction OnCapture = [this](const void* AudioData, int32 NumFrames,
