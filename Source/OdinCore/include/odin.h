@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.6.2"
+#define ODIN_VERSION "1.6.3"
 
 /**
  * Known types of a media stream.
@@ -754,6 +754,11 @@ OdinReturnCode odin_audio_push_data(OdinMediaStreamHandle stream, const float *b
 OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream,
                                     float *out_buffer,
                                     size_t out_buffer_len);
+
+/**
+ * Returns the number of samples available in the audio buffer of an output `OdinMediaStreamHandle`.
+ */
+OdinReturnCode odin_audio_data_len(OdinMediaStreamHandle stream);
 
 /**
  * Resets the specified `OdinMediaStreamHandle` to its initial state, restoring it to its default
