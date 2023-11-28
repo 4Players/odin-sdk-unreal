@@ -66,9 +66,6 @@ class ODIN_API UOdinJsonValue : public UObject
     static UOdinJsonValue *ConstructJsonValueObject(UObject         *WorldContextObject,
                                                     UOdinJsonObject *JsonObject);
 
-    static UOdinJsonValue *ConstructJsonValue(UObject                      *WorldContextObject,
-                                              const TSharedPtr<FJsonValue> &InValue);
-
     TSharedPtr<FJsonValue> &GetRootValue();
 
     void SetRootValue(TSharedPtr<FJsonValue> &JsonValue);

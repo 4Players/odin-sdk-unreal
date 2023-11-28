@@ -68,17 +68,6 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject         *WorldC
     return NewValue;
 }
 
-UOdinJsonValue *ConstructJsonValue(UObject                      *WorldContextObject,
-                                   const TSharedPtr<FJsonValue> &InValue)
-{
-    TSharedPtr<FJsonValue> NewVal = InValue;
-
-    UOdinJsonValue *NewValue = NewObject<UOdinJsonValue>();
-    NewValue->SetRootValue(NewVal);
-
-    return NewValue;
-}
-
 TSharedPtr<FJsonValue> &UOdinJsonValue::GetRootValue()
 {
     return JsonVal;
