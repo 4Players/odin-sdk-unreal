@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 #include "DSP/Dsp.h"
 #include "Sound/SoundGenerator.h"

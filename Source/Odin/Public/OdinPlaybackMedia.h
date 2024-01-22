@@ -2,11 +2,10 @@
 
 #pragma once
 
-#include "OdinCore/include/odin.h"
-
 #include "CoreMinimal.h"
 #include "OdinMediaBase.h"
 #include "UObject/Object.h"
+#include "odin_sdk.h"
 
 #include <memory>
 

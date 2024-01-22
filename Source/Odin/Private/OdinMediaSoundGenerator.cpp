@@ -2,7 +2,7 @@
 
 #include "OdinMediaSoundGenerator.h"
 #include "Components/SynthComponent.h"
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 OdinMediaSoundGenerator::OdinMediaSoundGenerator() = default;
 

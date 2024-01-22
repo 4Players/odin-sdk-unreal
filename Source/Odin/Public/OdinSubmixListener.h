@@ -3,8 +3,8 @@
 #pragma once
 
 #include "Engine/GameEngine.h"
-#include "OdinCore/include/odin.h"
 #include "Runtime/Launch/Resources/Version.h"
+#include "odin_sdk.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "ISubmixBufferListener.h"
 #else

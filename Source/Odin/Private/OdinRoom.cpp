@@ -2,7 +2,7 @@
 
 #include "OdinRoom.h"
 
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 #include "Async/Async.h"
 #include "Async/AsyncWork.h"

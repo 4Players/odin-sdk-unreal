@@ -15,7 +15,7 @@
 #include "IOSAppDelegate.h"
 #endif
 
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
 

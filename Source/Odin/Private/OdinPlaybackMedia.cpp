@@ -3,7 +3,7 @@
 #include "OdinPlaybackMedia.h"
 #include "OdinRoom.h"
 
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 UOdinPlaybackMedia::UOdinPlaybackMedia() {}
 

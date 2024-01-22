@@ -2,7 +2,7 @@
 
 #include "OdinTokenGenerator.h"
 
-#include "OdinCore/include/odin.h"
+#include "odin_sdk.h"
 
 UOdinTokenGenerator::UOdinTokenGenerator(const class FObjectInitializer &PCIP)
     : Super(PCIP)

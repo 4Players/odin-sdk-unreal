@@ -9,6 +9,7 @@ public class OdinLibrary : ModuleRules
   public OdinLibrary(ReadOnlyTargetRules Target) : base(Target)
   {
     Type = ModuleType.External;
+    PublicIncludePaths.Add(Path.Combine(ModuleDirectory, "include"));
 
     if (Target.Platform == UnrealTargetPlatform.Win64)
     {

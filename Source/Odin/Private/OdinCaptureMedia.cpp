@@ -3,8 +3,8 @@
 #include "OdinCaptureMedia.h"
 
 #include "Odin.h"
-#include "OdinCore/include/odin.h"
 #include "OdinFunctionLibrary.h"
+#include "odin_sdk.h"
 
 UOdinCaptureMedia::UOdinCaptureMedia(const class FObjectInitializer& PCIP)
     : Super(PCIP)

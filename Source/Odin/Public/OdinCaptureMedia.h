@@ -2,11 +2,10 @@
 
 #pragma once
 
-#include "OdinCore/include/odin.h"
-
 #include "AudioCapture.h"
 #include "CoreMinimal.h"
 #include "OdinMediaBase.h"
+#include "odin_sdk.h"
 
 #include "OdinCaptureMedia.generated.h"
 
