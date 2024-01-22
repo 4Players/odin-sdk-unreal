@@ -58,7 +58,7 @@ FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)
 
 FString UOdinFunctionLibrary::BytesToString(const TArray<uint8>& data)
 {
-    return ::BytesToString(data.GetData(), data.Num());
+    return FString(data.Num(), UTF8_TO_TCHAR(data.GetData()));
 }
 
 UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldContextObject)

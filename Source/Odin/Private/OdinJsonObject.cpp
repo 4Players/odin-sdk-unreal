@@ -7,6 +7,7 @@
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include <OdinFunctionLibrary.h>
 
 typedef TJsonWriterFactory<TCHAR, TCondensedJsonPrintPolicy<TCHAR>>
                                                              FCondensedJsonStringWriterFactory;
@@ -36,7 +37,7 @@ UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromBytes(UObject *WorldCon
                                                                const TArray<uint8> &data)
 {
     auto obj    = NewObject<UOdinJsonObject>();
-    auto s_data = BytesToString(data.GetData(), data.Num());
+    auto s_data = UOdinFunctionLibrary::BytesToString(data);
     obj->DecodeJson(s_data);
     return obj;
 }
@@ -85,7 +86,8 @@ TArray<uint8> UOdinJsonObject::EncodeJsonBytes() const
     uint32  size         = OutputString.Len();
 
     data.AddUninitialized(size);
-    StringToBytes(OutputString, data.GetData(), size);
+    FTCHARToUTF8_Convert::Convert((UTF8CHAR *)data.GetData(), data.Num(), *OutputString,
+                                  OutputString.Len());
 
     return data;
 }

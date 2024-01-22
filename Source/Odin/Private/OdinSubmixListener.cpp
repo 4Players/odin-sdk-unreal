@@ -1,7 +1,5 @@
 /* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
-#pragma once
-
 #include "OdinSubmixListener.h"
 #include "Odin.h"
 #include "Sound/SoundSubmix.h"
