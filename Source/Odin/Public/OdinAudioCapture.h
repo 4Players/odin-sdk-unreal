@@ -73,6 +73,14 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
     UFUNCTION(BlueprintCallable, Category = "AudioCapture")
     void ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess);
 
+
+    /**
+    * @brief Starts Capturing Audio and returns whether or not this was successful.
+    * @param bSuccess Whether or not the capturing was successfully started
+    */
+    UFUNCTION(BlueprintCallable, Category = "AudioCapture")
+    void StartCapturing(bool& bSuccess);
+
     /**
      * @brief Updates the capture device and restarts the capture stream of the Audio Capture
      * component. Runs async, therefore not blocking the main thread.
