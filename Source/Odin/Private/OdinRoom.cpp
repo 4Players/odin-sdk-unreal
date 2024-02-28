@@ -14,20 +14,6 @@
 UOdinRoom::UOdinRoom(const class FObjectInitializer& PCIP)
     : Super(PCIP)
 {
-
-    this->room_handle_ = odin_room_create();
-    odin_room_set_event_callback(
-        this->room_handle_,
-        [](OdinRoomHandle roomHandle, const struct OdinEvent* event, void* user_data) {
-            UObject* obj = static_cast<UObject*>(user_data);
-            if (obj && obj->IsValidLowLevel() && obj->IsA(UOdinRoom::StaticClass())) {
-                UOdinRoom* room = static_cast<UOdinRoom*>(user_data);
-                if (roomHandle && room && room->IsValidLowLevel() && nullptr != event) {
-                    room->HandleOdinEvent(*event);
-                }
-            }
-        },
-        this);
 }
 
 UOdinRoom::~UOdinRoom()
@@ -51,7 +37,23 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
                                     const FOdinApmSettings& InitialAPMSettings)
 {
     auto room = NewObject<UOdinRoom>();
+
+    room->room_handle_ = odin_room_create();
+    odin_room_set_event_callback(
+        room->room_handle_,
+        [](OdinRoomHandle roomHandle, const struct OdinEvent* event, void* user_data) {
+            UObject* obj = static_cast<UObject*>(user_data);
+            if (obj && obj->IsValidLowLevel() && obj->IsA(UOdinRoom::StaticClass())) {
+                UOdinRoom* room = static_cast<UOdinRoom*>(user_data);
+                if (roomHandle && room && room->IsValidLowLevel() && nullptr != event) {
+                    room->HandleOdinEvent(*event);
+                }
+            }
+        },
+        room);
+
     room->UpdateAPMConfig(InitialAPMSettings);
+
     return room;
 }
 

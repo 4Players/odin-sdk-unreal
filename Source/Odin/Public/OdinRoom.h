@@ -427,8 +427,7 @@ struct ODIN_API FOdinApmSettings {
 
 UCLASS(ClassGroup     = Odin, BlueprintType,
        hidecategories = (Activation, Transform, Object, ActorComponent, Physics, Rendering,
-                         Mobility, LOD),
-       meta           = (BlueprintSpawnableComponent))
+                         Mobility, LOD))
 class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 {
     GENERATED_BODY()

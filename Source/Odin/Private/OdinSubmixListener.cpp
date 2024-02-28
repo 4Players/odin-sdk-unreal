@@ -30,13 +30,20 @@ void UOdinSubmixListener::StartSubmixListener()
     if (bInitialized || !GEngine)
         return;
 
-    FAudioDeviceHandle AudioDevice = GEngine->GetActiveAudioDevice();
+    const FOdinModule OdinModule = FModuleManager::GetModuleChecked<FOdinModule>("Odin");
+    OdinSampleRate               = OdinModule.GetSampleRate();
+    OdinChannels                 = OdinModule.GetChannelCount();
 
-    int32 samplerate = AudioDevice->SampleRate;
-    if (samplerate != OdinSampleRate) {
-        UE_LOG(Odin, Warning, TEXT("Creating resampler. Samplerate of %d mismatch %d"),
-               AudioDevice->SampleRate, OdinSampleRate);
-        // resampler_handle = odin_resampler_create(samplerate, OdinSampleRate, OdinChannels);
+    UE_LOG(Odin, Log, TEXT("Starting Submix Listener with OdinSampleRate %d and OdinChannels %d"),
+           OdinSampleRate, OdinChannels);
+
+    FAudioDeviceHandle AudioDevice = GEngine->GetActiveAudioDevice();
+    const int32        SampleRate  = AudioDevice->SampleRate;
+    if (SampleRate != OdinSampleRate) {
+        UE_LOG(Odin, Warning,
+               TEXT("Detected difference in sample rate: %d In Sample Rate and %d Odin Sample "
+                    "Rate. Echo Cancellation will not work correctly!"),
+               SampleRate, OdinSampleRate);
     }
 
     AudioDevice->RegisterSubmixBufferListener(this);
@@ -67,9 +74,25 @@ void UOdinSubmixListener::OnNewSubmixBuffer(const USoundSubmix *OwningSubmix, fl
 
     FScopeLock Lock(&submix_cs_);
 
+    UE_LOG(Odin, VeryVerbose,
+           TEXT("In Channels: %d In SampleRate: %d In Num Samples: %d In Audio Clock: %f"),
+           InNumChannels, InSampleRate, InNumSamples, InAudioClock);
+
     TSampleBuffer<float> buffer(AudioData, InNumSamples, InNumChannels, InSampleRate);
-    if (buffer.GetNumChannels() != OdinChannels)
+    if (buffer.GetNumChannels() != OdinChannels) {
+        UE_LOG(Odin, VeryVerbose,
+               TEXT("Due to differences in Channel Count, remixing buffer from %d Channels to %d "
+                    "OdinChannels"),
+               InNumChannels, OdinChannels);
         buffer.MixBufferToChannels(OdinChannels);
+    }
+
+    if (InSampleRate != OdinSampleRate) {
+        UE_LOG(Odin, Verbose,
+               TEXT("InSampleRate %d !== OdinSampleRate %d - Echo Cancellation will not work "
+                    "correctly!"),
+               InSampleRate, OdinSampleRate);
+    }
 
     float         *pbuffer = buffer.GetArrayView().GetData();
     OdinReturnCode result =

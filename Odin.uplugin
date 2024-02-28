@@ -19,7 +19,7 @@
 		{
 			"Name": "Odin",
 			"Type": "Runtime",
-			"LoadingPhase": "PostConfigInit",
+			"LoadingPhase": "PostEngineInit",
 			"WhitelistPlatforms": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android" ],
 			"AdditionalDependencies": [
 				"AudioMixer",

@@ -11,8 +11,6 @@
 bool UOdinSynthComponent::Init(int32 &SampleRate)
 {
     NumChannels = 2;
-    SampleRate  = 48000;
-
     return true;
 }
 

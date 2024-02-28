@@ -55,6 +55,11 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
                     return;
                 }
 
+                if (!IsValidLowLevel() || !audio_capture_ || !audio_capture_->IsValidLowLevel()) {
+                    UE_LOG(Odin, VeryVerbose, TEXT("Aborting due to LowLevelCheck."));
+                    return;
+                }
+
                 if (nullptr != audio_capture_
                     && (stream_sample_rate_ != audio_capture_->GetSampleRate()
                         || stream_num_channels_ != audio_capture_->GetNumChannels())) {
@@ -86,7 +91,9 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
 
 void UOdinCaptureMedia::Reset()
 {
+    FScopeLock lock(&this->capture_generator_delegate_);
     if (nullptr != audio_capture_) {
+        audio_capture_->RemoveGeneratorDelegate(audio_generator_handle_);
         audio_capture_                = nullptr;
         this->audio_generator_handle_ = {};
     }
