@@ -36,4 +36,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintCallable, Category = "Odin|Audio Capture",
               meta = (WorldContext = "WorldContextObject"))
     static class UOdinAudioCapture *CreateOdinAudioCapture(UObject *WorldContextObject);
+
+    static bool OdinAsyncValidityCheck(const UWorld *WorldReference, const UObject *ObjectToCheck,
+                                       const FString &CheckReferenceName);
 };

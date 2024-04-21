@@ -78,3 +78,20 @@ UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldCo
     UE_LOG(Odin, Error, TEXT("Failed to open a default audio stream to the audio capture device."));
     return nullptr;
 }
+
+bool UOdinFunctionLibrary::OdinAsyncValidityCheck(const UWorld*  WorldReference,
+                                                  const UObject* ObjectToCheck,
+                                                  const FString& CheckReferenceName)
+{
+    if (!WorldReference || !IsValid(WorldReference)) {
+        UE_LOG(Odin, Verbose, TEXT("Aborting %s due to invalid World."), *CheckReferenceName);
+        return false;
+    }
+
+    if (!ObjectToCheck || !IsValid(ObjectToCheck)) {
+        UE_LOG(Odin, Verbose, TEXT("Aborting %s due to invalid object ptr."), *CheckReferenceName);
+        return false;
+    }
+
+    return true;
+}

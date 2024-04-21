@@ -1,6 +1,7 @@
 /* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinRoom.h"
+#include "OdinFunctionLibrary.h"
 
 #include "OdinRoom.AsyncTasks.h"
 
@@ -15,7 +16,7 @@ UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UPARAM(ref) 
                                        FVector initial_position, const FOdinRoomJoinError &onError,
                                        const FOdinRoomJoinSuccess &onSuccess)
 {
-    auto action                 = NewObject<UOdinRoomJoin>();
+    auto action                 = NewObject<UOdinRoomJoin>(WorldContextObject);
     action->Room                = room;
     action->Url                 = url;
     action->Token               = token;
@@ -27,10 +28,14 @@ UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UPARAM(ref) 
 
     FScopeLock lock(&room->joined_callbacks_cs_);
     room->joined_callbacks_.Reset();
+    UWorld *World = WorldContextObject->GetWorld();
     room->joined_callbacks_.Add([=](auto roomId, auto roomCustomer, auto roomUserData,
                                     auto ownPeerId, auto ownUserId) {
         FFunctionGraphTask::CreateAndDispatchWhenReady(
             [=]() {
+                if (!World || !IsValid(World)) {
+                    return;
+                }
                 onSuccess.ExecuteIfBound(roomId, roomUserData, roomCustomer, ownPeerId, ownUserId);
             },
             TStatId(), nullptr, ENamedThreads::GameThread);
@@ -53,7 +58,7 @@ UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject                        *W
                                                const FOdinRoomAddMediaError   &onError,
                                                const FOdinRoomAddMediaSuccess &onSuccess)
 {
-    auto action          = NewObject<UOdinRoomAddMedia>();
+    auto action          = NewObject<UOdinRoomAddMedia>(WorldContextObject);
     action->Room         = room;
     action->CaptureMedia = captureMedia;
     action->OnError      = onError;
@@ -64,8 +69,12 @@ UOdinRoomAddMedia *UOdinRoomAddMedia::AddMedia(UObject                        *W
 
 void UOdinRoomAddMedia::Activate()
 {
+    UWorld *World = GetWorld();
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [this]() {
+        [World, this]() {
+            if (!UOdinFunctionLibrary::OdinAsyncValidityCheck(World, this, "OdinRoomAddMedia"))
+                return;
+
             if (!(Room && CaptureMedia))
                 return;
 
@@ -77,13 +86,15 @@ void UOdinRoomAddMedia::Activate()
             if (odin_is_error(result)) {
 
                 OnError.ExecuteIfBound(result);
-                OnResponse.Broadcast(false);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(false);
 
             } else {
                 Room->BindCaptureMedia(CaptureMedia);
 
                 OnSuccess.ExecuteIfBound(result);
-                OnResponse.Broadcast(true);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(true);
             }
         },
         TStatId(), nullptr, ENamedThreads::GameThread);
@@ -96,7 +107,7 @@ UOdinRoomPauseMedia *UOdinRoomPauseMedia::PauseMedia(UObject *WorldContextObject
                                                      const FOdinRoomPauseMediaError  &onError,
                                                      const FOdinRoomPauseMediaSuccess &onSuccess)
 {
-    auto action           = NewObject<UOdinRoomPauseMedia>();
+    auto action           = NewObject<UOdinRoomPauseMedia>(WorldContextObject);
     action->PlaybackMedia = playbackMedia;
     action->OnError       = onError;
     action->OnSuccess     = onSuccess;
@@ -106,8 +117,13 @@ UOdinRoomPauseMedia *UOdinRoomPauseMedia::PauseMedia(UObject *WorldContextObject
 
 void UOdinRoomPauseMedia::Activate()
 {
+    UWorld *World = GetWorld();
+
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [this]() {
+        [World, this]() {
+            if (!UOdinFunctionLibrary::OdinAsyncValidityCheck(World, this, "OdinRoomPauseMedia"))
+                return;
+
             if (!PlaybackMedia)
                 return;
 
@@ -118,10 +134,12 @@ void UOdinRoomPauseMedia::Activate()
 
             if (odin_is_error(result)) {
                 OnError.ExecuteIfBound(result);
-                OnResponse.Broadcast(false);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(false);
             } else {
                 OnSuccess.ExecuteIfBound();
-                OnResponse.Broadcast(true);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(true);
             }
         },
         TStatId(), nullptr, ENamedThreads::GameThread);
@@ -133,7 +151,7 @@ UOdinRoomResumeMedia *UOdinRoomResumeMedia::ResumeMedia(
     UObject *WorldContextObject, UPARAM(ref) UOdinPlaybackMedia *&playbackMedia,
     const FOdinRoomResumeMediaError &onError, const FOdinRoomResumeMediaSuccess &onSuccess)
 {
-    auto action           = NewObject<UOdinRoomResumeMedia>();
+    auto action           = NewObject<UOdinRoomResumeMedia>(WorldContextObject);
     action->PlaybackMedia = playbackMedia;
     action->OnError       = onError;
     action->OnSuccess     = onSuccess;
@@ -143,8 +161,12 @@ UOdinRoomResumeMedia *UOdinRoomResumeMedia::ResumeMedia(
 
 void UOdinRoomResumeMedia::Activate()
 {
+    UWorld *World = GetWorld();
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [this]() {
+        [World, this]() {
+            if (!UOdinFunctionLibrary::OdinAsyncValidityCheck(World, this, "OdinRoomResumeMedia"))
+                return;
+
             if (!PlaybackMedia)
                 return;
 
@@ -155,10 +177,12 @@ void UOdinRoomResumeMedia::Activate()
 
             if (odin_is_error(result)) {
                 OnError.ExecuteIfBound(result);
-                OnResponse.Broadcast(false);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(false);
             } else {
                 OnSuccess.ExecuteIfBound();
-                OnResponse.Broadcast(true);
+                if (OnResponse.IsBound())
+                    OnResponse.Broadcast(true);
             }
         },
         TStatId(), nullptr, ENamedThreads::GameThread);
@@ -170,7 +194,7 @@ UOdinRoomRemoveMedia *UOdinRoomRemoveMedia::RemoveMedia(
     UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room, UOdinCaptureMedia *captureMedia,
     const FOdinRoomRemoveMediaError &onError, const FOdinRoomRemoveMediaSuccess &onSuccess)
 {
-    auto action          = NewObject<UOdinRoomRemoveMedia>();
+    auto action          = NewObject<UOdinRoomRemoveMedia>(WorldContextObject);
     action->Room         = room;
     action->CaptureMedia = captureMedia;
     action->OnError      = onError;
@@ -181,8 +205,12 @@ UOdinRoomRemoveMedia *UOdinRoomRemoveMedia::RemoveMedia(
 
 void UOdinRoomRemoveMedia::Activate()
 {
+    UWorld *World = GetWorld();
     FFunctionGraphTask::CreateAndDispatchWhenReady(
-        [this]() {
+        [World, this]() {
+            if (!UOdinFunctionLibrary::OdinAsyncValidityCheck(World, this, "OdinRoomRemoveMedia"))
+                return;
+
             OdinReturnCode result = -1;
             if (Room && CaptureMedia) {
                 Room->UnbindCaptureMedia(CaptureMedia);
@@ -205,7 +233,7 @@ UOdinRoomUpdatePosition *UOdinRoomUpdatePosition::UpdatePosition(
     UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room, FVector position,
     const FOdinRoomUpdatePositionError &onError, const FOdinRoomUpdatePositionSuccess &onSuccess)
 {
-    auto action       = NewObject<UOdinRoomUpdatePosition>();
+    auto action       = NewObject<UOdinRoomUpdatePosition>(WorldContextObject);
     action->Room      = room;
     action->Position  = position;
     action->OnError   = onError;
@@ -234,7 +262,7 @@ UOdinRoomUpdatePeerUserData *UOdinRoomUpdatePeerUserData::UpdatePeerUserData(
     const FOdinRoomUpdatePeerUserDataError   &onError,
     const FOdinRoomUpdatePeerUserDataSuccess &onSuccess)
 {
-    auto action       = NewObject<UOdinRoomUpdatePeerUserData>();
+    auto action       = NewObject<UOdinRoomUpdatePeerUserData>(WorldContextObject);
     action->Room      = room;
     action->Data      = data;
     action->OnError   = onError;
@@ -264,7 +292,7 @@ UOdinRoomSendMessage::SendMessage(UObject *WorldContextObject, UPARAM(ref) UOdin
                                   const FOdinRoomSendMessageError   &onError,
                                   const FOdinRoomSendMessageSuccess &onSuccess)
 {
-    auto action       = NewObject<UOdinRoomSendMessage>();
+    auto action       = NewObject<UOdinRoomSendMessage>(WorldContextObject);
     action->Room      = room;
     action->Data      = data;
     action->Targets   = targets;
