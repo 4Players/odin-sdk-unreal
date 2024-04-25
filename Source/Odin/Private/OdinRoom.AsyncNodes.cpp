@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
 
 #include "OdinRoom.h"
 #include "OdinFunctionLibrary.h"
@@ -42,7 +42,6 @@ UOdinRoomJoin *UOdinRoomJoin::JoinRoom(UObject *WorldContextObject, UPARAM(ref) 
     });
     return action;
 }
-
 void UOdinRoomJoin::Activate()
 {
     (new FAutoDeleteAsyncTask<JoinRoomTask>(this->Room->room_handle_, this->Url, this->Token,

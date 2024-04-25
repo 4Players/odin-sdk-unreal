@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
 
 #include "OdinRoom.h"
 
@@ -58,8 +58,7 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
     return room;
 }
 
-void UOdinRoom::SetPositionScale(float Scale)
-{
+void UOdinRoom::SetPositionScale(float Scale){
     (new FAutoDeleteAsyncTask<UpdateScalingTask>(this->room_handle_, Scale))->StartBackgroundTask();
 }
 
