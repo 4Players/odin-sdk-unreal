@@ -84,8 +84,8 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
     float max_volume_multiplier_ = 3.0f;
 
   private:
-    void  HandleInputDeviceChanges();
-    float GetVolumeMultiplierAdjusted() const;
+    static void HandleInputDeviceChanges(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia);
+    float       GetVolumeMultiplierAdjusted() const;
 
     FCriticalSection capture_generator_delegate_;
 

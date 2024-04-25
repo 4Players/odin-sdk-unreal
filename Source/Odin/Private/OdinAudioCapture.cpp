@@ -10,6 +10,7 @@
 #endif
 
 #include "Odin.h"
+#include "OdinFunctionLibrary.h"
 
 void UOdinAudioCapture::BeginDestroy()
 {
@@ -46,7 +47,9 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
         UE_LOG(Odin, Display,
                TEXT("Recognized change in default capture device, reconnecting to new default "
                     "device."));
-        RestartCapturing();
+        bool Success;
+        ChangeCaptureDeviceById(DeviceId, Success);
+        CurrentSelectedDeviceIndex = INDEX_NONE;
         OnDefaultDeviceChanged.Broadcast();
     }
 }
@@ -70,7 +73,9 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
         UE_LOG(Odin, Display,
                TEXT("Recognized change in default capture device, reconnecting to new default "
                     "device."));
-        RestartCapturing();
+        bool Success;
+        ChangeCaptureDeviceById(DeviceId, Success);
+        CurrentSelectedDeviceIndex = INDEX_NONE;
         OnDefaultDeviceChanged.Broadcast();
     }
 }
@@ -93,19 +98,30 @@ void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo
 
 void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegate Out)
 {
-    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, [this, Out]() {
+    TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, [WeakThisPtr, Out]() {
+        if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                         "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
+            return;
+        }
+
         TArray<FOdinCaptureDeviceInfo> Devices;
-        GetCaptureDevicesAvailable(Devices);
+        WeakThisPtr->GetCaptureDevicesAvailable(Devices);
 
         FOdinCaptureDeviceInfo CurrentDevice;
-        if (CurrentSelectedDeviceIndex >= 0 && CurrentSelectedDeviceIndex < Devices.Num()) {
-            CurrentDevice = Devices[CurrentSelectedDeviceIndex];
+        if (WeakThisPtr->CurrentSelectedDeviceIndex >= 0
+            && WeakThisPtr->CurrentSelectedDeviceIndex < Devices.Num()) {
+            CurrentDevice = Devices[WeakThisPtr->CurrentSelectedDeviceIndex];
         } else {
             CurrentDevice = Devices[0];
         }
 
         // We schedule back to the main thread and pass in our params
-        AsyncTask(ENamedThreads::GameThread, [Devices, CurrentDevice, Out]() {
+        AsyncTask(ENamedThreads::GameThread, [WeakThisPtr, Devices, CurrentDevice, Out]() {
+            if (!UOdinFunctionLibrary::Check(
+                    WeakThisPtr, "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
+                return;
+            }
             // We execute the delegate along with the param
             if (Out.IsBound()) {
                 Out.Execute(Devices, CurrentDevice);
@@ -145,11 +161,17 @@ void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSucc
 void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                      NewDeviceId,
                                                      FChangeCaptureDeviceDelegate OnChangeCompleted)
 {
-    TryRunAsyncChangeDeviceRequest(OnChangeCompleted, [this, NewDeviceId, OnChangeCompleted]() {
-        bool bSuccess;
-        ChangeCaptureDeviceById(NewDeviceId, bSuccess);
-        FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
-    });
+    TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+    TryRunAsyncChangeDeviceRequest(
+        OnChangeCompleted, [NewDeviceId, OnChangeCompleted, WeakThisPtr]() {
+            if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                             "UOdinAudioCapture::AsyncChangeCaptureDeviceById")) {
+                return;
+            }
+            bool bSuccess;
+            WeakThisPtr->ChangeCaptureDeviceById(NewDeviceId, bSuccess);
+            WeakThisPtr->FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
+        });
 }
 
 void UOdinAudioCapture::ChangeCaptureDeviceByName(FName DeviceName, bool& bSuccess)
@@ -169,11 +191,17 @@ void UOdinAudioCapture::ChangeCaptureDeviceByName(FName DeviceName, bool& bSucce
 void UOdinAudioCapture::AsyncChangeCaptureDeviceByName(
     FName DeviceName, FChangeCaptureDeviceDelegate OnChangeCompleted)
 {
-    TryRunAsyncChangeDeviceRequest(OnChangeCompleted, [this, DeviceName, OnChangeCompleted]() {
-        bool bSuccess;
-        ChangeCaptureDeviceByName(DeviceName, bSuccess);
-        FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
-    });
+    TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+    TryRunAsyncChangeDeviceRequest(
+        OnChangeCompleted, [DeviceName, OnChangeCompleted, WeakThisPtr]() {
+            if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                             "UOdinAudioCapture::AsyncChangeCaptureDeviceByName")) {
+                return;
+            }
+            bool bSuccess;
+            WeakThisPtr->ChangeCaptureDeviceByName(DeviceName, bSuccess);
+            WeakThisPtr->FinalizeCaptureDeviceChange(OnChangeCompleted, bSuccess);
+        });
 }
 
 void UOdinAudioCapture::TryRunAsyncChangeDeviceRequest(
@@ -192,8 +220,13 @@ void UOdinAudioCapture::TryRunAsyncChangeDeviceRequest(
 void UOdinAudioCapture::FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted,
                                                     bool&                        bSuccess)
 {
-    AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, this]() {
-        IsCurrentlyChangingDevice = false;
+    TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+    AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, WeakThisPtr]() {
+        if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                         "UOdinAudioCapture::FinalizeCaptureDeviceChange")) {
+            return;
+        }
+        WeakThisPtr->IsCurrentlyChangingDevice = false;
         // We execute the delegate along with the param
         if (OnChangeCompleted.IsBound()) {
             OnChangeCompleted.Execute(bSuccess);
@@ -237,7 +270,7 @@ float UOdinAudioCapture::GetStreamTime() const
 {
     double streamTime;
     AudioCapture.GetStreamTime(streamTime);
-    return (float)streamTime;
+    return static_cast<float>(streamTime);
 }
 
 void UOdinAudioCapture::Tick(float DeltaTime)
@@ -331,7 +364,7 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
                                                       int32 InNumChannels, int32 InSampleRate,
                                                       double StreamTime, bool bOverFlow) {
         if (!bIsCapturingPaused) {
-            OnGeneratedAudio((const float*)AudioData, NumFrames * InNumChannels);
+            OnGeneratedAudio(static_cast<const float*>(AudioData), NumFrames * InNumChannels);
         }
     };
 #else

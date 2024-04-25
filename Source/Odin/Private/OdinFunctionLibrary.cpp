@@ -23,7 +23,7 @@ UOdinFunctionLibrary* UOdinFunctionLibrary::getOdinFunctionLibrary()
 
 UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UPARAM(ref) UAudioCapture*& audioCapture)
 {
-    auto capture_media = NewObject<UOdinCaptureMedia>();
+    auto capture_media = NewObject<UOdinCaptureMedia>(audioCapture);
     capture_media->SetAudioCapture(audioCapture);
     return capture_media;
 }
@@ -79,16 +79,10 @@ UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldCo
     return nullptr;
 }
 
-bool UOdinFunctionLibrary::OdinAsyncValidityCheck(const UWorld*  WorldReference,
-                                                  const UObject* ObjectToCheck,
-                                                  const FString& CheckReferenceName)
+bool UOdinFunctionLibrary::Check(const TWeakObjectPtr<UObject> ObjectToCheck,
+                                 const FString&                CheckReferenceName)
 {
-    if (!WorldReference || !IsValid(WorldReference)) {
-        UE_LOG(Odin, Verbose, TEXT("Aborting %s due to invalid World."), *CheckReferenceName);
-        return false;
-    }
-
-    if (!ObjectToCheck || !IsValid(ObjectToCheck)) {
+    if (!ObjectToCheck.IsValid()) {
         UE_LOG(Odin, Verbose, TEXT("Aborting %s due to invalid object ptr."), *CheckReferenceName);
         return false;
     }
