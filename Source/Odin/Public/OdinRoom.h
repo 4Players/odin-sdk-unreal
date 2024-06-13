@@ -3,15 +3,12 @@
 #pragma once
 
 #include "Kismet/BlueprintAsyncActionBase.h"
-#include "Templates/SharedPointer.h"
 
 #include "OdinCaptureMedia.h"
 #include "OdinJsonObject.h"
 
 #include "OdinPlaybackMedia.h"
 #include "OdinSubmixListener.h"
-
-#include <memory>
 
 #include "OdinRoom.generated.h"
 
@@ -24,12 +21,46 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePositionResponsePin, bool, su
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePeerUserDataResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSendMessageResponsePin, bool, success);
 
+/**
+ * All valid connection states for an ODIN room.
+ */
 UENUM(BlueprintType)
-enum EOdinRoomConnectionState {
+enum class EOdinRoomConnectionState : uint8 {
+    /**
+     * Connection is closed
+     */
     Disconnected,
+    /**
+     * Connection is being closed
+     */
     Disconnecting,
+    /**
+     * Connection is being established
+     */
     Connecting,
+    /**
+     * Connection is established
+     */
     Connected,
+};
+
+/**
+ * Possible reasons for connection state changes of an ODIN room.
+ */
+UENUM(BlueprintType)
+enum class EOdinRoomConnectionStateChangeReason : uint8 {
+    /**
+     * Connection state change was initiated by the user
+     */
+    ClientRequested,
+    /**
+     * Connection state change was initiated by the server (e.g. peer was kicked)
+     */
+    ServerRequested,
+    /**
+     * Connection state change was caused by a timeout
+     */
+    ConnectionLost
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomJoinError, int64, errorCode);
@@ -425,6 +456,24 @@ struct ODIN_API FOdinApmSettings {
     bool bGainController = true;
 };
 
+USTRUCT(BlueprintType)
+struct ODIN_API FRoomConnectionStateChangedData {
+    GENERATED_BODY()
+    /**
+     *
+     */
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
+              meta = (DisplayName = "Connection State"))
+    EOdinRoomConnectionState State = EOdinRoomConnectionState::Disconnected;
+    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
+              meta = (DisplayName = "Reason"))
+    EOdinRoomConnectionStateChangeReason Reason =
+        EOdinRoomConnectionStateChangeReason::ClientRequested;
+
+    static FRoomConnectionStateChangedData
+    FromOdinEventData(OdinEvent_RoomConnectionStateChangedData data);
+};
+
 UCLASS(ClassGroup     = Odin, BlueprintType,
        hidecategories = (Activation, Transform, Object, ActorComponent, Physics, Rendering,
                          Mobility, LOD))
@@ -481,11 +530,20 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerUserDataChanged onPeerUserDataChanged;
 
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStatChanged,
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStatChanged_DEPRECATED,
                                                  EOdinRoomConnectionState, connectionState,
                                                  UOdinRoom *, room);
+    UPROPERTY(
+        BlueprintAssignable, Category = "Odin|Room|Events",
+        meta = (DisplayName        = "onConnectionStateChanged", DeprecatedProperty,
+                DeprecationMessage = "Deprecated, instead use On Room Connection State Changed."))
+    FOdinRoomConnectionStatChanged_DEPRECATED onConnectionStateChanged_DEPRECATED;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStateChanged,
+                                                 FRoomConnectionStateChangedData, stateChangedData,
+                                                 UOdinRoom *, room);
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinRoomConnectionStatChanged onConnectionStateChanged;
+    FOdinRoomConnectionStateChanged onRoomConnectionStateChanged;
 
   public:
     UOdinRoom(const FObjectInitializer &ObjectInitializer);
@@ -539,6 +597,9 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                 Category = "Odin|Room"))
     void Destroy();
 
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (Category = "Odin|Room"))
+    bool IsConnected() const;
+
     void BindCaptureMedia(UOdinCaptureMedia *media);
     void UnbindCaptureMedia(UOdinCaptureMedia *media);
 
@@ -555,11 +616,17 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     }
 
   protected:
-    void BeginDestroy() override;
-    void FinishDestroy() override;
+    virtual void BeginDestroy() override;
+    virtual void FinishDestroy() override;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Odin|Room|StateChange")
+    FRoomConnectionStateChangedData LastRoomConnectionStateChangedData;
 
   private:
     static void HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent Event);
+
+    void CleanUp();
+    void DeregisterRoomFromSubsystem();
 
     OdinRoomHandle room_handle_;
 

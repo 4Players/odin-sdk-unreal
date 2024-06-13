@@ -219,8 +219,9 @@ void UOdinRoomRemoveMedia::Activate()
                 } else {
                     This->OnSuccess.ExecuteIfBound();
                 }
-                if (This->OnResponse.IsBound())
+                if (This->OnResponse.IsBound()) {
                     This->OnResponse.Broadcast(!IsError);
+                }
             }
         },
         TStatId(), nullptr, ENamedThreads::GameThread);
@@ -307,4 +308,43 @@ void UOdinRoomSendMessage::Activate()
                                                this->OnResponse, this->OnError, this->OnSuccess))
         ->StartBackgroundTask();
     this->SetReadyToDestroy();
+}
+
+FRoomConnectionStateChangedData
+FRoomConnectionStateChangedData::FromOdinEventData(OdinEvent_RoomConnectionStateChangedData data)
+{
+    FRoomConnectionStateChangedData UnrealData;
+    switch (data.reason) {
+        case OdinRoomConnectionStateChangeReason_ClientRequested:
+            UnrealData.Reason = EOdinRoomConnectionStateChangeReason::ClientRequested;
+            break;
+        case OdinRoomConnectionStateChangeReason_ConnectionLost:
+            UnrealData.Reason = EOdinRoomConnectionStateChangeReason::ConnectionLost;
+            break;
+        case OdinRoomConnectionStateChangeReason_ServerRequested:
+            UnrealData.Reason = EOdinRoomConnectionStateChangeReason::ServerRequested;
+            break;
+        default:
+            UnrealData.Reason = EOdinRoomConnectionStateChangeReason::ClientRequested;
+            break;
+    }
+    switch (data.state) {
+        case OdinRoomConnectionState_Connected:
+            UnrealData.State = EOdinRoomConnectionState::Connected;
+            break;
+        case OdinRoomConnectionState_Connecting:
+            UnrealData.State = EOdinRoomConnectionState::Connecting;
+            break;
+        case OdinRoomConnectionState_Disconnecting:
+            UnrealData.State = EOdinRoomConnectionState::Disconnecting;
+            break;
+        case OdinRoomConnectionState_Disconnected:
+            UnrealData.State = EOdinRoomConnectionState::Disconnected;
+            break;
+        default:
+            UnrealData.State = EOdinRoomConnectionState::Disconnected;
+            break;
+    }
+
+    return UnrealData;
 }

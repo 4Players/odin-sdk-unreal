@@ -16,13 +16,13 @@ UOdinSubsystem* UOdinSubsystem::Get()
 void UOdinSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
-    UE_LOG(Odin, Log, TEXT("Initialize Odin Subsystem"));
+    UE_LOG(Odin, Log, TEXT("Initialize Odin Room Registration Subsystem"));
 }
 
 void UOdinSubsystem::Deinitialize()
 {
     Super::Deinitialize();
-    UE_LOG(Odin, Log, TEXT("Deinitialize Odin Subsystem"));
+    UE_LOG(Odin, Log, TEXT("Deinitialize Odin Room Registration Subsystem"));
 }
 
 void UOdinSubsystem::RegisterRoom(OdinRoomHandle RoomHandle, UOdinRoom* Room)
@@ -56,4 +56,9 @@ TWeakObjectPtr<UOdinRoom> UOdinSubsystem::GetRoomByHandle(OdinRoomHandle RoomHan
     }
     UE_LOG(Odin, Verbose, TEXT("Did not find Odin Room with room handle %llu"), RoomHandle);
     return nullptr;
+}
+
+bool UOdinSubsystem::IsRoomRegistered(OdinRoomHandle Handle) const
+{
+    return RegisteredRooms.Contains(Handle);
 }

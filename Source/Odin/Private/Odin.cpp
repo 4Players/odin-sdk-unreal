@@ -64,29 +64,10 @@ void FOdinModule::StartupModule()
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
 #endif
-
-    bool                 bStartupSuccess = false;
-    FAudioDeviceManager* DeviceManager   = FAudioDeviceManager::Get();
-    if (DeviceManager) {
-        FAudioDeviceHandle AudioDevice = DeviceManager->GetActiveAudioDevice();
-        SampleRate                     = AudioDevice->SampleRate;
-        ChannelCount                   = 2;
-
-        UE_LOG(Odin, Log, TEXT("Odin initialization with sample rate %d and channel count %d."),
-               SampleRate, ChannelCount);
-        bStartupSuccess = odin_startup_ex(
-            ODIN_VERSION, OdinAudioStreamConfig{(uint32_t)SampleRate, (uint8_t)ChannelCount});
-    }
-
-    if (!bStartupSuccess) {
-        UE_LOG(Odin, Warning, TEXT("Odin Startup aborted, no Active Audio Device available."))
-    }
 }
 
 void FOdinModule::ShutdownModule()
 {
-    odin_shutdown();
-
 #if PLATFORM_WINDOWS || PLATFORM_LINUX
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;

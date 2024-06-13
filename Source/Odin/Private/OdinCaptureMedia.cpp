@@ -1,7 +1,7 @@
 /* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
 
 #include "OdinCaptureMedia.h"
-
+#include "Async/Async.h"
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
 #include "odin_sdk.h"
@@ -70,7 +70,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
                                     "stream."),
                                StreamSampleRate, AudioCapture->GetSampleRate());
 
-                        HandleInputDeviceChanges(WeakThisPtr);
+                        ReconnectCaptureMedia(WeakThisPtr);
                         return;
                     }
 
@@ -148,6 +148,11 @@ void UOdinCaptureMedia::SetMaxVolumeMultiplier(const float newValue)
     this->max_volume_multiplier_ = newValue;
 }
 
+void UOdinCaptureMedia::Reconnect()
+{
+    ReconnectCaptureMedia(this);
+}
+
 void UOdinCaptureMedia::BeginDestroy()
 {
     Reset();
@@ -155,7 +160,7 @@ void UOdinCaptureMedia::BeginDestroy()
     Super::BeginDestroy();
 }
 
-void UOdinCaptureMedia::HandleInputDeviceChanges(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia)
+void UOdinCaptureMedia::ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia)
 {
     if (!CaptureMedia.IsValid()) {
         return;
@@ -169,41 +174,39 @@ void UOdinCaptureMedia::HandleInputDeviceChanges(TWeakObjectPtr<UOdinCaptureMedi
             return;
         }
 
-        if (!CaptureMedia->connected_room_.IsValid()) {
+        UOdinCaptureMedia* OdinCaptureMedia = CaptureMedia.Get();
+
+        if (!OdinCaptureMedia->connected_room_.IsValid()) {
             UE_LOG(Odin, Error,
                    TEXT("Missing connected Room on capture stream when trying to reconnect due to "
                         "Input Device change."));
             return;
         }
-        if (!CaptureMedia->audio_capture_) {
+        if (!OdinCaptureMedia->audio_capture_) {
             UE_LOG(Odin, Error,
                    TEXT("Missing connected audio capture object on capture stream when trying to "
                         "reconnect due to Input Device change."));
             return;
         }
 
-        auto       capturePointer = CaptureMedia->audio_capture_;
-        const auto roomPointer    = CaptureMedia->connected_room_.Get();
+        auto       capturePointer = OdinCaptureMedia->audio_capture_;
+        const auto roomPointer    = OdinCaptureMedia->connected_room_.Get();
 
         // disconnect current stream from connected room
-        roomPointer->UnbindCaptureMedia(CaptureMedia.Get());
+        roomPointer->UnbindCaptureMedia(OdinCaptureMedia);
         // reset audio capture generator delegate and media stream
-        CaptureMedia->ResetOdinStream();
-
-        // Create new capture media. Odin_CreateMedia also creates new audio capture generator
-        UOdinCaptureMedia* NewCaptureMedia = UOdinFunctionLibrary::Odin_CreateMedia(capturePointer);
-        // perform Add Media To Room functionality
-        const OdinRoomHandle        room_handle = roomPointer ? roomPointer->RoomHandle() : 0;
-        const OdinMediaStreamHandle media_handle =
-            NewCaptureMedia ? NewCaptureMedia->GetMediaHandle() : 0;
-        const OdinReturnCode result = odin_room_add_media(room_handle, media_handle);
+        OdinCaptureMedia->ResetOdinStream();
+        OdinCaptureMedia->SetAudioCapture(capturePointer);
+        const OdinRoomHandle        room_handle  = roomPointer->RoomHandle();
+        const OdinMediaStreamHandle media_handle = OdinCaptureMedia->GetMediaHandle();
+        const OdinReturnCode        result       = odin_room_add_media(room_handle, media_handle);
         if (odin_is_error(result)) {
             const FString FormattedError = UOdinFunctionLibrary::FormatError(result, true);
             UE_LOG(Odin, Error,
                    TEXT("Error during media stream reset due to input device changes: %s"),
                    *FormattedError);
         } else {
-            roomPointer->BindCaptureMedia(NewCaptureMedia);
+            roomPointer->BindCaptureMedia(OdinCaptureMedia);
             UE_LOG(Odin, Verbose, TEXT("Binding to New Capture Media."));
         }
     });

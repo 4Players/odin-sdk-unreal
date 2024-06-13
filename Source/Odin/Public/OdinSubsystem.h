@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "odin_sdk.h"
-#include "Subsystems/GameInstanceSubsystem.h"
+#include "Subsystems/EngineSubsystem.h"
 #include "OdinSubsystem.generated.h"
 
 class UOdinRoom;
@@ -22,6 +22,7 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
     void                      RegisterRoom(OdinRoomHandle RoomHandle, UOdinRoom* Room);
     void                      DeregisterRoom(OdinRoomHandle RoomHandle);
     TWeakObjectPtr<UOdinRoom> GetRoomByHandle(OdinRoomHandle RoomHandle);
+    bool                      IsRoomRegistered(OdinRoomHandle) const;
 
   protected:
     TMap<OdinRoomHandle, TWeakObjectPtr<UOdinRoom>> RegisteredRooms;

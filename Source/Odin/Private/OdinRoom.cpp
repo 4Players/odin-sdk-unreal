@@ -23,17 +23,70 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer& PCIP)
 void UOdinRoom::BeginDestroy()
 {
     Super::BeginDestroy();
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
-    if (OdinSubsystem) {
-        OdinSubsystem->DeregisterRoom(this->room_handle_);
-    }
-    this->Destroy();
-    odin_room_set_event_callback(room_handle_, nullptr, nullptr);
+    this->CleanUp();
+    DeregisterRoomFromSubsystem();
 }
 
 void UOdinRoom::FinishDestroy()
 {
+    odin_room_destroy(room_handle_);
     Super::FinishDestroy();
+}
+
+void UOdinRoom::Destroy()
+{
+    CleanUp();
+}
+
+bool UOdinRoom::IsConnected() const
+{
+    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    if (OdinSubsystem) {
+
+        const bool bIsRegistered = OdinSubsystem->IsRoomRegistered(room_handle_);
+        const bool bIsConnected =
+            LastRoomConnectionStateChangedData.State == EOdinRoomConnectionState::Connected;
+        return bIsRegistered && bIsConnected;
+    }
+    return false;
+}
+
+void UOdinRoom::CleanUp()
+{
+    {
+        FScopeLock lock(&this->capture_medias_cs_);
+        for (auto media : this->capture_medias_) {
+            if (nullptr != media) {
+                media->Reset();
+            }
+        }
+        this->capture_medias_.Empty();
+    }
+
+    {
+        FScopeLock lock(&this->medias_cs_);
+        this->medias_.Empty();
+    }
+
+    // UE_LOG(Odin, Log, TEXT("Pre room close, room handle: %lld"), room_handle_);
+    OdinReturnCode ReturnCode = odin_room_close(room_handle_);
+    if (odin_is_error(ReturnCode)) {
+        FString FormattedCloseError = UOdinFunctionLibrary::FormatError(ReturnCode, false);
+        UE_LOG(Odin, Error, TEXT("Error while closing Odin room: %s"), *FormattedCloseError);
+    }
+    // UE_LOG(Odin, Log, TEXT("Post room close, pre set event callback, room handle: %lld"),
+    // room_handle_); odin_room_set_event_callback(room_handle_, nullptr, nullptr); UE_LOG(Odin,
+    // Log, TEXT("Post set event callback, pre room destroy, room handle: %lld"), room_handle_);
+    // odin_room_destroy(room_handle_);
+    // UE_LOG(Odin, Log, TEXT("Post room destroy callback, room handle: %lld"), room_handle_);
+}
+
+void UOdinRoom::DeregisterRoomFromSubsystem()
+{
+    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    if (OdinSubsystem) {
+        OdinSubsystem->DeregisterRoom(this->room_handle_);
+    }
 }
 
 UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
@@ -80,7 +133,7 @@ FOdinConnectionStats UOdinRoom::ConnectionStats()
     auto                result = odin_room_connection_stats(this->room_handle_, &stats);
 
     if (odin_is_error(result)) {
-        UE_LOG(LogTemp, Warning, TEXT("odin_room_connection_stats result: %d"), result);
+        UE_LOG(Odin, Warning, TEXT("odin_room_connection_stats result: %d"), result);
     } else {
         FOdinConnectionStats RoomStats;
         RoomStats.udp_tx_datagrams  = stats.udp_tx_datagrams;
@@ -118,11 +171,12 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
 
     if (odin_apm_config.echo_canceller) {
         if (submix_listener_ == nullptr) {
-            submix_listener_ = NewObject<UOdinSubmixListener>();
+            submix_listener_ = NewObject<UOdinSubmixListener>(this);
             submix_listener_->SetRoom(this->room_handle_);
         }
-        submix_listener_->StartSubmixListener();
-    } else if (submix_listener_ != nullptr) {
+        if (!submix_listener_->IsListening())
+            submix_listener_->StartSubmixListener();
+    } else if (submix_listener_ != nullptr && submix_listener_->IsListening()) {
         submix_listener_->StopSubmixListener();
     }
 
@@ -150,29 +204,6 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
 void UOdinRoom::UpdateAPMStreamDelay(int64 DelayInMs)
 {
     odin_audio_set_stream_delay(this->room_handle_, DelayInMs);
-}
-
-void UOdinRoom::Destroy()
-{
-    {
-        FScopeLock lock(&this->capture_medias_cs_);
-        for (auto media : this->capture_medias_) {
-            if (nullptr != media) {
-                media->Reset();
-            }
-        }
-        this->capture_medias_.Empty();
-    }
-
-    {
-        FScopeLock lock(&this->medias_cs_);
-        this->medias_.Empty();
-    }
-
-    // (new FAutoDeleteAsyncTask<DestroyRoomTask>(this->room_handle_))->StartBackgroundTask();
-    odin_room_close(room_handle_);
-    odin_room_set_event_callback(room_handle_, nullptr, nullptr);
-    odin_room_destroy(room_handle_);
 }
 
 void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia* media)
@@ -403,29 +434,42 @@ void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event
                 TStatId(), nullptr, ENamedThreads::GameThread);
         } break;
         case OdinEvent_RoomConnectionStateChanged: {
-            EOdinRoomConnectionState state = {};
-            switch (event.room_connection_state_changed.state) {
-                case OdinRoomConnectionState_Connected: {
-                    state = Connected;
-                } break;
-                case OdinRoomConnectionState_Connecting: {
-                    state = Connecting;
-                } break;
-                case OdinRoomConnectionState_Disconnecting: {
-                    state = Disconnecting;
-                } break;
-                case OdinRoomConnectionState_Disconnected: {
-                    state = Disconnected;
-                } break;
-            }
+            FRoomConnectionStateChangedData Data =
+                FRoomConnectionStateChangedData::FromOdinEventData(
+                    event.room_connection_state_changed);
             FFunctionGraphTask::CreateAndDispatchWhenReady(
-                [state, WeakOdinRoom]() {
+                [Data, WeakOdinRoom]() {
                     if (!UOdinFunctionLibrary::Check(WeakOdinRoom,
                                                      "OdinEvent_RoomConnectionStateChanged")) {
                         return;
                     }
+                    WeakOdinRoom->LastRoomConnectionStateChangedData = Data;
 
-                    WeakOdinRoom->onConnectionStateChanged.Broadcast(state, WeakOdinRoom.Get());
+                    if (WeakOdinRoom->onConnectionStateChanged_DEPRECATED.IsBound()) {
+                        WeakOdinRoom->onConnectionStateChanged_DEPRECATED.Broadcast(
+                            Data.State, WeakOdinRoom.Get());
+                    }
+
+                    if (WeakOdinRoom->onRoomConnectionStateChanged.IsBound()) {
+                        WeakOdinRoom->onRoomConnectionStateChanged.Broadcast(Data,
+                                                                             WeakOdinRoom.Get());
+                    }
+
+                    // Handle connection timeouts and reconnects by creating new input stream
+                    if (Data.Reason == EOdinRoomConnectionStateChangeReason::ConnectionLost) {
+                        if (Data.State == EOdinRoomConnectionState::Connected) {
+                            FScopeLock lock(&WeakOdinRoom->capture_medias_cs_);
+                            for (auto media : WeakOdinRoom->capture_medias_) {
+                                if (IsValid(media)) {
+                                    media->Reconnect();
+                                }
+                            }
+                        }
+                    }
+
+                    if (Data.State == EOdinRoomConnectionState::Disconnected) {
+                        WeakOdinRoom->ConditionalBeginDestroy();
+                    }
                 },
                 TStatId(), nullptr, ENamedThreads::GameThread);
 
