@@ -79,6 +79,11 @@ void UOdinSubmixListener::StopSubmixListener()
         return;
 
     FAudioDeviceHandle AudioDevice = GEngine->GetActiveAudioDevice();
+    if (!AudioDevice.IsValid())
+        return;
+
+    if (!SubmixBufferListener.IsValid())
+        return;
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 4
     AudioDevice->UnregisterSubmixBufferListener(SubmixBufferListener.ToSharedRef(),

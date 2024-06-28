@@ -73,7 +73,7 @@ UOdinAudioCapture* UOdinFunctionLibrary::CreateOdinAudioCapture(UObject* WorldCo
                TEXT("No World Context provided when creating Odin Audio Capture. Audio Capture "
                     "will not be able to react to capture devices being removed."));
     }
-    UOdinAudioCapture* OdinAudioCapture = NewObject<UOdinAudioCapture>(World);
+    UOdinAudioCapture* OdinAudioCapture = NewObject<UOdinAudioCapture>(WorldContextObject);
     if (OdinAudioCapture->RestartCapturing(false)) {
         return OdinAudioCapture;
     }

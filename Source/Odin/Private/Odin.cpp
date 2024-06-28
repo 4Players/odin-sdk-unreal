@@ -76,4 +76,4 @@ void FOdinModule::ShutdownModule()
 
 #undef LOCTEXT_NAMESPACE
 
-IMPLEMENT_GAME_MODULE(FOdinModule, Odin)
+IMPLEMENT_MODULE(FOdinModule, Odin)
