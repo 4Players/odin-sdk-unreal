@@ -207,12 +207,20 @@ void UOdinRoomRemoveMedia::Activate()
     FFunctionGraphTask::CreateAndDispatchWhenReady(
         [WeakThis]() {
             if (UOdinRoomRemoveMedia* This = WeakThis.Get()) {
-                OdinReturnCode result = -1;
+                OdinReturnCode result = 1 << 30;
+                if (!This->Room.IsValid()) {
+                    UE_LOG(Odin, Error, TEXT("OdinRoomRemoveMedia: The Room reference is invalid."))
+                }
+
+                if (!This->CaptureMedia.IsValid()) {
+                    UE_LOG(Odin, Error,
+                           TEXT("OdinRoomRemoveMedia: The CaptureMedia reference is invalid."))
+                }
+
                 if (This->Room.IsValid() && This->CaptureMedia.IsValid()) {
                     This->Room->UnbindCaptureMedia(This->CaptureMedia.Get());
                     result = This->CaptureMedia->ResetOdinStream();
                 }
-
                 bool IsError = odin_is_error(result);
                 if (IsError) {
                     This->OnError.ExecuteIfBound(result);

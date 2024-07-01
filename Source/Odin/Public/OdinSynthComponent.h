@@ -39,26 +39,28 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
     void AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings);
 
+    // We want to hide the non-virtual function in USynthComponent here!
     void AddAudioBufferListener(IAudioBufferListener *InAudioBufferListener);
+    // We want to hide the non-virtual function in USynthComponent here!
     void RemoveAudioBufferListener(IAudioBufferListener *InAudioBufferListener);
 
   protected:
-    bool Init(int32 &SampleRate) override;
-    void BeginDestroy() override;
+    virtual bool Init(int32 &SampleRate) override;
 
-  protected:
-#if ENGINE_MAJOR_VERSION >= 5
-    virtual ISoundGeneratorPtr
-    CreateSoundGenerator(const FSoundGeneratorInitParams &InParams) override;
-#else
-    virtual ISoundGeneratorPtr CreateSoundGenerator(int32 InSampleRate,
-                                                    int32 InNumChannels) override;
-#endif
+    virtual void BeginDestroy() override;
+    virtual void OnRegister() override;
+
+    virtual int32 OnGenerateAudio(float *OutAudio, int32 NumSamples) override;
+
+    void SetOdinStream(OdinMediaStreamHandle NewStreamHandle);
+    void ResetOdinStream(OdinMediaStreamHandle HandleToReset);
 
   private:
     UPROPERTY()
     UOdinPlaybackMedia *playback_media_ = nullptr;
 
-    TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
-    TArray<IAudioBufferListener *>                           AudioBufferListeners;
+    // TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
+    TArray<IAudioBufferListener *> AudioBufferListeners;
+
+    OdinMediaStreamHandle StreamHandle = 0;
 };

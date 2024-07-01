@@ -11,28 +11,59 @@
 bool UOdinSynthComponent::Init(int32 &SampleRate)
 {
     NumChannels = 2;
+    // We reset the stream handle here, to avoid any kind of delays after re-enabling
+    ResetOdinStream(StreamHandle);
     return true;
 }
 
 void UOdinSynthComponent::BeginDestroy()
 {
-    if (this->sound_generator_) {
-        this->sound_generator_->SetOdinStream(0);
+    this->playback_media_ = nullptr;
+    Super::BeginDestroy();
+}
+
+void UOdinSynthComponent::OnRegister()
+{
+    Super::OnRegister();
+    if (nullptr != playback_media_ && 0 != StreamHandle) {
+        Start();
+    }
+}
+
+int32 UOdinSynthComponent::OnGenerateAudio(float *OutAudio, int32 NumSamples)
+{
+    if (StreamHandle == 0) {
+        return 0;
     }
 
-    this->sound_generator_ = nullptr;
-    this->playback_media_  = nullptr;
+    auto read = odin_audio_read_data(StreamHandle, OutAudio, NumSamples);
+    if (odin_is_error(read)) {
+        return NumSamples;
+    }
+    for (IAudioBufferListener *AudioBufferListener : AudioBufferListeners) {
+        AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
+    }
+    return read;
+}
 
-    Super::BeginDestroy();
+void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
+{
+    ResetOdinStream(NewStreamHandle);
+    this->StreamHandle = NewStreamHandle;
+}
+
+void UOdinSynthComponent::ResetOdinStream(OdinMediaStreamHandle HandleToReset)
+{
+    if (0 != HandleToReset) {
+        odin_audio_reset(HandleToReset);
+    }
 }
 
 void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia *&media)
 {
     if (nullptr != media) {
         this->playback_media_ = media;
-        if (sound_generator_) {
-            sound_generator_->SetOdinStream(media->GetMediaHandle());
-        }
+        SetOdinStream(media->GetMediaHandle());
     } else {
         UE_LOG(Odin, Error,
                TEXT("UOdinSynthComponent::Odin_AssignSynthToMedia: Tried to assign null media to "
@@ -44,7 +75,7 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia
 void UOdinSynthComponent::Reset()
 {
     if (this->playback_media_ != nullptr) {
-        odin_audio_reset(this->playback_media_->GetMediaHandle());
+        ResetOdinStream(this->playback_media_->GetMediaHandle());
     }
 }
 
@@ -56,9 +87,9 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
     bOverrideAttenuation = true;
     AttenuationOverrides = InAttenuationSettings;
 
-    auto audioComponent = GetAudioComponent();
-    if (audioComponent) {
-        audioComponent->AdjustAttenuation(InAttenuationSettings);
+    auto AudioComponentPointer = GetAudioComponent();
+    if (AudioComponentPointer) {
+        AudioComponentPointer->AdjustAttenuation(InAttenuationSettings);
     }
 
     Activate(true);
@@ -67,31 +98,9 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener *InAudioBufferListener)
 {
     AudioBufferListeners.AddUnique(InAudioBufferListener);
-    if (nullptr != sound_generator_)
-        sound_generator_->AddAudioBufferListener(InAudioBufferListener);
 }
 
 void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener *InAudioBufferListener)
 {
     AudioBufferListeners.Remove(InAudioBufferListener);
-    if (nullptr != sound_generator_)
-        sound_generator_->RemoveAudioBufferListener(InAudioBufferListener);
-}
-
-#if ENGINE_MAJOR_VERSION >= 5
-ISoundGeneratorPtr
-UOdinSynthComponent::CreateSoundGenerator(const FSoundGeneratorInitParams &InParams)
-#else
-ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
-                                                             int32 InNumChannels)
-#endif
-{
-    this->sound_generator_ = MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>();
-    if (this->playback_media_ != nullptr) {
-        sound_generator_->SetOdinStream(this->playback_media_->GetMediaHandle());
-        for (IAudioBufferListener *AudioBufferListener : AudioBufferListeners) {
-            sound_generator_->AddAudioBufferListener(AudioBufferListener);
-        }
-    }
-    return sound_generator_;
 }

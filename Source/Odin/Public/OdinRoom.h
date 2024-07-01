@@ -536,7 +536,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(
         BlueprintAssignable, Category = "Odin|Room|Events",
         meta = (DisplayName        = "onConnectionStateChanged", DeprecatedProperty,
-                DeprecationMessage = "Deprecated, instead use On Room Connection State Changed."))
+                DeprecationMessage = "Use \"On Room Connection State Changed\" instead please."))
     FOdinRoomConnectionStatChanged_DEPRECATED onConnectionStateChanged_DEPRECATED;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStateChanged,

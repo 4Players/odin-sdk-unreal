@@ -19,6 +19,7 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
     for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
         AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, 2);
     }
+
     return read;
 }
 
