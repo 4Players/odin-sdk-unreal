@@ -15,6 +15,7 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
     GENERATED_BODY()
   public:
     static UOdinSubsystem* Get();
+    static bool            GlobalIsRoomValid(OdinRoomHandle);
 
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;

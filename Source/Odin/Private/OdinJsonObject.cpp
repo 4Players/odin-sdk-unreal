@@ -82,13 +82,18 @@ TArray<uint8> UOdinJsonObject::EncodeJsonBytes() const
         return data;
     }
 
-    FString OutputString = EncodeJson();
-    uint32  size         = OutputString.Len();
+    const FString OutputString = EncodeJson();
+
+#if ENGINE_MAJOR_VERSION >= 5
+    const auto Utf8String = StringCast<UTF8CHAR>(*OutputString);
+#else
+    const auto Utf8String = FTCHARToUTF8(*OutputString);
+#endif
+
+    const uint32 size = Utf8String.Length();
 
     data.AddUninitialized(size);
-    FTCHARToUTF8_Convert::Convert((UTF8CHAR *)data.GetData(), data.Num(), *OutputString,
-                                  OutputString.Len());
-
+    FMemory::Memcpy(data.GetData(), Utf8String.Get(), size);
     return data;
 }
 

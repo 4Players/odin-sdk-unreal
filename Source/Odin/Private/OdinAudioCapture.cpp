@@ -352,6 +352,8 @@ void UOdinAudioCapture::SetIsPaused(bool newValue)
 
 bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinAudioCapture::RestartCapturing)
+
     if (AudioCapture.IsStreamOpen()) {
         AudioCapture.CloseStream();
     }

@@ -15,8 +15,7 @@
 #include "IOSAppDelegate.h"
 #endif
 
-#include "AudioDevice.h"
-#include "odin_sdk.h"
+#include "OdinFunctionLibrary.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
 
@@ -72,6 +71,12 @@ void FOdinModule::ShutdownModule()
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;
 #endif
+}
+
+void FOdinModule::LogErrorCode(FString Prefix, uint32_t ErrorCode)
+{
+    FString ErrorMessage = UOdinFunctionLibrary::FormatError(ErrorCode, false);
+    UE_LOG(Odin, Error, TEXT("%s, Error: %s"), *Prefix, *ErrorMessage);
 }
 
 #undef LOCTEXT_NAMESPACE

@@ -25,7 +25,7 @@ void UOdinTokenGenerator::SetAccessKey(const FString &AccessKey)
         this->TokenGenerator = nullptr;
     }
 
-    this->TokenGenerator = odin_token_generator_create(TCHAR_TO_ANSI(*AccessKey));
+    this->TokenGenerator = odin_token_generator_create(StringCast<ANSICHAR>(*AccessKey).Get());
 }
 
 FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FString &UserId,
@@ -38,8 +38,13 @@ FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FStr
                                     ? OdinTokenAudience_Sfu
                                     : OdinTokenAudience_Gateway;
     options.lifetime          = 300;
-    odin_token_generator_create_token_ex(this->TokenGenerator, TCHAR_TO_ANSI(*RoomId),
-                                         TCHAR_TO_ANSI(*UserId), &options, buf, sizeof buf);
+    odin_token_generator_create_token_ex(this->TokenGenerator, StringCast<ANSICHAR>(*RoomId).Get(),
+                                         StringCast<ANSICHAR>(*UserId).Get(), &options, buf,
+                                         sizeof buf);
 
+#if ENGINE_MAJOR_VERSION >= 5
+    return FString(512, buf);
+#else
     return ANSI_TO_TCHAR(buf);
+#endif
 }

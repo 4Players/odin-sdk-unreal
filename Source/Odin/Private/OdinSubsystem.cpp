@@ -13,6 +13,15 @@ UOdinSubsystem* UOdinSubsystem::Get()
     return nullptr;
 }
 
+bool UOdinSubsystem::GlobalIsRoomValid(OdinRoomHandle Handle)
+{
+    UOdinSubsystem* OdinSubsystem = Get();
+    if (OdinSubsystem) {
+        return OdinSubsystem->IsRoomRegistered(Handle);
+    }
+    return false;
+}
+
 void UOdinSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);

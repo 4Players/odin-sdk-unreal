@@ -23,6 +23,8 @@ void UOdinCaptureMedia::RemoveRoom()
 
 void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinCaptureMedia::SetAudioCapture)
+
     if (!audio_capture) {
         UE_LOG(Odin, Error,
                TEXT("UOdinCaptureMedia::SetAudioCapture - audio capture is null, microphone will "
@@ -32,6 +34,7 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
     this->audio_capture_ = audio_capture;
 
     if (this->stream_handle_) {
+        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinCaptureMedia::SetAudioCapture Odin Create Audio Stream)
         odin_media_stream_destroy(this->stream_handle_);
         this->SetMediaHandle(0);
     }
@@ -40,12 +43,16 @@ void UOdinCaptureMedia::SetAudioCapture(UAudioCapture* audio_capture)
         stream_sample_rate_  = audio_capture->GetSampleRate();
         stream_num_channels_ = audio_capture->GetNumChannels();
     }
+    {
+        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinCaptureMedia::SetAudioCapture Odin Create Audio Stream)
 
-    UE_LOG(Odin, Log,
-           TEXT("Initializing Audio Capture stream with Sample Rate: %d and Channels: %d"),
-           stream_sample_rate_, stream_num_channels_);
-    this->stream_handle_ = odin_audio_stream_create(OdinAudioStreamConfig{
-        static_cast<uint32_t>(stream_sample_rate_), static_cast<uint8_t>(stream_num_channels_)});
+        UE_LOG(Odin, Log,
+               TEXT("Initializing Audio Capture stream with Sample Rate: %d and Channels: %d"),
+               stream_sample_rate_, stream_num_channels_);
+        this->stream_handle_ = odin_audio_stream_create(
+            OdinAudioStreamConfig{static_cast<uint32_t>(stream_sample_rate_),
+                                  static_cast<uint8_t>(stream_num_channels_)});
+    }
 
     TWeakObjectPtr<UOdinCaptureMedia> WeakThisPtr = this;
     if (audio_capture && audio_capture->IsValidLowLevel()) {

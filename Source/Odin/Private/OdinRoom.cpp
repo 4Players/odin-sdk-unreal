@@ -24,12 +24,10 @@ void UOdinRoom::BeginDestroy()
 {
     Super::BeginDestroy();
     this->CleanUp();
-    DeregisterRoomFromSubsystem();
 }
 
 void UOdinRoom::FinishDestroy()
 {
-    odin_room_destroy(room_handle_);
     Super::FinishDestroy();
 }
 
@@ -68,17 +66,7 @@ void UOdinRoom::CleanUp()
         this->medias_.Empty();
     }
 
-    // UE_LOG(Odin, Log, TEXT("Pre room close, room handle: %lld"), room_handle_);
-    OdinReturnCode ReturnCode = odin_room_close(room_handle_);
-    if (odin_is_error(ReturnCode)) {
-        FString FormattedCloseError = UOdinFunctionLibrary::FormatError(ReturnCode, false);
-        UE_LOG(Odin, Error, TEXT("Error while closing Odin room: %s"), *FormattedCloseError);
-    }
-    // UE_LOG(Odin, Log, TEXT("Post room close, pre set event callback, room handle: %lld"),
-    // room_handle_); odin_room_set_event_callback(room_handle_, nullptr, nullptr); UE_LOG(Odin,
-    // Log, TEXT("Post set event callback, pre room destroy, room handle: %lld"), room_handle_);
-    // odin_room_destroy(room_handle_);
-    // UE_LOG(Odin, Log, TEXT("Post room destroy callback, room handle: %lld"), room_handle_);
+    (new FAutoDeleteAsyncTask<DestroyRoomTask>(RoomHandle()))->StartBackgroundTask();
 }
 
 void UOdinRoom::DeregisterRoomFromSubsystem()
@@ -261,9 +249,9 @@ void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event
             TArray<uint8> user_data{event.joined.room_user_data,
                                     static_cast<int>(event.joined.room_user_data_len)};
 
-            FString roomId       = UTF8_TO_TCHAR(event.joined.room_id);
-            FString roomCustomer = UTF8_TO_TCHAR(event.joined.customer);
-            FString own_user_id  = UTF8_TO_TCHAR(event.joined.own_user_id);
+            FString roomId       = StringCast<TCHAR>(event.joined.room_id).Get();
+            FString roomCustomer = StringCast<TCHAR>(event.joined.customer).Get();
+            FString own_user_id  = StringCast<TCHAR>(event.joined.own_user_id).Get();
 
             FFunctionGraphTask::CreateAndDispatchWhenReady(
                 [roomId, roomCustomer, own_user_id, own_peer_id, user_data, WeakOdinRoom]() {
@@ -287,7 +275,7 @@ void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event
         } break;
         case OdinEvent_PeerJoined: {
             auto          peer_id = event.peer_joined.peer_id;
-            FString       user_id = UTF8_TO_TCHAR(event.peer_joined.user_id);
+            FString       user_id = StringCast<TCHAR>(event.peer_joined.user_id).Get();
             TArray<uint8> user_data{event.peer_joined.peer_user_data,
                                     static_cast<int>(event.peer_joined.peer_user_data_len)};
 

@@ -250,7 +250,7 @@ class ODIN_API UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
     FUpdatePositionResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom *Room;
+    TWeakObjectPtr<UOdinRoom> Room;
 
     FVector Position;
 
@@ -281,7 +281,7 @@ class ODIN_API UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
     FUpdatePeerUserDataResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom *Room;
+    TWeakObjectPtr<UOdinRoom> Room;
 
     TArray<uint8> Data;
 
@@ -314,7 +314,7 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
     FSendMessageResponsePin OnResponse;
 
     UPROPERTY()
-    UOdinRoom *Room;
+    TWeakObjectPtr<UOdinRoom> Room;
 
     TArray<uint8> Data;
     TArray<int64> Targets;
