@@ -68,7 +68,13 @@ FString UOdinFunctionLibrary::BytesToString(const TArray<uint8>& data)
     const UTF8CHAR* UTF8Char = reinterpret_cast<const UTF8CHAR*>(data.GetData());
     return FString(data.Num(), UTF8Char);
 #else
-    return UTF8_TO_TCHAR(data.GetData());
+    // ensure null terminated string is being returned
+    if (data.Num() > 0 && data[data.Num() - 1] != TEXT('\0')) {
+        TArray<uint8> NullTerminatedArray = data;
+        NullTerminatedArray.Add(TEXT('\0'));
+        return UTF8_TO_TCHAR(NullTerminatedArray.GetData());
+    }
+    return FString(data.Num(), UTF8_TO_TCHAR(data.GetData()));
 #endif
 }
 

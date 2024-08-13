@@ -95,6 +95,11 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
     Activate(true);
 }
 
+UOdinPlaybackMedia *UOdinSynthComponent::GetConnectedPlaybackMedia() const
+{
+    return playback_media_;
+}
+
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener *InAudioBufferListener)
 {
     AudioBufferListeners.AddUnique(InAudioBufferListener);
