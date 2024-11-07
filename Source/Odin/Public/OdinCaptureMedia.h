@@ -31,6 +31,8 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
      * @param audio_capture The audio capture object used for capturing microphone data
      */
     void SetAudioCapture(UAudioCapture* audio_capture);
+
+    void SetAudioGenerator(UAudioGenerator* audioGenerator);
     /**
      * @brief Reset auf audio capture and media stream
      */
@@ -70,17 +72,54 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     void SetMaxVolumeMultiplier(const float newValue);
 
+    /**
+     * @brief Get the current status of mono mixing for audio capture.
+     * @return Whether mono mixing is enabled for audio capture (true) or not (false).
+     */
+    UFUNCTION(BlueprintPure, BlueprintInternalUseOnly)
+    bool GetEnableMonoMixing() const;
+
+    /**
+     * @brief Enables or disables mono mixing for audio capture.
+     * Mono mixing combines the channels of an audio signal into a single channel.
+     * @param bShouldEnableMonoMixing True to enable mono mixing, false to disable.
+     */
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
+    void SetEnableMonoMixing(const bool bShouldEnableMonoMixing);
+
     void Reconnect();
 
   protected:
     virtual void BeginDestroy() override;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Capture")
-    UAudioCapture* audio_capture_ = nullptr;
+    /**
+     * @brief Determines whether mono mixing is enabled for audio capture.
+     */
+    UPROPERTY(BlueprintGetter = GetEnableMonoMixing, BlueprintSetter = SetEnableMonoMixing,
+              Category = "Odin|Audio Capture")
+    bool bEnableMonoMixing = true;
 
+    /**
+     * @brief Represents the audio capture object used for capturing microphone data
+     *
+     * A pointer to the UAudioGenerator class instance and is used within the OdinCaptureMedia class
+     * to handle audio capture functionality.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Capture")
+    UAudioGenerator* audio_capture_ = nullptr;
+
+    /**
+     * @brief The capture devices input volume will be increased by this multiplier. The multiplier
+     * will be in range of [0, max_volume_multiplier_].
+     * @return The current volume multiplier
+     */
     UPROPERTY(BlueprintGetter = GetVolumeMultiplier, BlueprintSetter = SetVolumeMultiplier,
               Category = "Odin|Audio Capture")
     float volume_multiplier_ = 1.0f;
+    /**
+     * @brief The maximum value of the volume_multiplier_ property.
+     * @return The current max volume multiplier value.
+     */
     UPROPERTY(BlueprintGetter = GetMaxVolumeMultiplier, BlueprintSetter = SetMaxVolumeMultiplier,
               Category = "Odin|Audio Capture")
     float max_volume_multiplier_ = 3.0f;

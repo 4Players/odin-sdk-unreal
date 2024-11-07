@@ -622,6 +622,24 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Room|StateChange")
     FRoomConnectionStateChangedData LastRoomConnectionStateChangedData;
 
+    /**
+     * The default apm stream delay in ms. Will be set once when echo cancellation is first
+     * activated. Will not be used, if @UpdateAPMStreamDelay was used previously to set a custom
+     * value.
+     */
+    UPROPERTY(BlueprintReadWrite, Category = "Odin|Room")
+    int64 DefaultAPMStreamDelay = 200;
+
+    /**
+     * Retrieves the Submix listener object used for echo cancellation
+     * @remark You can use the SetRecordSubmixOutput function of UOdinSubmixListener to create a
+     * .wav file of the Submix Output. This helps with checking if the echo cancellation is being
+     * supplied with the correct output.
+     * @return The submix listener object used for Echo Cancellation
+     */
+    UFUNCTION(BlueprintCallable, Category = "Odin|Room")
+    UOdinSubmixListener *GetSubmixListener() const;
+
   private:
     static void HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent Event);
 
@@ -648,9 +666,7 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
                           int64 ownPeerId, FString ownUserId)>>
         joined_callbacks_;
 
-    // void HandleOdinEvent(const OdinEvent event);
-
-    UPROPERTY(transient)
+    UPROPERTY(transient, BlueprintGetter = GetSubmixListener, Category = "Odin|Room")
     UOdinSubmixListener *submix_listener_;
 
     friend class UOdinRoomJoin;
@@ -659,4 +675,6 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     friend class UOdinRoomUpdatePeerUserData;
     friend class UOdinRoomSendMessage;
     friend class UOdinRoomJoinTask;
+
+    bool bWasStreamDelayInitialized = false;
 };

@@ -12,6 +12,7 @@
 #include "OdinFunctionLibrary.h"
 #include "OdinRoom.AsyncTasks.h"
 #include "OdinSubsystem.h"
+#include "Engine/Engine.h"
 
 UOdinRoom::UOdinRoom(const class FObjectInitializer& PCIP)
     : Super(PCIP)
@@ -66,7 +67,14 @@ void UOdinRoom::CleanUp()
         this->medias_.Empty();
     }
 
-    (new FAutoDeleteAsyncTask<DestroyRoomTask>(RoomHandle()))->StartBackgroundTask();
+    if (room_handle_ > 0) {
+        (new FAutoDeleteAsyncTask<DestroyRoomTask>(RoomHandle()))->StartBackgroundTask();
+        room_handle_ = 0;
+    } else {
+        UE_LOG(Odin, Log,
+               TEXT("UOdinRoom::Cleanup(): Aborted starting destroy room task, room handle is "
+                    "already invalid."))
+    }
 }
 
 void UOdinRoom::DeregisterRoomFromSubsystem()
@@ -80,12 +88,6 @@ void UOdinRoom::DeregisterRoomFromSubsystem()
 UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
                                     const FOdinApmSettings& InitialAPMSettings)
 {
-    if (!GEngine) {
-        UE_LOG(Odin, Error,
-               TEXT("Aborted Odin Room Construction due to invalid GEngine reference."))
-        return nullptr;
-    }
-
     UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
     if (!OdinSubsystem) {
         UE_LOG(Odin, Error,
@@ -95,6 +97,13 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
 
     auto room          = NewObject<UOdinRoom>(WorldContextObject);
     room->room_handle_ = odin_room_create();
+    if (0 == room->room_handle_) {
+        UE_LOG(Odin, Error,
+               TEXT("UOdinRoom::ConstructRoom: odin_room_create() returned a zero room handle, "
+                    "indicating that the ODIN client runtime was not initialized yet."))
+        return nullptr;
+    }
+
     OdinSubsystem->RegisterRoom(room->room_handle_, room);
     odin_room_set_event_callback(
         room->room_handle_,
@@ -157,14 +166,16 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
     odin_apm_config.gain_controller              = apm_config.bGainController;
 
+    if (nullptr == submix_listener_) {
+        submix_listener_ = NewObject<UOdinSubmixListener>(this);
+        submix_listener_->SetRoom(this->room_handle_);
+    }
     if (odin_apm_config.echo_canceller) {
-        if (submix_listener_ == nullptr) {
-            submix_listener_ = NewObject<UOdinSubmixListener>(this);
-            submix_listener_->SetRoom(this->room_handle_);
+        if (!bWasStreamDelayInitialized) {
+            UpdateAPMStreamDelay(200);
         }
-        if (!submix_listener_->IsListening())
-            submix_listener_->StartSubmixListener();
-    } else if (submix_listener_ != nullptr && submix_listener_->IsListening()) {
+        submix_listener_->StartSubmixListener();
+    } else {
         submix_listener_->StopSubmixListener();
     }
 
@@ -186,12 +197,25 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
         } break;
         default:;
     }
-    odin_room_configure_apm(this->room_handle_, odin_apm_config);
+
+    const OdinReturnCode ReturnCode = odin_room_configure_apm(this->room_handle_, odin_apm_config);
+    if (odin_is_error(ReturnCode)) {
+        FOdinModule::LogErrorCode(TEXT("Call to odin_room_configure_apm returned error: "),
+                                  ReturnCode);
+    } else {
+        UE_LOG(Odin, Verbose, TEXT("Successfully called odin_room_configure_apm"));
+    }
 }
 
 void UOdinRoom::UpdateAPMStreamDelay(int64 DelayInMs)
 {
-    odin_audio_set_stream_delay(this->room_handle_, DelayInMs);
+    const OdinReturnCode ReturnCode = odin_audio_set_stream_delay(this->room_handle_, DelayInMs);
+    if (odin_is_error(ReturnCode)) {
+        FOdinModule::LogErrorCode(TEXT("Call to odin_room_configure_apm returned error: "),
+                                  ReturnCode);
+    } else {
+        bWasStreamDelayInitialized = true;
+    }
 }
 
 void UOdinRoom::BindCaptureMedia(UOdinCaptureMedia* media)
@@ -227,6 +251,11 @@ void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia* media)
         FScopeLock lock(&this->medias_cs_);
         this->medias_.Remove(media->GetMediaHandle());
     }
+}
+
+UOdinSubmixListener* UOdinRoom::GetSubmixListener() const
+{
+    return submix_listener_;
 }
 
 void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event)

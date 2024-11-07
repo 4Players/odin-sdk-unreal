@@ -4,6 +4,8 @@
 
 #include "Odin.h"
 #include "OdinSubsystem.h"
+#include "GenericPlatform/GenericPlatform.h"
+#include "Async/Async.h"
 
 void JoinRoomTask::DoWork()
 {
@@ -306,18 +308,24 @@ void SendMessageTask::DoWork()
 
 void DestroyRoomTask::DoWork()
 {
-    OdinReturnCode ReturnCode = odin_room_close(roomHandle);
-    if (odin_is_error(ReturnCode)) {
-        FOdinModule::LogErrorCode(TEXT("Destroy Room Task: Error while closing room"), ReturnCode);
-    }
-    ReturnCode = odin_room_set_event_callback(roomHandle, nullptr, nullptr);
-    if (odin_is_error(ReturnCode)) {
-        FOdinModule::LogErrorCode(TEXT("Destroy Room Task: Error while reseting event callback"),
-                                  ReturnCode);
-    }
-
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
-    if (OdinSubsystem) {
-        OdinSubsystem->DeregisterRoom(roomHandle);
+    if (roomHandle > 0) {
+        OdinReturnCode ReturnCode = odin_room_close(roomHandle);
+        if (odin_is_error(ReturnCode)) {
+            FOdinModule::LogErrorCode(TEXT("Destroy Room Task: Error while closing room"),
+                                      ReturnCode);
+        }
+        ReturnCode = odin_room_set_event_callback(roomHandle, nullptr, nullptr);
+        if (odin_is_error(ReturnCode)) {
+            FOdinModule::LogErrorCode(
+                TEXT("Destroy Room Task: Error while reseting event callback"), ReturnCode);
+        }
+        UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+        if (OdinSubsystem) {
+            OdinSubsystem->DeregisterRoom(roomHandle);
+        }
+    } else {
+        UE_LOG(Odin, Log,
+               TEXT("DestroyRoomTask::DoWork(): Aborted closing room, room handle is already "
+                    "invalid."));
     }
 }

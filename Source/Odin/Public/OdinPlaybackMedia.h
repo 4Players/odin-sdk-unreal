@@ -72,21 +72,43 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
     UOdinPlaybackMedia();
     UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *room);
 
+    /**
+     * Sets the room for the playback media object to the provided room pointer.
+     *
+     * @param room Pointer to the UOdinRoom object to set as the room for the playback media.
+     */
     void SetRoom(UOdinRoom *room)
     {
         this->Room = room;
     }
 
+    /**
+     * Retrieves the internal ID of the media from the Odin SDK.
+     *
+     * @return The internal media ID that uniquely identifies the media.
+     */
     UFUNCTION(BlueprintCallable,
               meta = (DisplayName = "Get Output Media ID",
                       ToolTip = "Get the internal ID of an output media", Category = "Odin|Debug"))
     int32 GetMediaId();
 
+    /**
+     * @brief Get the peer ID associated with the media stream.
+     *
+     * @return The peer ID of the media stream.
+     */
     UFUNCTION(BlueprintCallable,
               meta = (DisplayName = "Get Output Media Peer ID",
                       ToolTip = "Get the peer ID of an output media", Category = "Odin|Debug"))
     int64 GetPeerId();
 
+    /**
+     * Retrieves the statistics of the audio stream including the total packets, processed packets,
+     * packets arrived too early, packets arrived too late, dropped packets, invalid packets,
+     * repeated packets, and lost packets.
+     *
+     * @return FOdinAudioStreamStats struct containing the audio stream statistics.
+     */
     UFUNCTION(BlueprintCallable,
               meta = (DisplayName = "Get Output Media Audio Stats",
                       ToolTip     = "Get statistics for an output media",

@@ -18,6 +18,11 @@ class ODIN_API UOdinMediaBase : public UObject
     GENERATED_UCLASS_BODY()
 
   public:
+    /**
+     * @brief Returns the Odin media stream handle associated with this object.
+     *
+     * @return The Odin media stream handle.
+     */
     OdinMediaStreamHandle GetMediaHandle() const
     {
         return this->stream_handle_;

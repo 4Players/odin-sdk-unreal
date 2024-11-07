@@ -2,11 +2,12 @@
 
 #include "OdinRoom.h"
 #include "OdinRoom.AsyncTasks.h"
-#include "OdinFunctionLibrary.h"
 #include "odin_sdk.h"
 #include "Odin.h"
 #include "OdinSubsystem.h"
 #include "Async/AsyncWork.h"
+#include "GenericPlatform/GenericPlatform.h"
+#include "Async/Async.h"
 
 UOdinRoomJoin* UOdinRoomJoin::JoinRoom(UObject* WorldContextObject, UPARAM(ref) UOdinRoom*& room,
                                        const FString url, const FString token,

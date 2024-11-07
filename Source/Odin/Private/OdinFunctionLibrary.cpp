@@ -21,12 +21,13 @@ UOdinFunctionLibrary* UOdinFunctionLibrary::getOdinFunctionLibrary()
     return g_odinFunctionLibrary;
 }
 
-UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UPARAM(ref) UAudioCapture*& audioCapture)
+UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UPARAM(ref)
+                                                              UAudioGenerator*& audioGenerator)
 {
-    if (!audioCapture)
+    if (!audioGenerator)
         return nullptr;
-    auto capture_media = NewObject<UOdinCaptureMedia>(audioCapture);
-    capture_media->SetAudioCapture(audioCapture);
+    auto capture_media = NewObject<UOdinCaptureMedia>(audioGenerator);
+    capture_media->SetAudioGenerator(audioGenerator);
     return capture_media;
 }
 

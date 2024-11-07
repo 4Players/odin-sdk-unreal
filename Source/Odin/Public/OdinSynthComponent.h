@@ -12,6 +12,9 @@
 
 class OdinMediaSoundGenerator;
 
+/**
+ * Component for playing back audio data received from an Odin Media Stream in Unreal.
+ */
 UCLASS(Blueprintable, BlueprintType, ClassGroup = Synth, meta = (BlueprintSpawnableComponent))
 class ODIN_API UOdinSynthComponent : public USynthComponent
 {

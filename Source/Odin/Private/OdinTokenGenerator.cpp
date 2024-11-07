@@ -2,6 +2,7 @@
 
 #include "OdinTokenGenerator.h"
 
+#include "Odin.h"
 #include "odin_sdk.h"
 
 UOdinTokenGenerator::UOdinTokenGenerator(const class FObjectInitializer &PCIP)
@@ -38,9 +39,13 @@ FString UOdinTokenGenerator::GenerateRoomToken(const FString &RoomId, const FStr
                                     ? OdinTokenAudience_Sfu
                                     : OdinTokenAudience_Gateway;
     options.lifetime          = 300;
-    odin_token_generator_create_token_ex(this->TokenGenerator, StringCast<ANSICHAR>(*RoomId).Get(),
-                                         StringCast<ANSICHAR>(*UserId).Get(), &options, buf,
-                                         sizeof buf);
+    OdinReturnCode ReturnCode = odin_token_generator_create_token_ex(
+        this->TokenGenerator, StringCast<ANSICHAR>(*RoomId).Get(),
+        StringCast<ANSICHAR>(*UserId).Get(), &options, buf, sizeof buf);
+    if (odin_is_error(ReturnCode)) {
+        FOdinModule::LogErrorCode(TEXT("UOdinTokenGenerator::GenerateRoomToken Error:"),
+                                  ReturnCode);
+    }
 
 #if ENGINE_MAJOR_VERSION >= 5
     return FString(512, buf);
