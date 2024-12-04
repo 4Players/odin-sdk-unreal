@@ -84,6 +84,10 @@ class ODIN_API FOdinSubmixBufferListenerImplementation
 
     void SetRecordSubmixOutput(bool bShouldRecord);
     void StopSubmixRecording();
+    void ResetOdinResampler();
+    void PerformResampling(float*& BufferToUse, int32& NumSamplesToProcess);
+    void PerformRemixing(float* AudioData, int32 InNumSamples, int32 InNumChannels,
+                         int32 InSampleRate);
 
   private:
     virtual void OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, float* AudioData,
@@ -95,9 +99,19 @@ class ODIN_API FOdinSubmixBufferListenerImplementation
     OdinRoomHandle               CurrentRoomHandle;
     FOnSubmixBufferListenerError ErrorCallback;
 
-    int32 OdinSampleRate = 48000;
-    int32 OdinChannels   = 2;
+    int32 OdinSampleRate  = 48000;
+    int32 OdinNumChannels = 1;
+
+    int32 FromSampleRate  = 0;
+    int32 FromNumChannels = 0;
+
+    OdinResamplerHandle ResamplerHandle;
 
     bool                   bRecordSubmixOutput;
-    Audio::TSampleBuffer<> SavedBuffer;
+    Audio::TSampleBuffer<> RecordingBuffer;
+
+    Audio::TSampleBuffer<float> ChannelMixBuffer;
+
+    float* RawBuffer;
+    int32  RawBufferSize;
 };

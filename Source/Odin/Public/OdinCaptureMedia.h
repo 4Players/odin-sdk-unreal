@@ -92,6 +92,10 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
   protected:
     virtual void BeginDestroy() override;
 
+    static void AudioGeneratorCallback(UOdinCaptureMedia*     Media,
+                                       const UAudioGenerator* AudioGenerator, const float* InAudio,
+                                       int32 NumSamples);
+
     /**
      * @brief Determines whether mono mixing is enabled for audio capture.
      */

@@ -10,9 +10,11 @@
 
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
+#include "OdinInitializationSubsystem.h"
 #include "OdinRoom.AsyncTasks.h"
 #include "OdinSubsystem.h"
 #include "Engine/Engine.h"
+#include "Engine/GameInstance.h"
 
 UOdinRoom::UOdinRoom(const class FObjectInitializer& PCIP)
     : Super(PCIP)
@@ -67,13 +69,25 @@ void UOdinRoom::CleanUp()
         this->medias_.Empty();
     }
 
+    bool bIsInitialized = false;
+    if (UWorld* World = GetWorld()) {
+        if (UGameInstance* GameInstance = World->GetGameInstance()) {
+            if (UOdinInitializationSubsystem* OdinSubsystem =
+                    GameInstance->GetSubsystem<UOdinInitializationSubsystem>()) {
+                bIsInitialized = OdinSubsystem->IsOdinInitialized();
+            }
+        }
+    }
+
     if (room_handle_ > 0) {
-        (new FAutoDeleteAsyncTask<DestroyRoomTask>(RoomHandle()))->StartBackgroundTask();
+        if (bIsInitialized) {
+            (new FAutoDeleteAsyncTask<DestroyRoomTask>(RoomHandle()))->StartBackgroundTask();
+        }
         room_handle_ = 0;
     } else {
         UE_LOG(Odin, Log,
                TEXT("UOdinRoom::Cleanup(): Aborted starting destroy room task, room handle is "
-                    "already invalid."))
+                    "already invalid."));
     }
 }
 
@@ -91,7 +105,7 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
     UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
     if (!OdinSubsystem) {
         UE_LOG(Odin, Error,
-               TEXT("Aborted Odin Room Construction due to invalid Odin Subsystem reference."))
+               TEXT("Aborted Odin Room Construction due to invalid Odin Subsystem reference."));
         return nullptr;
     }
 
@@ -100,7 +114,7 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
     if (0 == room->room_handle_) {
         UE_LOG(Odin, Error,
                TEXT("UOdinRoom::ConstructRoom: odin_room_create() returned a zero room handle, "
-                    "indicating that the ODIN client runtime was not initialized yet."))
+                    "indicating that the ODIN client runtime was not initialized yet."));
         return nullptr;
     }
 

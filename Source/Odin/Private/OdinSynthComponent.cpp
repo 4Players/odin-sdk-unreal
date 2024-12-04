@@ -1,16 +1,28 @@
 /* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
 
 #include "OdinSynthComponent.h"
-
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
-
 #include "Odin.h"
+#include "OdinFunctionLibrary.h"
+#include "OdinInitializationSubsystem.h"
 #include "OdinMediaSoundGenerator.h"
+#include "Engine/GameInstance.h"
 
-bool UOdinSynthComponent::Init(int32 &SampleRate)
+bool UOdinSynthComponent::Init(int32& SampleRate)
 {
-    NumChannels = 2;
+    NumChannels = 1;
+    SampleRate  = 48000;
+
+    if (GetWorld() && GetWorld()->GetGameInstance()) {
+        const UOdinInitializationSubsystem* OdinInitSubsystem =
+            GetWorld()->GetGameInstance()->GetSubsystem<UOdinInitializationSubsystem>();
+        if (OdinInitSubsystem) {
+            NumChannels = OdinInitSubsystem->GetChannelCount();
+            SampleRate  = OdinInitSubsystem->GetSampleRate();
+        }
+    }
+
     // We reset the stream handle here, to avoid any kind of delays after re-enabling
     ResetOdinStream(StreamHandle);
     return true;
@@ -30,20 +42,26 @@ void UOdinSynthComponent::OnRegister()
     }
 }
 
-int32 UOdinSynthComponent::OnGenerateAudio(float *OutAudio, int32 NumSamples)
+int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
     if (StreamHandle == 0) {
         return 0;
     }
 
-    auto read = odin_audio_read_data(StreamHandle, OutAudio, NumSamples);
-    if (odin_is_error(read)) {
-        return NumSamples;
+    // Will return the number of read samples, if successful, error code otherwise
+    OdinReturnCode ReadResult = odin_audio_read_data(StreamHandle, OutAudio, NumSamples);
+    if (odin_is_error(ReadResult)) {
+        const FString FormattedError = UOdinFunctionLibrary::FormatError(ReadResult, false);
+        UE_LOG(Odin, Verbose,
+               TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
+                    "Error Message: %s, could be due to media being removed."),
+               *FormattedError);
+        return 0;
     }
-    for (IAudioBufferListener *AudioBufferListener : AudioBufferListeners) {
+    for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
         AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
     }
-    return read;
+    return ReadResult;
 }
 
 void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
@@ -59,7 +77,7 @@ void UOdinSynthComponent::ResetOdinStream(OdinMediaStreamHandle HandleToReset)
     }
 }
 
-void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia *&media)
+void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia*& media)
 {
     if (nullptr != media) {
         this->playback_media_ = media;
@@ -79,7 +97,7 @@ void UOdinSynthComponent::Reset()
     }
 }
 
-void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings)
+void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings& InAttenuationSettings)
 {
     bAllowSpatialization = true;
     Deactivate();
@@ -95,17 +113,17 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings &InA
     Activate(true);
 }
 
-UOdinPlaybackMedia *UOdinSynthComponent::GetConnectedPlaybackMedia() const
+UOdinPlaybackMedia* UOdinSynthComponent::GetConnectedPlaybackMedia() const
 {
     return playback_media_;
 }
 
-void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener *InAudioBufferListener)
+void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
     AudioBufferListeners.AddUnique(InAudioBufferListener);
 }
 
-void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener *InAudioBufferListener)
+void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
     AudioBufferListeners.Remove(InAudioBufferListener);
 }

@@ -64,64 +64,13 @@ void UOdinCaptureMedia::SetAudioGenerator(UAudioGenerator* audioGenerator)
 
     TWeakObjectPtr<UOdinCaptureMedia> WeakThisPtr = this;
     if (audio_capture_ && IsValid(audio_capture_)) {
+        TWeakObjectPtr<UAudioGenerator> WeakAudioGenerator = audio_capture_;
         // Create generator delegate
         TFunction<void(const float* InAudio, int32 NumSamples)> audioGeneratorDelegate =
-            [WeakThisPtr](const float* InAudio, int32 NumSamples) {
+            [WeakThisPtr, WeakAudioGenerator](const float* InAudio, int32 NumSamples) {
                 if (UOdinCaptureMedia* This = WeakThisPtr.Get()) {
-                    UAudioGenerator* AudioCapture = This->audio_capture_;
-
-                    if (!AudioCapture || !IsValid(AudioCapture)) {
-                        UE_LOG(Odin, Warning,
-                               TEXT("Aborting audio generator callback due to LowLevelCheck."));
-                        return;
-                    }
-
-                    const int32 StreamSampleRate  = This->stream_sample_rate_;
-                    const int32 StreamNumChannels = This->stream_num_channels_;
-                    // Avoid Checking for num channel equality because we're mixing to mono
-                    if (StreamSampleRate != AudioCapture->GetSampleRate()
-                        /* || StreamNumChannels != AudioCapture->GetNumChannels()*/) {
-                        UE_LOG(Odin, Display,
-                               TEXT("Incompatible sample rate, stream: %d, capture: %d. Restarting "
-                                    "stream."),
-                               StreamSampleRate, AudioCapture->GetSampleRate());
-
-                        ReconnectCaptureMedia(WeakThisPtr);
-                        return;
-                    }
-
-                    if (This->stream_handle_) {
-                        int32 TargetSampleCount = This->GetEnableMonoMixing()
-                                                      ? NumSamples / StreamNumChannels
-                                                      : NumSamples;
-                        if (This->volume_adjusted_audio_size_ < TargetSampleCount) {
-                            delete[] This->volume_adjusted_audio_;
-                            This->volume_adjusted_audio_      = new float[TargetSampleCount];
-                            This->volume_adjusted_audio_size_ = TargetSampleCount;
-                        }
-
-                        if (This->GetEnableMonoMixing()) {
-                            // Simple mix to mono
-                            for (int32 i = 0; i < TargetSampleCount; ++i) {
-                                float MixingResult = 0.0f;
-                                for (int32 ChannelIndex = 0; ChannelIndex < StreamNumChannels;
-                                     ++ChannelIndex) {
-                                    float Sample = InAudio[i * StreamNumChannels + ChannelIndex];
-                                    MixingResult += Sample;
-                                }
-                                This->volume_adjusted_audio_[i] =
-                                    (MixingResult / StreamNumChannels)
-                                    * This->GetVolumeMultiplierAdjusted();
-                            }
-                        } else {
-                            for (int32 i = 0; i < TargetSampleCount; ++i) {
-                                This->volume_adjusted_audio_[i] =
-                                    InAudio[i] * This->GetVolumeMultiplierAdjusted();
-                            }
-                        }
-
-                        odin_audio_push_data(This->stream_handle_, This->volume_adjusted_audio_,
-                                             TargetSampleCount);
+                    if (UAudioGenerator* AudioCapture = WeakAudioGenerator.Get()) {
+                        AudioGeneratorCallback(This, AudioCapture, InAudio, NumSamples);
                     }
                 }
             };
@@ -160,8 +109,6 @@ OdinReturnCode UOdinCaptureMedia::ResetOdinStream()
         this->stream_handle_ = 0;
         return result;
     }
-    bIsBeingReset = false;
-
     return 0;
 }
 
@@ -214,9 +161,77 @@ void UOdinCaptureMedia::BeginDestroy()
     Super::BeginDestroy();
 }
 
+void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
+                                               const UAudioGenerator* AudioGenerator,
+                                               const float* InAudio, int32 NumSamples)
+{
+    if (!Media) {
+        UE_LOG(
+            Odin, Error,
+            TEXT("Aborting Audio Generator Callback due to invalid Odin Capture Media reference."));
+        return;
+    }
+
+    if (!AudioGenerator) {
+        UE_LOG(Odin, Error,
+               TEXT("Aborting Audio Generator Callback due to invalid AudioGenerator reference."));
+        return;
+    }
+
+    const int32 StreamSampleRate  = Media->stream_sample_rate_;
+    const int32 StreamNumChannels = Media->stream_num_channels_;
+    if (StreamSampleRate != AudioGenerator->GetSampleRate()
+        || StreamNumChannels != AudioGenerator->GetNumChannels()) {
+
+        if (!Media->bIsBeingReset) {
+            UE_LOG(Odin, Display,
+                   TEXT("Incompatible sample rate, stream: %d, capture: %d. Restarting "
+                        "stream."),
+                   StreamSampleRate, AudioGenerator->GetSampleRate());
+
+            ReconnectCaptureMedia(Media);
+        }
+        return;
+    }
+
+    if (Media->stream_handle_) {
+        int32 TargetSampleCount =
+            Media->GetEnableMonoMixing() ? NumSamples / StreamNumChannels : NumSamples;
+        if (Media->volume_adjusted_audio_size_ < TargetSampleCount) {
+            delete[] Media->volume_adjusted_audio_;
+            Media->volume_adjusted_audio_      = new float[TargetSampleCount];
+            Media->volume_adjusted_audio_size_ = TargetSampleCount;
+        }
+
+        if (Media->GetEnableMonoMixing()) {
+            // Simple mix to mono
+            for (int32 i = 0; i < TargetSampleCount; ++i) {
+                float MixingResult = 0.0f;
+                for (int32 ChannelIndex = 0; ChannelIndex < StreamNumChannels; ++ChannelIndex) {
+                    float Sample = InAudio[i * StreamNumChannels + ChannelIndex];
+                    MixingResult += Sample;
+                }
+                Media->volume_adjusted_audio_[i] =
+                    (MixingResult / StreamNumChannels) * Media->GetVolumeMultiplierAdjusted();
+            }
+        } else {
+            for (int32 i = 0; i < TargetSampleCount; ++i) {
+                Media->volume_adjusted_audio_[i] =
+                    InAudio[i] * Media->GetVolumeMultiplierAdjusted();
+            }
+        }
+
+        odin_audio_push_data(Media->stream_handle_, Media->volume_adjusted_audio_,
+                             TargetSampleCount);
+    }
+}
+
 void UOdinCaptureMedia::ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia)
 {
     if (!CaptureMedia.IsValid()) {
+        return;
+    }
+    if (CaptureMedia->bIsBeingReset) {
         return;
     }
     CaptureMedia->bIsBeingReset = true;
@@ -263,6 +278,7 @@ void UOdinCaptureMedia::ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> 
             roomPointer->BindCaptureMedia(OdinCaptureMedia);
             UE_LOG(Odin, Verbose, TEXT("Binding to New Capture Media."));
         }
+        CaptureMedia->bIsBeingReset = false;
     });
 }
 

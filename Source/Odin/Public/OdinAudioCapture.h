@@ -129,6 +129,22 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
     void SetIsPaused(bool newValue);
 
     /**
+     * Whether capture device disconnect is being recognized automatically.
+     * @return True, if automatic disconnection recognition is active, false otherwise.
+     */
+    UFUNCTION(BlueprintInternalUseOnly, BlueprintPure, Category = "AudioCapture")
+    bool GetTryRecognizingDeviceDisconnected() const;
+
+    /**
+     * Sets automatic recognition of capture device disconnects (i.e. if a capture device was
+     * removed). Can accidentally recognize disconnects if app experiences large frame times
+     * (greater than AllowedTimeWithoutStreamUpdate value)
+     * @param bTryRecognizing New value for whether automatic recognition of disconnects is active.
+     */
+    UFUNCTION(BlueprintInternalUseOnly, BlueprintCallable, Category = "AudioCapture")
+    void SetTryRecognizingDeviceDisconnected(bool bTryRecognizing);
+
+    /**
      * @brief Will be called, if ODIN recognizes that the selected capture device does not supply
      * data anymore, i.e. if a microphone was unplugged. ODIN will wait for
      * AllowedTimeWithoutStreamUpdate seconds, before trying a stream restart.
@@ -146,9 +162,11 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
 #pragma region FTickableGameObject
     virtual void Tick(float DeltaTime) override;
 
+    virtual bool IsTickable() const override;
+
     virtual ETickableTickType GetTickableTickType() const override
     {
-        return ETickableTickType::Always;
+        return ETickableTickType::Conditional;
     }
 
     virtual TStatId GetStatId() const override
@@ -211,7 +229,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
      * restarting with default device.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AudioCapture")
-    float AllowedTimeWithoutStreamUpdate = 0.25f;
+    float AllowedTimeWithoutStreamUpdate = 1.0f;
 
     /**
      * @brief The amount of time in seconds a capture device is allowed to try and set up the
@@ -223,6 +241,16 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
     UPROPERTY(BlueprintGetter = GetIsPaused, BlueprintSetter = SetIsPaused,
               Category = "AudioCapture")
     bool bIsCapturingPaused;
+
+    /**
+     * Activates / Decativates automatically trying to recognize, if a capture device was removed or
+     * not. Can accidentally recognize disconnects if app experiences large frame times (greater
+     * than AllowedTimeWithoutStreamUpdate value).
+     */
+    UPROPERTY(BlueprintGetter = GetTryRecognizingDeviceDisconnected,
+              BlueprintSetter = SetTryRecognizingDeviceDisconnected, Category = "AudioCapture")
+    bool bTryRecognizingDeviceDisconnect = true;
+
     /**
      * @brief Will be filled in, once a device was selected by the user.
      * We can't have access to this before the custom selection, because - at least the Windows

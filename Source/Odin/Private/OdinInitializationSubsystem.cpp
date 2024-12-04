@@ -1,9 +1,6 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+﻿/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
 
 #include "OdinInitializationSubsystem.h"
-
-#include "AudioDevice.h"
-#include "AudioDeviceManager.h"
 #include "Odin.h"
 #include "odin_sdk.h"
 
@@ -11,28 +8,22 @@ void UOdinInitializationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 {
     Super::Initialize(Collection);
 
-    bool                 bStartupSuccess = false;
-    FAudioDeviceManager* DeviceManager   = FAudioDeviceManager::Get();
-    if (DeviceManager) {
-        FAudioDeviceHandle AudioDevice = DeviceManager->GetActiveAudioDevice();
-        SampleRate                     = AudioDevice->SampleRate;
-        ChannelCount                   = 2;
+    // default Initialization with 48khz Mono
+    IsInitialized = odin_startup(ODIN_VERSION);
 
-        UE_LOG(Odin, Log, TEXT("Odin initialization with sample rate %d and channel count %d."),
-               SampleRate, ChannelCount);
-        bStartupSuccess = odin_startup_ex(
-            ODIN_VERSION, OdinAudioStreamConfig{(uint32_t)SampleRate, (uint8_t)ChannelCount});
-    }
-
-    if (!bStartupSuccess) {
-        UE_LOG(Odin, Warning, TEXT("Odin Startup aborted, no Active Audio Device available."))
+    if (!IsOdinInitialized()) {
+        UE_LOG(Odin, Warning, TEXT("Odin startup failed."));
     }
 }
 
 void UOdinInitializationSubsystem::Deinitialize()
 {
     Super::Deinitialize();
-    odin_shutdown();
+    if (IsOdinInitialized()) {
+        UE_LOG(Odin, Log, TEXT("Odin Subsystem deinitialized, shutting down Odin."));
+        odin_shutdown();
+        IsInitialized = false;
+    }
 }
 
 int32 UOdinInitializationSubsystem::GetSampleRate() const
@@ -43,4 +34,9 @@ int32 UOdinInitializationSubsystem::GetSampleRate() const
 int32 UOdinInitializationSubsystem::GetChannelCount() const
 {
     return ChannelCount;
+}
+
+bool UOdinInitializationSubsystem::IsOdinInitialized() const
+{
+    return IsInitialized;
 }

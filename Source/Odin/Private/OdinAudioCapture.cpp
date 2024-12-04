@@ -303,6 +303,11 @@ void UOdinAudioCapture::Tick(float DeltaTime)
     }
 }
 
+bool UOdinAudioCapture::IsTickable() const
+{
+    return GetTryRecognizingDeviceDisconnected();
+}
+
 void UOdinAudioCapture::InitializeGenerator()
 {
     TArray<FOdinCaptureDeviceInfo> Devices;
@@ -348,6 +353,16 @@ bool UOdinAudioCapture::GetIsPaused() const
 void UOdinAudioCapture::SetIsPaused(bool newValue)
 {
     bIsCapturingPaused = newValue;
+}
+
+bool UOdinAudioCapture::GetTryRecognizingDeviceDisconnected() const
+{
+    return bTryRecognizingDeviceDisconnect;
+}
+
+void UOdinAudioCapture::SetTryRecognizingDeviceDisconnected(bool bTryRecognizing)
+{
+    bTryRecognizingDeviceDisconnect = bTryRecognizing;
 }
 
 bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)

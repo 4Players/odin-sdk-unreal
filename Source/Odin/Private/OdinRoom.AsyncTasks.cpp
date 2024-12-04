@@ -309,6 +309,8 @@ void SendMessageTask::DoWork()
 void DestroyRoomTask::DoWork()
 {
     if (roomHandle > 0) {
+        UE_LOG(Odin, Verbose, TEXT("DestroyRoomTask::DoWork(): Closing Odin Room with Handle %lld"),
+               roomHandle);
         OdinReturnCode ReturnCode = odin_room_close(roomHandle);
         if (odin_is_error(ReturnCode)) {
             FOdinModule::LogErrorCode(TEXT("Destroy Room Task: Error while closing room"),

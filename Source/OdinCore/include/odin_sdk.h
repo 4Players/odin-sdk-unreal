@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.6.6"
+#define ODIN_VERSION "1.6.7"
 
 /**
  * Known types of a media stream.
@@ -365,16 +365,16 @@ typedef struct OdinEvent_MessageReceivedData {
 typedef struct OdinEvent {
     OdinEventTag tag;
     union {
-        OdinEvent_JoinedData                     joined;
-        OdinEvent_PeerJoinedData                 peer_joined;
-        OdinEvent_PeerLeftData                   peer_left;
-        OdinEvent_PeerUserDataChangedData        peer_user_data_changed;
-        OdinEvent_MediaAddedData                 media_added;
-        OdinEvent_MediaRemovedData               media_removed;
-        OdinEvent_MediaActiveStateChangedData    media_active_state_changed;
-        OdinEvent_RoomUserDataChangedData        room_user_data_changed;
+        OdinEvent_JoinedData joined;
+        OdinEvent_PeerJoinedData peer_joined;
+        OdinEvent_PeerLeftData peer_left;
+        OdinEvent_PeerUserDataChangedData peer_user_data_changed;
+        OdinEvent_MediaAddedData media_added;
+        OdinEvent_MediaRemovedData media_removed;
+        OdinEvent_MediaActiveStateChangedData media_active_state_changed;
+        OdinEvent_RoomUserDataChangedData room_user_data_changed;
         OdinEvent_RoomConnectionStateChangedData room_connection_state_changed;
-        OdinEvent_MessageReceivedData            message_received;
+        OdinEvent_MessageReceivedData message_received;
     };
 } OdinEvent;
 
@@ -603,9 +603,9 @@ OdinReturnCode odin_room_destroy(OdinRoomHandle room);
  * _once_ before joining a room.
  */
 OdinReturnCode odin_room_set_event_callback(OdinRoomHandle room,
-                                            void (*callback)(OdinRoomHandle          room,
+                                            void (*callback)(OdinRoomHandle room,
                                                              const struct OdinEvent *event,
-                                                             void *                  extra_data),
+                                                             void *extra_data),
                                             void *extra_data);
 
 /**
@@ -632,10 +632,11 @@ OdinReturnCode odin_room_join(OdinRoomHandle room, const char *url, const char *
 OdinReturnCode odin_room_id(OdinRoomHandle room, char *out_id, size_t out_id_len);
 
 /**
- * Retrieves the identifier of the customer the room is assigned to from the specified
- * `OdinRoomHandle`.
+ * Retrieves the identifier of the customer the room is assigned to from the specified `OdinRoomHandle`.
  */
-OdinReturnCode odin_room_customer(OdinRoomHandle room, char *out_customer, size_t out_customer_len);
+OdinReturnCode odin_room_customer(OdinRoomHandle room,
+                                  char *out_customer,
+                                  size_t out_customer_len);
 
 /**
  * Retrieves your own peer ID from the specified `OdinRoomHandle`.
@@ -653,7 +654,8 @@ OdinReturnCode odin_room_connection_stats(OdinRoomHandle room, struct OdinConnec
  *
  * Note: Use this before calling `odin_room_join` to set initial peer user data upon connect.
  */
-OdinReturnCode odin_room_update_peer_user_data(OdinRoomHandle room, const uint8_t *user_data,
+OdinReturnCode odin_room_update_peer_user_data(OdinRoomHandle room,
+                                               const uint8_t *user_data,
                                                size_t user_data_length);
 
 /**
@@ -672,8 +674,10 @@ OdinReturnCode odin_room_update_position(OdinRoomHandle room, float x, float y, 
  * Sends arbitrary data to a list of target peers over the ODIN server. If `NULL` is specified, the
  * message will be sent to all other peers in the same room.
  */
-OdinReturnCode odin_room_send_message(OdinRoomHandle room, const uint64_t *peer_id_list,
-                                      size_t peer_id_list_size, const uint8_t *data,
+OdinReturnCode odin_room_send_message(OdinRoomHandle room,
+                                      const uint64_t *peer_id_list,
+                                      size_t peer_id_list_size,
+                                      const uint8_t *data,
                                       size_t data_length);
 
 /**
@@ -747,7 +751,8 @@ OdinReturnCode odin_audio_push_data(OdinMediaStreamHandle stream, const float *b
  * Reads audio data from the specified `OdinMediaStreamHandle`. This will return audio data in the
  * format specified when calling `odin_startup_ex` or 48 kHz interleaved by default.
  */
-OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream, float *out_buffer,
+OdinReturnCode odin_audio_read_data(OdinMediaStreamHandle stream,
+                                    float *out_buffer,
                                     size_t out_buffer_len);
 
 /**
@@ -771,15 +776,17 @@ OdinReturnCode odin_audio_stats(OdinMediaStreamHandle stream, struct OdinAudioSt
 
 /**
  * Reads up to `out_buffer_len` samples from the given streams and mixes them into the `out_buffer`.
- * All audio streams will be read based on the sample rate you chose when initializing the ODIN
- * runtime so make sure to allocate the buffer accordingly. After the call the `out_buffer_len` will
- * contain the amount of samples that have actually been read and mixed into `out_buffer`.
+ * All audio streams will be read based on the sample rate you chose when initializing the ODIN runtime
+ * so make sure to allocate the buffer accordingly. After the call the `out_buffer_len` will contain
+ * the amount of samples that have actually been read and mixed into `out_buffer`.
  *
  * If enabled this will also apply any audio processing to the output stream and feed back required
  * data to the internal audio processing pipeline which requires a final mix.
  */
-OdinReturnCode odin_audio_mix_streams(OdinRoomHandle room, const OdinMediaStreamHandle *streams,
-                                      size_t stream_count, float *out_buffer,
+OdinReturnCode odin_audio_mix_streams(OdinRoomHandle room,
+                                      const OdinMediaStreamHandle *streams,
+                                      size_t stream_count,
+                                      float *out_buffer,
                                       size_t out_buffer_len);
 
 /**
@@ -805,7 +812,8 @@ OdinReturnCode odin_audio_set_stream_delay(OdinRoomHandle room, uint64_t delay_m
  *
  * Note: One resampler should be used exclusively per audio stream.
  */
-OdinResamplerHandle odin_resampler_create(uint32_t from_rate, uint32_t to_rate,
+OdinResamplerHandle odin_resampler_create(uint32_t from_rate,
+                                          uint32_t to_rate,
                                           uint16_t channel_count);
 
 /**
@@ -816,8 +824,11 @@ OdinResamplerHandle odin_resampler_create(uint32_t from_rate, uint32_t to_rate,
  * On success, the written size for the processed sample is returned in both, the return value
  * and the `output_capacity` out parameter.
  */
-OdinReturnCode odin_resampler_process(OdinResamplerHandle resampler, const float *input,
-                                      size_t input_len, float *output, size_t *output_capacity);
+OdinReturnCode odin_resampler_process(OdinResamplerHandle resampler,
+                                      const float *input,
+                                      size_t input_len,
+                                      float *output,
+                                      size_t *output_capacity);
 
 /**
  * Destroys the given ODIN resampler instance. After this call, all attempts to use this handle
@@ -842,14 +853,16 @@ OdinReturnCode odin_access_key_id(const char *access_key, char *out_key_id, size
  * Extracts the public key from a specified access key. The public key, derived from the Ed25519
  * curve, must be shared with _4Players_ to enable verification of a generated room token.
  */
-OdinReturnCode odin_access_key_public_key(const char *access_key, char *out_public_key,
+OdinReturnCode odin_access_key_public_key(const char *access_key,
+                                          char *out_public_key,
                                           size_t out_public_key_len);
 
 /**
  * Extracts the private key from a specified access key. The private key, rooted in the Ed25519
  * curve, is utilized to sign a generated room token for accessing the ODIN network.
  */
-OdinReturnCode odin_access_key_secret_key(const char *access_key, char *out_secret_key,
+OdinReturnCode odin_access_key_secret_key(const char *access_key,
+                                          char *out_secret_key,
                                           size_t out_secret_key_len);
 
 /**
@@ -866,17 +879,21 @@ void odin_token_generator_destroy(struct OdinTokenGenerator *generator);
  * Generates a signed JWT, which can be used by an ODIN client to join a room.
  */
 OdinReturnCode odin_token_generator_create_token(struct OdinTokenGenerator *generator,
-                                                 const char *room_id, const char *user_id,
-                                                 char *out_token, size_t out_token_len);
+                                                 const char *room_id,
+                                                 const char *user_id,
+                                                 char *out_token,
+                                                 size_t out_token_len);
 
 /**
  * Generates a signed JWT such as `odin_token_generator_create_token` and allows passing a custom
  * set of `OdinTokenOptions` for advanced use-cases.
  */
 OdinReturnCode odin_token_generator_create_token_ex(struct OdinTokenGenerator *generator,
-                                                    const char *room_id, const char *user_id,
+                                                    const char *room_id,
+                                                    const char *user_id,
                                                     const struct OdinTokenOptions *options,
-                                                    char *out_token, size_t out_token_len);
+                                                    char *out_token,
+                                                    size_t out_token_len);
 
 #ifdef __cplusplus
 } // extern "C"
