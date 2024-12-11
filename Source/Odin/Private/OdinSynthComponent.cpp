@@ -58,6 +58,15 @@ int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
                *FormattedError);
         return 0;
     }
+
+    if (ReadResult > static_cast<uint32>(NumSamples)) {
+        UE_LOG(Odin, Verbose,
+               TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
+                    "number of read samples returned by Odin is larger than requested number of "
+                    "samples."));
+        return 0;
+    }
+
     for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
         AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
     }

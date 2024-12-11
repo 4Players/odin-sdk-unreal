@@ -52,6 +52,6 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
     bool IsRoomRegistered(OdinRoomHandle) const;
 
   protected:
-    TMap<OdinRoomHandle, TWeakObjectPtr<UOdinRoom>> RegisteredRooms;
-    FCriticalSection                                RegisteredRoomsLock;
+    TMap<uint64, TWeakObjectPtr<UOdinRoom>> RegisteredRooms;
+    FCriticalSection                        RegisteredRoomsLock;
 };

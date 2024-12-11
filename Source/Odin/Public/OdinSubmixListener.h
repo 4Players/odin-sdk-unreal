@@ -67,9 +67,13 @@ class ODIN_API UOdinSubmixListener : public UObject
     TWeakObjectPtr<USoundSubmix>                        ConnectedSubmix;
 };
 
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 5
+class ODIN_API FOdinSubmixBufferListenerImplementation : public ISubmixBufferListener
+#else
 class ODIN_API FOdinSubmixBufferListenerImplementation
     : public TSharedFromThis<FOdinSubmixBufferListenerImplementation>,
       public ISubmixBufferListener
+#endif
 {
   public:
     FOdinSubmixBufferListenerImplementation();
@@ -89,7 +93,6 @@ class ODIN_API FOdinSubmixBufferListenerImplementation
     void PerformRemixing(float* AudioData, int32 InNumSamples, int32 InNumChannels,
                          int32 InSampleRate);
 
-  private:
     virtual void OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, float* AudioData,
                                    int32 InNumSamples, int32 InNumChannels,
                                    const int32 InSampleRate, double InAudioClock) override;
