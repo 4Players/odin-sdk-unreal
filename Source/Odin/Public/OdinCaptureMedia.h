@@ -3,6 +3,7 @@
 #pragma once
 
 #include "AudioCapture.h"
+#include "Odin.h"
 #include "CoreMinimal.h"
 #include "OdinMediaBase.h"
 #include "odin_sdk.h"
@@ -101,7 +102,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
      */
     UPROPERTY(BlueprintGetter = GetEnableMonoMixing, BlueprintSetter = SetEnableMonoMixing,
               Category = "Odin|Audio Capture")
-    bool bEnableMonoMixing = true;
+    bool bEnableMonoMixing = false;
 
     /**
      * @brief Represents the audio capture object used for capturing microphone data
@@ -138,8 +139,8 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     TWeakObjectPtr<UOdinRoom> connected_room_;
 
-    int32 stream_sample_rate_  = 48000;
-    int32 stream_num_channels_ = 1;
+    int32 stream_sample_rate_  = ODIN_DEFAULT_SAMPLE_RATE;
+    int32 stream_num_channels_ = ODIN_DEFAULT_CHANNEL_COUNT;
 
     FThreadSafeBool bIsBeingReset = false;
 

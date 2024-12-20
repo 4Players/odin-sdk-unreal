@@ -7,6 +7,8 @@
 DECLARE_LOG_CATEGORY_EXTERN(Odin, Log, All);
 
 #define ODIN_GENERAL_CLIENT_ERROR_CODE (7u << 29)
+#define ODIN_DEFAULT_SAMPLE_RATE 48000
+#define ODIN_DEFAULT_CHANNEL_COUNT 2
 
 class ODIN_API FOdinModule : public IModuleInterface
 {

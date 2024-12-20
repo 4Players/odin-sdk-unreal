@@ -11,8 +11,8 @@
 
 bool UOdinSynthComponent::Init(int32& SampleRate)
 {
-    NumChannels = 1;
-    SampleRate  = 48000;
+    NumChannels = ODIN_DEFAULT_CHANNEL_COUNT;
+    SampleRate  = ODIN_DEFAULT_SAMPLE_RATE;
 
     if (GetWorld() && GetWorld()->GetGameInstance()) {
         const UOdinInitializationSubsystem* OdinInitSubsystem =

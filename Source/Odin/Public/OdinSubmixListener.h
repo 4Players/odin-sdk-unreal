@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "Odin.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "odin_sdk.h"
 #include "SampleBuffer.h"
@@ -102,8 +103,8 @@ class ODIN_API FOdinSubmixBufferListenerImplementation
     OdinRoomHandle               CurrentRoomHandle;
     FOnSubmixBufferListenerError ErrorCallback;
 
-    int32 OdinSampleRate  = 48000;
-    int32 OdinNumChannels = 1;
+    int32 OdinSampleRate  = ODIN_DEFAULT_SAMPLE_RATE;
+    int32 OdinNumChannels = ODIN_DEFAULT_CHANNEL_COUNT;
 
     int32 FromSampleRate  = 0;
     int32 FromNumChannels = 0;

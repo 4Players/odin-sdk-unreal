@@ -3,6 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Odin.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "OdinInitializationSubsystem.generated.h"
 
@@ -31,7 +32,7 @@ class ODIN_API UOdinInitializationSubsystem : public UGameInstanceSubsystem
     bool IsOdinInitialized() const;
 
   private:
-    int32 SampleRate    = 48000;
-    int32 ChannelCount  = 1;
+    int32 SampleRate    = ODIN_DEFAULT_SAMPLE_RATE;
+    int32 ChannelCount  = ODIN_DEFAULT_CHANNEL_COUNT;
     bool  IsInitialized = false;
 };

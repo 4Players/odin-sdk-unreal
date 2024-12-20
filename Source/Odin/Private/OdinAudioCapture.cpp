@@ -108,11 +108,10 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
         TArray<FOdinCaptureDeviceInfo> Devices;
         WeakThisPtr->GetCaptureDevicesAvailable(Devices);
 
-        FOdinCaptureDeviceInfo CurrentDevice;
-        if (WeakThisPtr->CurrentSelectedDeviceIndex >= 0
-            && WeakThisPtr->CurrentSelectedDeviceIndex < Devices.Num()) {
+        FOdinCaptureDeviceInfo CurrentDevice = FOdinCaptureDeviceInfo();
+        if (Devices.IsValidIndex(WeakThisPtr->CurrentSelectedDeviceIndex)) {
             CurrentDevice = Devices[WeakThisPtr->CurrentSelectedDeviceIndex];
-        } else {
+        } else if (Devices.Num() > 0) {
             CurrentDevice = Devices[0];
         }
 

@@ -8,8 +8,10 @@ void UOdinInitializationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 {
     Super::Initialize(Collection);
 
-    // default Initialization with 48khz Mono
-    IsInitialized = odin_startup(ODIN_VERSION);
+    UE_LOG(Odin, Log, TEXT("Odin initializing with Channel Count %d, Sample Rate %d"), ChannelCount,
+           SampleRate);
+    IsInitialized = odin_startup_ex(
+        ODIN_VERSION, OdinAudioStreamConfig{(uint32_t)SampleRate, (uint8_t)ChannelCount});
 
     if (!IsOdinInitialized()) {
         UE_LOG(Odin, Warning, TEXT("Odin startup failed."));
