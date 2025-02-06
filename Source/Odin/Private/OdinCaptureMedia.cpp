@@ -148,6 +148,16 @@ void UOdinCaptureMedia::SetEnableMonoMixing(const bool bShouldEnableMonoMixing)
     }
 }
 
+bool UOdinCaptureMedia::GetIsMuted() const
+{
+    return bIsMuted;
+}
+
+void UOdinCaptureMedia::SetIsMuted(bool bNewIsMuted)
+{
+    bIsMuted = bNewIsMuted;
+}
+
 void UOdinCaptureMedia::Reconnect()
 {
     ReconnectCaptureMedia(this);
@@ -194,7 +204,7 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
         return;
     }
 
-    if (Media->stream_handle_) {
+    if (Media->stream_handle_ && !Media->GetIsMuted()) {
         int32 TargetSampleCount =
             Media->GetEnableMonoMixing() ? NumSamples / StreamNumChannels : NumSamples;
         if (Media->volume_adjusted_audio_size_ < TargetSampleCount) {

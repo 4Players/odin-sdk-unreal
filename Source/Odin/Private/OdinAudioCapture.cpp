@@ -43,10 +43,14 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole Audio
 {
     FString    RoleAsString = UEnum::GetValueAsString(AudioDeviceChangedRole);
     const bool bIsEmpty     = CustomSelectedDevice.DeviceId.IsEmpty();
-    if (INDEX_NONE == CurrentSelectedDeviceIndex || bIsEmpty) {
+    UE_LOG(Odin, Display,
+           TEXT("Recognized change in default capture device, new Default Device Id: %s"),
+           *DeviceId);
+
+    if (bIsEmpty || CustomSelectedDevice.DeviceId.Equals(DeviceId)) {
         UE_LOG(Odin, Display,
-               TEXT("Recognized change in default capture device, reconnecting to new default "
-                    "device."));
+               TEXT("Recognized change in default capture device. Current selected device is "
+                    "default device, starting reconnect to new default device."));
         bool Success;
         ChangeCaptureDeviceById(DeviceId, Success);
         CurrentSelectedDeviceIndex = INDEX_NONE;
@@ -84,6 +88,13 @@ void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
 
 void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo>& OutDevices)
 {
+    if (!IsInGameThread()) {
+        UE_LOG(Odin, Error,
+               TEXT("Tried running UOdinAudioCapture::GetCaptureDevicesAvailable in "
+                    "non-Game-Thread. This is not supported."));
+        return;
+    }
+
     TArray<Audio::FCaptureDeviceInfo> CaptureDevices;
     AudioCapture.GetCaptureDevicesAvailable(CaptureDevices);
     for (Audio::FCaptureDeviceInfo CaptureDevice : CaptureDevices) {
@@ -99,7 +110,8 @@ void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo
 void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegate Out)
 {
     TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
-    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, [WeakThisPtr, Out]() {
+    // Calling this will now simply schedule execution to the Game Thread.
+    AsyncTask(ENamedThreads::GameThread, [WeakThisPtr, Out = MoveTemp(Out)]() {
         if (!UOdinFunctionLibrary::Check(WeakThisPtr,
                                          "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
             return;
@@ -108,29 +120,28 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
         TArray<FOdinCaptureDeviceInfo> Devices;
         WeakThisPtr->GetCaptureDevicesAvailable(Devices);
 
-        FOdinCaptureDeviceInfo CurrentDevice = FOdinCaptureDeviceInfo();
-        if (Devices.IsValidIndex(WeakThisPtr->CurrentSelectedDeviceIndex)) {
-            CurrentDevice = Devices[WeakThisPtr->CurrentSelectedDeviceIndex];
+        FOdinCaptureDeviceInfo CurrentDevice       = FOdinCaptureDeviceInfo();
+        int32                  SelectedDeviceIndex = WeakThisPtr->CurrentSelectedDeviceIndex;
+        if (Devices.IsValidIndex(SelectedDeviceIndex)) {
+            CurrentDevice = Devices[SelectedDeviceIndex];
         } else if (Devices.Num() > 0) {
             CurrentDevice = Devices[0];
         }
 
-        // We schedule back to the main thread and pass in our params
-        AsyncTask(ENamedThreads::GameThread, [WeakThisPtr, Devices, CurrentDevice, Out]() {
-            if (!UOdinFunctionLibrary::Check(
-                    WeakThisPtr, "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
-                return;
-            }
-            // We execute the delegate along with the param
-            if (Out.IsBound()) {
-                Out.Execute(Devices, CurrentDevice);
-            }
-        });
+        if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                         "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
+            return;
+        }
+        // We execute the delegate along with the param
+        if (Out.IsBound()) {
+            Out.Execute(Devices, CurrentDevice);
+        }
     });
 }
 
 void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice)
 {
+
     TArray<FOdinCaptureDeviceInfo> allDevices;
     GetCaptureDevicesAvailable(allDevices);
     if (allDevices.Num() > 0) {
@@ -208,29 +219,44 @@ void UOdinAudioCapture::TryRunAsyncChangeDeviceRequest(
 {
     if (IsCurrentlyChangingDevice) {
         if (OnChangeCompleted.IsBound()) {
+            UE_LOG(Odin, Warning,
+                   TEXT("Currently in the process of changing the Capture Device, ignoring "
+                        "repeated Change Device Request."))
             OnChangeCompleted.Execute(false);
         }
         return;
     }
     IsCurrentlyChangingDevice = true;
-    AsyncTask(ENamedThreads::AnyHiPriThreadNormalTask, ChangeDeviceFunction);
+    if (IsInGameThread()) {
+        ChangeDeviceFunction();
+    } else {
+        AsyncTask(ENamedThreads::GameThread, MoveTemp(ChangeDeviceFunction));
+    }
 }
 
 void UOdinAudioCapture::FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted,
                                                     bool&                        bSuccess)
 {
-    TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
-    AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, WeakThisPtr]() {
-        if (!UOdinFunctionLibrary::Check(WeakThisPtr,
-                                         "UOdinAudioCapture::FinalizeCaptureDeviceChange")) {
-            return;
-        }
-        WeakThisPtr->IsCurrentlyChangingDevice = false;
+    if (IsInGameThread()) {
+        IsCurrentlyChangingDevice = false;
         // We execute the delegate along with the param
         if (OnChangeCompleted.IsBound()) {
             OnChangeCompleted.Execute(bSuccess);
         }
-    });
+    } else {
+        TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+        AsyncTask(ENamedThreads::GameThread, [OnChangeCompleted, bSuccess, WeakThisPtr]() {
+            if (!UOdinFunctionLibrary::Check(WeakThisPtr,
+                                             "UOdinAudioCapture::FinalizeCaptureDeviceChange")) {
+                return;
+            }
+            WeakThisPtr->IsCurrentlyChangingDevice = false;
+            // We execute the delegate along with the param
+            if (OnChangeCompleted.IsBound()) {
+                OnChangeCompleted.Execute(bSuccess);
+            }
+        });
+    }
 }
 
 template <typename DeviceCheck>
@@ -240,7 +266,6 @@ bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFuncti
     GetCaptureDevicesAvailable(allDevices);
 
     bool bSuccess = false;
-
     // look for the name of the selected device.
     for (int32 i = 0; i < allDevices.Num(); ++i) {
         const FOdinCaptureDeviceInfo OdinCaptureDeviceInfo = allDevices[i];
@@ -253,20 +278,44 @@ bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFuncti
     }
 
     if (bSuccess) {
-        UE_LOG(Odin, VeryVerbose, TEXT("Selected index: %d with device id: %s"),
+
+        UE_LOG(Odin, Verbose, TEXT("Selected index: %d with device id: %s"),
                CurrentSelectedDeviceIndex, *CustomSelectedDevice.DeviceId);
-        RestartCapturing();
+
+        if (IsInGameThread()) {
+            RestartCapturing();
+        } else {
+            TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
+            AsyncTask(ENamedThreads::GameThread, [WeakThisPtr]() {
+                if (WeakThisPtr.IsValid()) {
+                    WeakThisPtr->RestartCapturing();
+                }
+            });
+        }
     }
     return bSuccess;
 }
 
 bool UOdinAudioCapture::IsStreamOpen() const
 {
+    if (!IsInGameThread()) {
+        UE_LOG(Odin, Error,
+               TEXT("Tried running UOdinAudioCapture::IsStreamOpen in non-Game-Thread. This is not "
+                    "supported. Returning false by default."));
+        return false;
+    }
     return AudioCapture.IsStreamOpen();
 }
 
 float UOdinAudioCapture::GetStreamTime() const
 {
+    if (!IsInGameThread()) {
+        UE_LOG(Odin, Error,
+               TEXT("Tried running UOdinAudioCapture::GetStreamTime in non-Game-Thread. This is "
+                    "not supported."));
+        return 0.0f;
+    }
+
     double streamTime;
     AudioCapture.GetStreamTime(streamTime);
     return static_cast<float>(streamTime);
@@ -289,7 +338,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
             const bool bIsStreamSettingUp = CurrentStreamTime < AllowedTimeForStreamSetup;
             const bool bIsStreamOffline = TimeWithoutStreamUpdate > AllowedTimeWithoutStreamUpdate;
             if (bIsStreamOffline && !bIsStreamSettingUp) {
-                UE_LOG(Odin, Log,
+                UE_LOG(Odin, Warning,
                        TEXT("Recognized disconnected Capture Device, restarting Capture Stream "
                             "with Default Device..."));
                 TimeWithoutStreamUpdate    = 0.0f;
@@ -313,21 +362,33 @@ void UOdinAudioCapture::InitializeGenerator()
     GetCaptureDevicesAvailable(Devices);
     if (Devices.Num() > 0) {
         FOdinCaptureDeviceInfo CurrentDevice;
-        if (CurrentSelectedDeviceIndex >= 0 && CurrentSelectedDeviceIndex < Devices.Num()) {
+        if (Devices.IsValidIndex(CurrentSelectedDeviceIndex)) {
             CurrentDevice = Devices[CurrentSelectedDeviceIndex];
         } else {
             CurrentDevice = Devices[0];
         }
+
         const FAudioCaptureDeviceInfo AudioCaptureDeviceInfo = CurrentDevice.AudioCaptureInfo;
         Init(AudioCaptureDeviceInfo.SampleRate, AudioCaptureDeviceInfo.NumInputChannels);
-        UE_LOG(Odin, Display, TEXT("Switched to input device %s, Sample Rate: %d, Channels: %d"),
+        UE_LOG(Odin, Display,
+               TEXT("Starting up generator with input device %s, Sample Rate: %d, Channels: %d"),
                *AudioCaptureDeviceInfo.DeviceName.ToString(), AudioCaptureDeviceInfo.SampleRate,
                AudioCaptureDeviceInfo.NumInputChannels);
+    } else {
+        UE_LOG(Odin, Error,
+               TEXT("Could not find any available capture devices, InitializeGenerator failed."));
     }
 }
 
-void UOdinAudioCapture::RetrieveCurrentSelectedDeviceIndex()
+void UOdinAudioCapture::TryRetrieveCurrentSelectedDeviceIndex()
 {
+    if (!IsInGameThread()) {
+        UE_LOG(Odin, Error,
+               TEXT("Tried running UOdinAudioCapture::TryRetrieveCurrentSelectedDeviceIndex in "
+                    "non-Game-Thread. This is not supported."));
+        return;
+    }
+
     Audio::FCaptureDeviceInfo Current;
     AudioCapture.GetCaptureDeviceInfo(Current);
     UE_LOG(
@@ -335,6 +396,7 @@ void UOdinAudioCapture::RetrieveCurrentSelectedDeviceIndex()
         TEXT("Using Default Device during Restart Stream, name: %s, samplerate: %d, channels: %d"),
         *Current.DeviceName, Current.PreferredSampleRate, Current.InputChannels);
 
+    CurrentSelectedDeviceIndex = INDEX_NONE;
     TArray<Audio::FCaptureDeviceInfo> OutDevices;
     AudioCapture.GetCaptureDevicesAvailable(OutDevices);
     for (int i = 0; i < OutDevices.Num(); ++i) {
@@ -342,16 +404,6 @@ void UOdinAudioCapture::RetrieveCurrentSelectedDeviceIndex()
             CurrentSelectedDeviceIndex = i;
         }
     }
-}
-
-bool UOdinAudioCapture::GetIsPaused() const
-{
-    return bIsCapturingPaused;
-}
-
-void UOdinAudioCapture::SetIsPaused(bool newValue)
-{
-    bIsCapturingPaused = newValue;
 }
 
 bool UOdinAudioCapture::GetTryRecognizingDeviceDisconnected() const
@@ -368,6 +420,14 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinAudioCapture::RestartCapturing)
 
+    if (!IsInGameThread()) {
+        UE_LOG(Odin, Error,
+               TEXT("Tried running UOdinAudioCapture::RestartCapturing in non-Game-Thread. This is "
+                    "not supported, "
+                    "aborting restart."));
+        return false;
+    }
+
     if (AudioCapture.IsStreamOpen()) {
         AudioCapture.CloseStream();
     }
@@ -379,9 +439,7 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
     Audio::FOnAudioCaptureFunction OnCapture = [this](const void* AudioData, int32 NumFrames,
                                                       int32 InNumChannels, int32 InSampleRate,
                                                       double StreamTime, bool bOverFlow) {
-        if (!bIsCapturingPaused) {
-            OnGeneratedAudio(static_cast<const float*>(AudioData), NumFrames * InNumChannels);
-        }
+        OnCaptureCallback(static_cast<const float*>(AudioData), NumFrames, InNumChannels);
     };
 #else
     // Below here is basically a copy of the UAudioCapture::OpenDefaultAudioStream() implementation,
@@ -389,14 +447,12 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
     Audio::FOnCaptureFunction OnCapture = [this](const float* AudioData, int32 NumFrames,
                                                  int32 InNumChannels, int32 InSampleRate,
                                                  double StreamTime, bool bOverFlow) {
-        if (!bIsCapturingPaused) {
-            OnGeneratedAudio(AudioData, NumFrames * InNumChannels);
-        }
+        OnCaptureCallback(static_cast<const float*>(AudioData), NumFrames, InNumChannels);
     };
 #endif
 
     if (CurrentSelectedDeviceIndex < 0) {
-        RetrieveCurrentSelectedDeviceIndex();
+        TryRetrieveCurrentSelectedDeviceIndex();
     }
 
     Audio::FAudioCaptureDeviceParams Params;
@@ -413,8 +469,55 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
         InitializeGenerator();
         // Restart the audio capture stream.
         if (bAutomaticallyStartCapture) {
-            AudioCapture.StartStream();
+            StartCapturingAudio();
         }
     }
     return bSuccess;
+}
+
+void UOdinAudioCapture::OnCaptureCallback(const float* AudioData, int32 NumFrames,
+                                          int32 InNumChannels)
+{
+    if (!GetIsMuted()) {
+        const int32 NumSamples = NumFrames * InNumChannels;
+        if (AdjustedAudio.Num() != NumSamples) {
+            AdjustedAudio.SetNumZeroed(NumSamples);
+        }
+        for (int32 SampleIndex = 0; SampleIndex < NumSamples; ++SampleIndex) {
+            AdjustedAudio[SampleIndex] =
+                AudioData[SampleIndex] * FMath::Pow(GetVolumeMultiplier(), 3);
+        }
+
+        OnGeneratedAudio(AdjustedAudio.GetData(), NumSamples);
+    }
+}
+
+bool UOdinAudioCapture::GetIsPaused() const
+{
+    return GetIsMuted();
+}
+
+void UOdinAudioCapture::SetIsPaused(bool bNewValue)
+{
+    SetVolumeMultiplier(bNewValue);
+}
+
+bool UOdinAudioCapture::GetIsMuted() const
+{
+    return bIsCapturingPaused;
+}
+
+void UOdinAudioCapture::SetIsMuted(bool bNewValue)
+{
+    bIsCapturingPaused = bNewValue;
+}
+
+float UOdinAudioCapture::GetVolumeMultiplier() const
+{
+    return VolumeMultiplier;
+}
+
+void UOdinAudioCapture::SetVolumeMultiplier(float NewMultiplierValue)
+{
+    VolumeMultiplier = NewMultiplierValue;
 }

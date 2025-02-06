@@ -5,13 +5,14 @@
 #include "AudioCapture.h"
 #include "Odin.h"
 #include "CoreMinimal.h"
+#include "OdinAudioControl.h"
 #include "OdinMediaBase.h"
 #include "odin_sdk.h"
 
 #include "OdinCaptureMedia.generated.h"
 
 UCLASS(BlueprintType, ClassGroup = Odin)
-class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
+class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioControl
 {
     GENERATED_UCLASS_BODY()
   public:
@@ -45,20 +46,6 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
     OdinReturnCode ResetOdinStream();
 
     /**
-     * @brief The capture devices input volume will be increased by this multiplier. The multiplier
-     * will be in range of [0, MaxVolumeMultiplier].
-     * @return The current volume multiplier
-     */
-    UFUNCTION(BlueprintPure, BlueprintInternalUseOnly)
-    float GetVolumeMultiplier() const;
-    /**
-     * @brief Set the volume multiplier of the capture devices input volume. The new value will be
-     * capped to the range [0, MaxVolumeMultiplier].
-     * @param newValue The new volume multiplier.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
-    void SetVolumeMultiplier(const float newValue);
-    /**
      * @brief Get the current maximum volume multiplier value. The Volume Multiplier will be capped
      * to the range [0, MaxVolumeMultiplier].
      * @return The current max volume Multiplier.
@@ -87,6 +74,27 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
      */
     UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
     void SetEnableMonoMixing(const bool bShouldEnableMonoMixing);
+
+    // --- IOdinAudioControl Interface START ---
+    virtual bool GetIsMuted() const override;
+    virtual void SetIsMuted(bool bNewIsMuted) override;
+
+    /**
+     * @brief The capture devices input volume will be increased by this multiplier. The multiplier
+     * will be in range of [0, MaxVolumeMultiplier].
+     * @return The current volume multiplier
+     */
+    UFUNCTION(BlueprintPure, BlueprintInternalUseOnly)
+    virtual float GetVolumeMultiplier() const override;
+
+    /**
+     * @brief Set the volume multiplier of the capture devices input volume. The new value will be
+     * capped to the range [0, MaxVolumeMultiplier].
+     * @param newValue The new volume multiplier.
+     */
+    UFUNCTION(BlueprintCallable, BlueprintInternalUseOnly)
+    virtual void SetVolumeMultiplier(const float newValue) override;
+    // --- IOdinAudioControl Interface END ---
 
     void Reconnect();
 
@@ -146,4 +154,6 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase
 
     float* volume_adjusted_audio_      = nullptr;
     int32  volume_adjusted_audio_size_ = 0;
+
+    bool bIsMuted = false;
 };

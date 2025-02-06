@@ -42,7 +42,9 @@ void UOdinRoomJoin::Activate()
                     },
                     TStatId(), nullptr, ENamedThreads::GameThread);
             });
-
+        UE_LOG(Odin, Verbose,
+               TEXT("Starting OdinRoomJoin Task for Room %llu, Url %s, Initial Position: %s"),
+               this->Room->RoomHandle(), *this->Url, *this->InitialPosition.ToString());
         (new FAutoDeleteAsyncTask<JoinRoomTask>(this->Room->RoomHandle(), this->Url, this->Token,
                                                 this->InitialPeerUserData, this->InitialPosition,
                                                 this->OnResponse, this->OnError, this->OnSuccess))
