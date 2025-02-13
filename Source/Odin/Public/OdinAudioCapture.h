@@ -94,6 +94,14 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
     UFUNCTION(BlueprintCallable, Category = "AudioCapture")
     void ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess);
 
+
+    /**
+    * @brief Starts Capturing Audio and returns whether or not this was successful.
+    * @param bSuccess Whether or not the capturing was successfully started
+    */
+    UFUNCTION(BlueprintCallable, Category = "AudioCapture")
+    void StartCapturing(bool& bSuccess);
+
     /**
      * @brief DEPRECATED: Please use the ChangeCaptureDeviceById function instead. Calls to the
      * the underlying Audio Capture engine components were identified to be not thread-safe, so Odin
