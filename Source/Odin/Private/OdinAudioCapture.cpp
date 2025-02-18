@@ -41,19 +41,20 @@ void UOdinAudioCapture::PostInitProperties()
 void UOdinAudioCapture::HandleDefaultDeviceChanged(EAudioDeviceChangedRole AudioDeviceChangedRole,
                                                    FString                 DeviceId)
 {
-    FString    RoleAsString = UEnum::GetValueAsString(AudioDeviceChangedRole);
-    const bool bIsEmpty     = CustomSelectedDevice.DeviceId.IsEmpty();
-    UE_LOG(Odin, Display,
-           TEXT("Recognized change in default capture device, new Default Device Id: %s"),
-           *DeviceId);
+    const bool bIsCurrentDeviceDefault = CurrentSelectedDevice.DeviceId.Equals(DefaultDeviceId);
+    DefaultDeviceId                    = DeviceId;
 
-    if (bIsEmpty || CustomSelectedDevice.DeviceId.Equals(DeviceId)) {
+    FString RoleAsString = UEnum::GetValueAsString(AudioDeviceChangedRole);
+    UE_LOG(Odin, Display,
+           TEXT("Recognized change in default capture device, new Default Device Id: %s, Role: %s"),
+           *DeviceId, *RoleAsString);
+    if (bIsCurrentDeviceDefault) {
         UE_LOG(Odin, Display,
                TEXT("Recognized change in default capture device. Current selected device is "
                     "default device, starting reconnect to new default device."));
-        bool Success;
-        ChangeCaptureDeviceById(DeviceId, Success);
-        CurrentSelectedDeviceIndex = INDEX_NONE;
+
+        bool bSuccess;
+        ChangeCaptureDeviceById(DeviceId, bSuccess);
         OnDefaultDeviceChanged.Broadcast();
     }
 }
@@ -72,16 +73,7 @@ void UOdinAudioCapture::PostInitProperties()
 
 void UOdinAudioCapture::HandleDefaultDeviceChanged(FString DeviceId)
 {
-    const bool bIsEmpty = CustomSelectedDevice.DeviceId.IsEmpty();
-    if (INDEX_NONE == CurrentSelectedDeviceIndex || bIsEmpty) {
-        UE_LOG(Odin, Display,
-               TEXT("Recognized change in default capture device, reconnecting to new default "
-                    "device."));
-        bool Success;
-        ChangeCaptureDeviceById(DeviceId, Success);
-        CurrentSelectedDeviceIndex = INDEX_NONE;
-        OnDefaultDeviceChanged.Broadcast();
-    }
+    // is not being called because Audio Device Notification Subsystem is not available.
 }
 
 #endif
@@ -120,13 +112,8 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
         TArray<FOdinCaptureDeviceInfo> Devices;
         WeakThisPtr->GetCaptureDevicesAvailable(Devices);
 
-        FOdinCaptureDeviceInfo CurrentDevice       = FOdinCaptureDeviceInfo();
-        int32                  SelectedDeviceIndex = WeakThisPtr->CurrentSelectedDeviceIndex;
-        if (Devices.IsValidIndex(SelectedDeviceIndex)) {
-            CurrentDevice = Devices[SelectedDeviceIndex];
-        } else if (Devices.Num() > 0) {
-            CurrentDevice = Devices[0];
-        }
+        FOdinCaptureDeviceInfo CurrentDevice = FOdinCaptureDeviceInfo();
+        WeakThisPtr->GetCurrentAudioCaptureDevice(CurrentDevice);
 
         if (!UOdinFunctionLibrary::Check(WeakThisPtr,
                                          "UOdinAudioCapture: AsyncGetCaptureDevicesAvailable")) {
@@ -139,18 +126,15 @@ void UOdinAudioCapture::AsyncGetCaptureDevicesAvailable(FGetCaptureDeviceDelegat
     });
 }
 
-void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice)
+void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice) const
 {
+    CurrentDevice = CurrentSelectedDevice;
+}
 
-    TArray<FOdinCaptureDeviceInfo> allDevices;
-    GetCaptureDevicesAvailable(allDevices);
-    if (allDevices.Num() > 0) {
-        if (allDevices.IsValidIndex(CurrentSelectedDeviceIndex)) {
-            CurrentDevice = allDevices[CurrentSelectedDeviceIndex];
-        } else {
-            CurrentDevice = allDevices[0];
-        }
-    }
+void UOdinAudioCapture::ChangeToDefaultCaptureDevice()
+{
+    bool bSuccess;
+    ChangeCaptureDeviceById(DefaultDeviceId, bSuccess);
 }
 
 void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess)
@@ -270,9 +254,15 @@ bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFuncti
     for (int32 i = 0; i < allDevices.Num(); ++i) {
         const FOdinCaptureDeviceInfo OdinCaptureDeviceInfo = allDevices[i];
         if (DeviceCheckFunction(OdinCaptureDeviceInfo)) {
-            CurrentSelectedDeviceIndex = i;
-            CustomSelectedDevice       = OdinCaptureDeviceInfo;
-            bSuccess                   = true;
+            if (OdinCaptureDeviceInfo.DeviceId == CurrentSelectedDevice.DeviceId) {
+                UE_LOG(Odin, Log,
+                       TEXT("Tried changing to the current selected Device. Doing nothing."));
+                return true;
+            } else {
+                CurrentSelectedDeviceIndex = i;
+                CurrentSelectedDevice      = OdinCaptureDeviceInfo;
+                bSuccess                   = true;
+            }
             break;
         }
     }
@@ -280,7 +270,7 @@ bool UOdinAudioCapture::ChangeCaptureDevice(const DeviceCheck& DeviceCheckFuncti
     if (bSuccess) {
 
         UE_LOG(Odin, Verbose, TEXT("Selected index: %d with device id: %s"),
-               CurrentSelectedDeviceIndex, *CustomSelectedDevice.DeviceId);
+               CurrentSelectedDeviceIndex, *CurrentSelectedDevice.DeviceId);
 
         if (IsInGameThread()) {
             RestartCapturing();
@@ -341,10 +331,15 @@ void UOdinAudioCapture::Tick(float DeltaTime)
                 UE_LOG(Odin, Warning,
                        TEXT("Recognized disconnected Capture Device, restarting Capture Stream "
                             "with Default Device..."));
-                TimeWithoutStreamUpdate    = 0.0f;
-                LastStreamTime             = 0.0f;
+
+                TimeWithoutStreamUpdate = 0.0f;
+                LastStreamTime          = 0.0f;
+
+                // Reset current device info, in case the user switched the capture device format
+                // instead of changing the capture device.
                 CurrentSelectedDeviceIndex = INDEX_NONE;
-                RestartCapturing();
+                CurrentSelectedDevice      = FOdinCaptureDeviceInfo();
+                ChangeToDefaultCaptureDevice();
                 OnCaptureDeviceReset.Broadcast();
             }
         }
@@ -358,16 +353,9 @@ bool UOdinAudioCapture::IsTickable() const
 
 void UOdinAudioCapture::InitializeGenerator()
 {
-    TArray<FOdinCaptureDeviceInfo> Devices;
-    GetCaptureDevicesAvailable(Devices);
-    if (Devices.Num() > 0) {
-        FOdinCaptureDeviceInfo CurrentDevice;
-        if (Devices.IsValidIndex(CurrentSelectedDeviceIndex)) {
-            CurrentDevice = Devices[CurrentSelectedDeviceIndex];
-        } else {
-            CurrentDevice = Devices[0];
-        }
-
+    FOdinCaptureDeviceInfo CurrentDevice;
+    GetCurrentAudioCaptureDevice(CurrentDevice);
+    if (!CurrentDevice.DeviceId.IsEmpty()) {
         const FAudioCaptureDeviceInfo AudioCaptureDeviceInfo = CurrentDevice.AudioCaptureInfo;
         Init(AudioCaptureDeviceInfo.SampleRate, AudioCaptureDeviceInfo.NumInputChannels);
         UE_LOG(Odin, Display,
@@ -376,33 +364,42 @@ void UOdinAudioCapture::InitializeGenerator()
                AudioCaptureDeviceInfo.NumInputChannels);
     } else {
         UE_LOG(Odin, Error,
-               TEXT("Could not find any available capture devices, InitializeGenerator failed."));
+               TEXT("Could not retrieve Current Capture Device, InitializeGenerator failed."));
     }
 }
 
-void UOdinAudioCapture::TryRetrieveCurrentSelectedDeviceIndex()
+void UOdinAudioCapture::TryRetrieveDefaultDevice()
 {
     if (!IsInGameThread()) {
         UE_LOG(Odin, Error,
-               TEXT("Tried running UOdinAudioCapture::TryRetrieveCurrentSelectedDeviceIndex in "
+               TEXT("Tried running UOdinAudioCapture::TryRetrieveDefaultDeviceIndex in "
                     "non-Game-Thread. This is not supported."));
         return;
     }
 
     Audio::FCaptureDeviceInfo Current;
-    AudioCapture.GetCaptureDeviceInfo(Current);
-    UE_LOG(
-        Odin, Warning,
-        TEXT("Using Default Device during Restart Stream, name: %s, samplerate: %d, channels: %d"),
-        *Current.DeviceName, Current.PreferredSampleRate, Current.InputChannels);
+    const bool                bSuccess = AudioCapture.GetCaptureDeviceInfo(Current);
+    if (bSuccess) {
+        UE_LOG(Odin, Warning,
+               TEXT("Using Default Device during Restart Stream, Name: %s, Samplerate: %d, "
+                    "Channels: %d"),
+               *Current.DeviceName, Current.PreferredSampleRate, Current.InputChannels);
 
-    CurrentSelectedDeviceIndex = INDEX_NONE;
-    TArray<Audio::FCaptureDeviceInfo> OutDevices;
-    AudioCapture.GetCaptureDevicesAvailable(OutDevices);
-    for (int i = 0; i < OutDevices.Num(); ++i) {
-        if (OutDevices[i].DeviceId == Current.DeviceId) {
-            CurrentSelectedDeviceIndex = i;
+        CurrentSelectedDeviceIndex = INDEX_NONE;
+        TArray<FOdinCaptureDeviceInfo> OutDevices;
+        GetCaptureDevicesAvailable(OutDevices);
+        for (int i = 0; i < OutDevices.Num(); ++i) {
+            if (OutDevices[i].DeviceId == Current.DeviceId) {
+                CurrentSelectedDeviceIndex = i;
+                CurrentSelectedDevice      = OutDevices[CurrentSelectedDeviceIndex];
+                DefaultDeviceId            = CurrentSelectedDevice.DeviceId;
+                break;
+            }
         }
+    } else {
+        UE_LOG(Odin, Error,
+               TEXT("Error when trying to retrieve Default Device Index. This could happen if "
+                    "there is no available Capture Device connected."));
     }
 }
 
@@ -452,7 +449,7 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
 #endif
 
     if (CurrentSelectedDeviceIndex < 0) {
-        TryRetrieveCurrentSelectedDeviceIndex();
+        TryRetrieveDefaultDevice();
     }
 
     Audio::FAudioCaptureDeviceParams Params;

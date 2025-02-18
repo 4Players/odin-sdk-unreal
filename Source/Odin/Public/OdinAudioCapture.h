@@ -79,11 +79,18 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
      * @param CurrentDevice Info on the current capture device
      */
     UFUNCTION(BlueprintPure, Category = "AudioCapture")
-    void GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice);
+    void GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice) const;
+
+    /**
+     * @brief Changes the current capture device to the system default and restarts the capture
+     * stream. Only usable in GameThread.
+     */
+    UFUNCTION(BlueprintCallable, Category = "AudioCapture")
+    void ChangeToDefaultCaptureDevice();
 
     /**
      * @brief Updates the capture device and restarts the capture stream of the Audio Capture
-     * component. Only usable in GameThread.
+     * object. Only usable in GameThread.
      *
      * IMPORTANT! Should not be used in tick or on a regular basis because it could lead to
      * stuttering.
@@ -101,7 +108,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
      * simply schedule execution to the Game Thread.
      *
      * Original description: Updates the capture device and restarts the capture stream of the Audio
-     * Capture component. Runs async, therefore not blocking the main thread.
+     * Capture object. Runs async, therefore not blocking the main thread.
      * @param NewDeviceId The id of the targeted capture device.
      * @param OnChangeCompleted Callback for when the change result is available.
      */
@@ -113,7 +120,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
 
     /**
      * @brief Updates the capture device and restarts the capture stream of the Audio Capture
-     * component. Only usable in GameThread.
+     * object. Only usable in GameThread.
      *
      * IMPORTANT! Should not be used in tick or on a regular basis because it could lead to
      * stuttering.
@@ -131,7 +138,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
      * simply schedule execution to the Game Thread.
      *
      * Original description: Updates the capture device and restarts the capture stream of the Audio
-     * Capture component. Runs async, therefore not blocking the main thread.
+     * Capture object. Runs async, therefore not blocking the main thread.
      * @param DeviceName The name of the targeted capture device. Needs to be an exact match.
      * @param OnChangeCompleted Callback for when the change result is available.
      */
@@ -270,7 +277,7 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
     void FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted,
                                      bool&                        bSuccess);
 
-    void TryRetrieveCurrentSelectedDeviceIndex();
+    void TryRetrieveDefaultDevice();
 
     /**
      * Handles the audio generation logic triggered by the native Audio Capture Implementation
@@ -321,9 +328,21 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
      * RtAudio implementation - AudioDeviceInterface does not provide us with a Device Id or Url of
      * the Default Device.
      */
-    FOdinCaptureDeviceInfo CustomSelectedDevice;
+    FOdinCaptureDeviceInfo CurrentSelectedDevice;
 
-    float         VolumeMultiplier = 1.0f;
+    /**
+     * @brief Device Id of the currently known Default Capture Device.
+     */
+    FString DefaultDeviceId;
+
+    /**
+     * Currently set Volume Multiplier for this Audio Capture
+     */
+    float VolumeMultiplier = 1.0f;
+
+    /**
+     * Buffer for audio that has volume multiplier applied.
+     */
     TArray<float> AdjustedAudio;
 
     double          LastStreamTime            = -1.0f;

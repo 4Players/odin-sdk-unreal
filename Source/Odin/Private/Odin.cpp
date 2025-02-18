@@ -16,6 +16,9 @@
 #endif
 
 #include "OdinFunctionLibrary.h"
+#include "Sound/AudioSettings.h"
+#include "CoreGlobals.h"
+#include "Misc/ConfigCacheIni.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
 
@@ -63,6 +66,34 @@ void FOdinModule::StartupModule()
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
 #endif
+
+    FString OdinConfigPath =
+        FPaths::Combine(FPaths::ProjectPluginsDir(), TEXT("Odin/Config/Odin.ini"));
+
+    if (FPaths::FileExists(OdinConfigPath)) {
+        GConfig->LoadFile(OdinConfigPath);
+    }
+
+    TWeakObjectPtr<UAudioSettings> AudioSettings = GetMutableDefault<UAudioSettings>();
+    if (GConfig && AudioSettings.IsValid()) {
+        // only set this, if not changed from default by user
+        float EngineMinPitchScale = -1.0f;
+        GConfig->GetFloat(TEXT("/Script/Engine.AudioSettings"), TEXT("GlobalMinPitchScale"),
+                          EngineMinPitchScale, GEngineIni);
+        float MinPitch = 0.1f;
+        GConfig->GetFloat(TEXT("Odin"), TEXT("GlobalMinPitch"), MinPitch, OdinConfigPath);
+        if (EngineMinPitchScale < 0.0f && AudioSettings->GlobalMinPitchScale > MinPitch)
+            AudioSettings->GlobalMinPitchScale = MinPitch;
+
+        // only set this, if not changed from default by user
+        float EngineMaxPitchScale = -1.0f;
+        GConfig->GetFloat(TEXT("/Script/Engine.AudioSettings"), TEXT("GlobalMaxPitchScale"),
+                          EngineMaxPitchScale, GEngineIni);
+        float MaxPitch = 4.0f;
+        GConfig->GetFloat(TEXT("Odin"), TEXT("GlobalMaxPitch"), MaxPitch, OdinConfigPath);
+        if (EngineMaxPitchScale < 0.0f && AudioSettings->GlobalMaxPitchScale < MaxPitch)
+            AudioSettings->GlobalMaxPitchScale = MaxPitch;
+    }
 }
 
 void FOdinModule::ShutdownModule()
