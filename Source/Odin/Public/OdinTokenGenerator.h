@@ -55,11 +55,13 @@ class ODIN_API UOdinTokenGenerator : public UObject
      * @param RoomId The ID of the room to generate the token for.
      * @param UserId The ID of the user for whom the token is generated.
      * @param TokenAudience The audience type for the token (Default, SingleServer).
+     * @param TokenLifeTime The lifetime in seconds of the generated room token.
      * @return The generated token as a FString.
      */
-    UFUNCTION(BlueprintCallable, Category = "Odin|Authentication")
+    UFUNCTION(BlueprintCallable, meta = (AdvancedDisplay = "2"), Category = "Odin|Authentication")
     FString GenerateRoomToken(const FString &RoomId, const FString &UserId,
-                              EOdinTokenAudience TokenAudience);
+                              EOdinTokenAudience TokenAudience = EOdinTokenAudience::Default,
+                              int32              TokenLifeTime = 300);
 
   private:
     struct OdinTokenGenerator *TokenGenerator = nullptr;

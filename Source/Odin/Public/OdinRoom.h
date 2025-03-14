@@ -405,52 +405,99 @@ struct ODIN_API FOdinApmSettings {
     GENERATED_BODY()
 
     /**
-     * Enables or disables voice activity detection
+     * When enabled, ODIN will analyze the audio input signal using smart voice detection algorithm
+     * to determine the presence of speech. You can define both the probability required to start
+     * and stop transmitting.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Enable Voice Activity Detection"))
     bool bVoiceActivityDetection = true;
 
+    /**
+     * Voice probability value when the VAD should engage.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Attack Probability", ClampMin = "0.0", ClampMax = "1.0",
                       UIMin = "0.0", UIMax = "1.0"))
     float fVadAttackProbability = 0.9f;
 
+    /**
+     * Voice probability value when the VAD should disengage. It's recommended to keep this value
+     * 0.1 lower than the attack probability.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
               meta = (DisplayName = "Release Probability", ClampMin = "0.0", ClampMax = "1.0",
                       UIMin = "0.0", UIMax = "1.0"))
     float fVadReleaseProbability = 0.8f;
 
+    /**
+     * When enabled, the volume gate will measure the volume of the input audio signal, thus
+     * deciding when a user is speaking loud enough to transmit voice data. You can define both the
+     * root mean square power (dBFS) for when the gate should engage and disengage.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
               meta = (DisplayName = "Enable Volume Gate"))
     bool bEnableVolumeGate = false;
 
+    /**
+     * Root mean square power (dBFS) when the volume gate should engage.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
               meta = (DisplayName = "Attack Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0",
                       UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateAttackLoudness = -90.0;
 
+    /**
+     * Root mean square power (dBFS) when the volume gate should disengage. It's recommended to keep
+     * this value 10 lower than the attack loudness.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
               meta = (DisplayName = "Release Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0",
                       UIMin = "-90.0", UIMax = "0.0"))
     float fVolumeGateReleaseLoudness = -90.0;
 
+    /**
+     * When enabled, aligns the original and the reverse audio stream to negate the output inside
+     * the input, resulting in effective echo cancellation
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Echo Canceller"),
               Category = "Filters")
     bool bEchoCanceller = false;
+    /**
+     * When enabled, the high-pass filter will remove low-frequency content from the input audio
+     * signal, thus making it sound cleaner and more focused.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"),
               Category = "Filters")
     bool bHighPassFilter = false;
+    /**
+     * When enabled, the preamplifier will boost the signal of sensitive microphones by taking
+     * really weak audio signals and making them louder.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"),
               Category = "Filters")
     bool bPreAmplifier = false;
+    /**
+     * When enabled, the noise suppressor will remove distracting background noise from the input
+     * audio signal. You can control the aggressiveness of the suppression. Increasing the level
+     * will reduce the noise level at the expense of a higher speech distortion.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppression"),
               Category = "Filters")
     TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
         EOdinNoiseSuppressionLevel::OdinNS_Moderate;
+    /**
+     * When enabled, the transient suppressor will try to detect and attenuate keyboard clicks.
+
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppression"),
               Category = "Filters")
     bool bTransientSuppresor = false;
+    /**
+     * When enabled, the gain controller will automatically bring the signal to an appropriate
+     * range. This means input signals with low volume will be amplified and high volume will be
+     * limited.
+     */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
               Category = "Filters")
     bool bGainController = true;
@@ -460,11 +507,15 @@ USTRUCT(BlueprintType)
 struct ODIN_API FRoomConnectionStateChangedData {
     GENERATED_BODY()
     /**
-     *
+     *  The new ODIN connection state.
      */
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
               meta = (DisplayName = "Connection State"))
     EOdinRoomConnectionState State = EOdinRoomConnectionState::Disconnected;
+
+    /**
+     * The reason for the connection state change.
+     */
     UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
               meta = (DisplayName = "Reason"))
     EOdinRoomConnectionStateChangeReason Reason =
@@ -485,48 +536,97 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinRoomJoined, int64, peerId,
                                                    const TArray<uint8> &, roomUserData, UOdinRoom *,
                                                    room);
+
+    /**
+     * Handles Room Joined events which are called once the local user has successfully joined a
+     * room. Connect a Bind to On Room Joined delegate node to handle this event for the specified
+     * room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinRoomJoined onRoomJoined;
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomUserDataChanged, const TArray<uint8> &,
                                                  userData, UOdinRoom *, room);
+
+    /**
+     * Called whenever the user data of the room changed. Connect a Bind to On Room User Data
+     * Changed delegate node to handle this event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinRoomUserDataChanged onRoomUserDataChanged;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaAdded, int64, peerId,
                                                   UOdinPlaybackMedia *, media, UOdinJsonObject *,
                                                   properties, UOdinRoom *, room);
+
+    /**
+     * Called whenever a peer has added a media (i.e. activated the microphone). Connect to a Bind
+     * to On Media Added delegate node to handle this event for the specified room. Will not be
+     * called for the local player.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaAdded onMediaAdded;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaRemoved, int64, peerId,
                                                    UOdinPlaybackMedia *, media, UOdinRoom *, room);
+
+    /**
+     * Called whenever a peer has removed a media stream. Connect to a Bind to On Media Removed
+     * delegate node to handle this event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaRemoved onMediaRemoved;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaActiveStateChanged, int64, peerId,
                                                   UOdinMediaBase *const, media, bool, active,
                                                   UOdinRoom *, room);
+
+    /**
+     * Called whenever a peer's media changed its active state, either starting to transmit a signal
+     * or ending a currently active transmission. Connect to a Bind to On Media Active State Changed
+     * delegate node to handle this event for the specified room. Will not be called for the local
+     * player.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMediaActiveStateChanged onMediaActiveStateChanged;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMessageReceived, int64, peerId,
                                                    const TArray<uint8> &, data, UOdinRoom *, room);
+
+    /**
+     * Called whenever another peer has sent a message. Connect to a Bind to On Message Received
+     * delegate node to handle this event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinMessageReceived onMessageReceived;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinPeerJoined, int64, peerId, FString, userId,
                                                   const TArray<uint8> &, userData, UOdinRoom *,
                                                   room);
+
+    /**
+     * Called whenever a peer joins the room. Connect a Bind to On Peer Joined delegate node to
+     * handle this event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerJoined onPeerJoined;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerLeft, int64, peerId, UOdinRoom *, room);
+
+    /**
+     * Called whenever a peer leaves the room. Connect to a Bind to On Peer Left node to handle this
+     * event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerLeft onPeerLeft;
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinPeerUserDataChanged, int64, peerId,
                                                    const TArray<uint8> &, userData, UOdinRoom *,
                                                    room);
+
+    /**
+     * Called whenever a peer has changed its user data. Connect to a Bind to On Peer User Data
+     * Changed node to handle this event for the specified room.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerUserDataChanged onPeerUserDataChanged;
 

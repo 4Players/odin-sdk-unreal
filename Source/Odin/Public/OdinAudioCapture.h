@@ -96,10 +96,17 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
      * stuttering.
      *
      * @param NewDeviceId The id of the targeted capture device.
-     * @param bSuccess  Whether or not the capture device was successfully changed
+     * @param bSuccess  Whether the capture device was successfully changed
      */
     UFUNCTION(BlueprintCallable, Category = "AudioCapture")
     void ChangeCaptureDeviceById(FString NewDeviceId, bool& bSuccess);
+
+    /**
+     * @brief Starts Capturing Audio and returns whether capturing was started successfully.
+     * @param bSuccess True if capturing was started successfully.
+     */
+    UFUNCTION(BlueprintCallable, Category = "AudioCapture")
+    void StartCapturing(bool& bSuccess);
 
     /**
      * @brief DEPRECATED: Please use the ChangeCaptureDeviceById function instead. Calls to the
@@ -323,17 +330,19 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
     bool bTryRecognizingDeviceDisconnect = true;
 
     /**
+     * @brief Device Id of the currently known Default Capture Device.
+     */
+    UPROPERTY(BlueprintReadOnly, Category = "AudioCapture")
+    FString DefaultDeviceId;
+
+    /**
      * @brief Will be filled in, once a device was selected by the user.
      * We can't have access to this before the custom selection, because - at least the Windows
      * RtAudio implementation - AudioDeviceInterface does not provide us with a Device Id or Url of
      * the Default Device.
      */
+    UPROPERTY(BlueprintReadOnly, Category = "AudioCapture")
     FOdinCaptureDeviceInfo CurrentSelectedDevice;
-
-    /**
-     * @brief Device Id of the currently known Default Capture Device.
-     */
-    FString DefaultDeviceId;
 
     /**
      * Currently set Volume Multiplier for this Audio Capture

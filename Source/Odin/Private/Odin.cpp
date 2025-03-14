@@ -32,7 +32,7 @@ void FOdinModule::StartupModule()
     [[IOSAppDelegate GetDelegate] SetFeature:EAudioFeature::VoiceChat Active:true];
 #endif
 
-#if PLATFORM_WINDOWS || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_LINUX || PLATFORM_PS5
     FString BaseDir = IPluginManager::Get().FindPlugin("Odin")->GetBaseDir();
     FString LibraryPath;
     FString libraryName;
@@ -52,8 +52,20 @@ void FOdinModule::StartupModule()
     LibraryPath =
         FPaths::Combine(*BaseDir, TEXT("Source/OdinCore"), PlatformArchitecture, TEXT("Linux"));
     libraryName = "libodin.so";
+#elif PLATFORM_PS5
+    // packaging will copy prx to "prx/libodin.prx"
+    libraryName = "libodin.prx";
 #endif
 
+#if PLATFORM_PS5
+    // FSonyPlatformProcess will try "libraryName" and "/app0/prx/libraryName"
+    OdinLibraryHandle = FPlatformProcess::GetDllHandle(*libraryName);
+    if (OdinLibraryHandle == nullptr) {
+        UE_LOG(Odin, Error, TEXT("Failed to load library (%s)"), *libraryName);
+    } else {
+        UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *libraryName);
+    }
+#else
     FPlatformProcess::PushDllDirectory(*LibraryPath);
     OdinLibraryHandle = !LibraryPath.IsEmpty()
                             ? FPlatformProcess::GetDllHandle(*(LibraryPath / libraryName))
@@ -65,6 +77,7 @@ void FOdinModule::StartupModule()
     } else {
         UE_LOG(Odin, Log, TEXT("Loaded Library (%s)"), *(LibraryPath / libraryName));
     }
+#endif
 #endif
 
     FString OdinConfigPath =
@@ -98,7 +111,7 @@ void FOdinModule::StartupModule()
 
 void FOdinModule::ShutdownModule()
 {
-#if PLATFORM_WINDOWS || PLATFORM_LINUX
+#if PLATFORM_WINDOWS || PLATFORM_LINUX || PLATFORM_PS5
     FPlatformProcess::FreeDllHandle(OdinLibraryHandle);
     OdinLibraryHandle = nullptr;
 #endif
