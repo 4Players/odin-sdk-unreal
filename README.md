@@ -10,11 +10,25 @@ The ODIN SDK for Unreal enables you to add real-time VoIP communication to your 
 
 [Online Documentation](https://docs.4players.io/voice/unreal)
 
+## Supported Platforms
+
+The current release of the ODIN Unreal Engine Plugin is shipped with native pre-compiled binaries for the following platforms:
+
+| Platform      | x86_64               | aarch64            |
+|---------------|----------------------|--------------------|
+| Windows       | :white_check_mark:   | :white_check_mark: |
+| Linux         | :white_check_mark:   | :white_check_mark: |
+| macOS         | :white_check_mark:   | :white_check_mark: |
+| Android       | :white_check_mark:   | :white_check_mark: |
+| iOS           | :white_check_mark:   | :white_check_mark: |
+
+:information_source: _Support for gaming consoles, such as Sony PlayStation 5 is available upon request._
+
+If your project requires support for any additional platform, please [contact us](https://www.4players.io/company/contact_us/).
+
 ## Prerequisites
 
 - Unreal Engine 4.26 or any later version (including 5.x)
-
-Internally, the plugin is built and tested with Unreal Engine 4.27.
 
 ## Getting Started
 
