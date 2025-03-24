@@ -21,7 +21,9 @@
 #include "Misc/ConfigCacheIni.h"
 
 #define LOCTEXT_NAMESPACE "FOdinModule"
-
+#ifndef PLATFORM_PS5
+#define PLATFORM_PS5 0
+#endif
 DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
