@@ -10,7 +10,19 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.6.7"
+#define ODIN_VERSION "1.7.0"
+
+/**
+ * Available Gain Controller Versions
+ */
+typedef enum OdinGainControllerVersion {
+    /// Automatic gain control is disabled
+    OdinGainControllerVersion_None,
+    /// Use version 1 of the gain controller
+    OdinGainControllerVersion_V1,
+    /// Use version 2 of the gain controller
+    OdinGainControllerVersion_V2,
+} OdinGainControllerVersion;
 
 /**
  * Known types of a media stream.
@@ -458,10 +470,6 @@ typedef struct OdinApmConfig {
      */
     bool high_pass_filter;
     /**
-     * Enable or disable the pre amplifier
-     */
-    bool pre_amplifier;
-    /**
      * Set the aggressiveness of the suppression
      */
     enum OdinNoiseSuppressionLevel noise_suppression_level;
@@ -472,7 +480,7 @@ typedef struct OdinApmConfig {
     /**
      * Enable or disable the gain controller
      */
-    bool gain_controller;
+    OdinGainControllerVersion gain_controller_version;
 } OdinApmConfig;
 
 /**

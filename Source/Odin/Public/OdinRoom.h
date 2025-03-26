@@ -22,6 +22,19 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePeerUserDataResponsePin, bool
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSendMessageResponsePin, bool, success);
 
 /**
+ * Gain Controller Version to use.
+ */
+UENUM(BlueprintType)
+enum class EOdinGainControllerVersion : uint8 {
+    /// Automatic gain control is disabled
+    None,
+    /// Use version 1 of the gain controller
+    V1 UMETA(DisplayName = "Version 1"),
+    /// Use version 2 of the gain controller
+    V2 UMETA(DisplayName = "Version 2"),
+};
+
+/**
  * All valid connection states for an ODIN room.
  */
 UENUM(BlueprintType)
@@ -324,7 +337,7 @@ class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
 };
 
 UENUM(BlueprintType)
-enum EOdinNoiseSuppressionLevel {
+enum class EOdinNoiseSuppressionLevel : uint8 {
     OdinNS_None UMETA(DisplayName = "Disabled"),
     /**
      * Use low suppression (6 dB)
@@ -471,24 +484,16 @@ struct ODIN_API FOdinApmSettings {
               Category = "Filters")
     bool bHighPassFilter = false;
     /**
-     * When enabled, the preamplifier will boost the signal of sensitive microphones by taking
-     * really weak audio signals and making them louder.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Pre Amplifier"),
-              Category = "Filters")
-    bool bPreAmplifier = false;
-    /**
      * When enabled, the noise suppressor will remove distracting background noise from the input
      * audio signal. You can control the aggressiveness of the suppression. Increasing the level
      * will reduce the noise level at the expense of a higher speech distortion.
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppression"),
               Category = "Filters")
-    TEnumAsByte<EOdinNoiseSuppressionLevel> noise_suppression_level =
+    EOdinNoiseSuppressionLevel noise_suppression_level =
         EOdinNoiseSuppressionLevel::OdinNS_Moderate;
     /**
      * When enabled, the transient suppressor will try to detect and attenuate keyboard clicks.
-
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppression"),
               Category = "Filters")
@@ -500,7 +505,7 @@ struct ODIN_API FOdinApmSettings {
      */
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
               Category = "Filters")
-    bool bGainController = true;
+    EOdinGainControllerVersion GainControllerVersion = EOdinGainControllerVersion::None;
 };
 
 USTRUCT(BlueprintType)

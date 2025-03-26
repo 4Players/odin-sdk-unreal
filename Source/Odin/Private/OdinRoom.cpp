@@ -66,6 +66,11 @@ void UOdinRoom::CleanUp()
 
     {
         FScopeLock lock(&this->medias_cs_);
+        for (auto media : this->medias_) {
+            if (nullptr != media.Value) {
+                odin_media_stream_destroy(media.Value->GetMediaHandle());
+            }
+        }
         this->medias_.Empty();
     }
 
@@ -176,9 +181,9 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     odin_apm_config.volume_gate_release_loudness = apm_config.fVolumeGateReleaseLoudness;
     odin_apm_config.echo_canceller               = apm_config.bEchoCanceller;
     odin_apm_config.high_pass_filter             = apm_config.bHighPassFilter;
-    odin_apm_config.pre_amplifier                = apm_config.bPreAmplifier;
     odin_apm_config.transient_suppressor         = apm_config.bTransientSuppresor;
-    odin_apm_config.gain_controller              = apm_config.bGainController;
+    odin_apm_config.gain_controller_version =
+        static_cast<OdinGainControllerVersion>(apm_config.GainControllerVersion);
 
     if (nullptr == submix_listener_) {
         submix_listener_ = NewObject<UOdinSubmixListener>(this);
@@ -194,19 +199,19 @@ void UOdinRoom::UpdateAPMConfig(FOdinApmSettings apm_config)
     }
 
     switch (apm_config.noise_suppression_level) {
-        case OdinNS_None: {
+        case EOdinNoiseSuppressionLevel::OdinNS_None: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_None;
         } break;
-        case OdinNS_Low: {
+        case EOdinNoiseSuppressionLevel::OdinNS_Low: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_Low;
         } break;
-        case OdinNS_Moderate: {
+        case EOdinNoiseSuppressionLevel::OdinNS_Moderate: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_Moderate;
         } break;
-        case OdinNS_High: {
+        case EOdinNoiseSuppressionLevel::OdinNS_High: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_High;
         } break;
-        case OdinNS_VeryHigh: {
+        case EOdinNoiseSuppressionLevel::OdinNS_VeryHigh: {
             odin_apm_config.noise_suppression_level = OdinNoiseSuppressionLevel_VeryHigh;
         } break;
         default:;

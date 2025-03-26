@@ -44,7 +44,7 @@ void UOdinSynthComponent::OnRegister()
 
 int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
-    if (StreamHandle == 0) {
+    if (StreamHandle == 0 || !IsActive()) {
         return 0;
     }
 
@@ -124,7 +124,7 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings& InA
 
 UOdinPlaybackMedia* UOdinSynthComponent::GetConnectedPlaybackMedia() const
 {
-    return playback_media_;
+    return playback_media_.Get();
 }
 
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)

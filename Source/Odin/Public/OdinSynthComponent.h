@@ -67,7 +67,7 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
 
   private:
     UPROPERTY()
-    UOdinPlaybackMedia *playback_media_ = nullptr;
+    TWeakObjectPtr<UOdinPlaybackMedia> playback_media_ = nullptr;
 
     // TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
     TArray<IAudioBufferListener *> AudioBufferListeners;
