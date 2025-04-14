@@ -1,8 +1,8 @@
 {
 	"FileVersion": 2,
-	"Version": 588,
-	"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android"],
-	"VersionName": "1.10.0",
+	"Version": 597,
+	"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "Android"],
+	"VersionName": "1.10.2",
 	"FriendlyName": "4Players ODIN",
 	"Description": "Unreal integration plugin to integrate real-time chat technology into your game",
 	"Category": "Other",
@@ -20,7 +20,7 @@
 			"Name": "Odin",
 			"Type": "Runtime",
 			"LoadingPhase": "PreDefault",
-			"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android"],
+			"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "Android"],
 			"AdditionalDependencies": [
 				"AudioMixer",
 				"AudioCapture"
@@ -31,7 +31,7 @@
 		{
 			"Name": "AudioCapture",
 			"Enabled": true,
-			"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "LinuxArm64", "Android"]
+			"PlatformAllowList": [ "Win64", "Mac", "IOS", "Linux", "Android"]
 		}
 	]
 }

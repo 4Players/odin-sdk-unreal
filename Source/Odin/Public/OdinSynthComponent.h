@@ -23,7 +23,7 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
   public:
     UFUNCTION(BlueprintCallable, meta = (Category    = "Odin|Sound",
                                          DisplayName = "Assign Odin Synth Component to Media"))
-    void Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia *&media);
+    void Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia*& media);
 
     /**
      * This function can be used to reset the media handle assigned to the targeted ODIN Synth
@@ -40,27 +40,31 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
      * so modified Attenuation data should be set before sound playback.
      */
     UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
-    void AdjustAttenuation(const FSoundAttenuationSettings &InAttenuationSettings);
+    void AdjustAttenuation(const FSoundAttenuationSettings& InAttenuationSettings);
 
     /**
      * Retrieves the playback media stream pointer that was assigned to this synth component.
      * @return A pointer to the playback media stream that is used to playback audio.
      */
     UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin")
-    UOdinPlaybackMedia *GetConnectedPlaybackMedia() const;
+    UOdinPlaybackMedia* GetConnectedPlaybackMedia() const;
 
     // We want to hide the non-virtual function in USynthComponent here!
-    void AddAudioBufferListener(IAudioBufferListener *InAudioBufferListener);
+    void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
     // We want to hide the non-virtual function in USynthComponent here!
-    void RemoveAudioBufferListener(IAudioBufferListener *InAudioBufferListener);
+    void RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+
+    virtual void Activate(bool bReset = false) override;
+    virtual void Deactivate() override;
 
   protected:
-    virtual bool Init(int32 &SampleRate) override;
+    virtual bool Init(int32& SampleRate) override;
 
+    virtual void BeginPlay() override;
     virtual void BeginDestroy() override;
     virtual void OnRegister() override;
 
-    virtual int32 OnGenerateAudio(float *OutAudio, int32 NumSamples) override;
+    virtual int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override;
 
     void SetOdinStream(OdinMediaStreamHandle NewStreamHandle);
     void ResetOdinStream(OdinMediaStreamHandle HandleToReset);
@@ -70,7 +74,6 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     TWeakObjectPtr<UOdinPlaybackMedia> playback_media_ = nullptr;
 
     // TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
-    TArray<IAudioBufferListener *> AudioBufferListeners;
-
-    OdinMediaStreamHandle StreamHandle = 0;
+    TArray<IAudioBufferListener*> AudioBufferListeners;
+    int32                         PlaybackMediaReadIndex = 0;
 };

@@ -63,6 +63,7 @@ class ODIN_API UOdinSubmixListener : public UObject
 
   private:
     OdinRoomHandle CurrentRoomHandle;
+    uint32         RegisteredDeviceId;
 
     TSharedPtr<FOdinSubmixBufferListenerImplementation> SubmixBufferListener;
     TWeakObjectPtr<USoundSubmix>                        ConnectedSubmix;

@@ -62,7 +62,7 @@ TWeakObjectPtr<UOdinRoom> UOdinSubsystem::GetRoomByHandle(OdinRoomHandle RoomHan
     FScopeLock                       GetRoomLock(&RegisteredRoomsLock);
     const TWeakObjectPtr<UOdinRoom>* OdinRoom = RegisteredRooms.Find(RoomHandle);
     if (OdinRoom) {
-        UE_LOG(Odin, Verbose, TEXT("Retrieved Odin Room with room handle %llu"), RoomHandle);
+        UE_LOG(Odin, VeryVerbose, TEXT("Retrieved Odin Room with room handle %llu"), RoomHandle);
         return *OdinRoom;
     }
     UE_LOG(Odin, Verbose, TEXT("Did not find Odin Room with room handle %llu"), RoomHandle);

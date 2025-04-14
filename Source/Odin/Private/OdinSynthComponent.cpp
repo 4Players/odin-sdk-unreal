@@ -2,7 +2,6 @@
 
 #include "OdinSynthComponent.h"
 #include "Engine/Engine.h"
-#include "Kismet/GameplayStatics.h"
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
 #include "OdinInitializationSubsystem.h"
@@ -24,8 +23,15 @@ bool UOdinSynthComponent::Init(int32& SampleRate)
     }
 
     // We reset the stream handle here, to avoid any kind of delays after re-enabling
-    ResetOdinStream(StreamHandle);
+    if (playback_media_.IsValid())
+        ResetOdinStream(playback_media_->GetMediaHandle());
     return true;
+}
+
+void UOdinSynthComponent::BeginPlay()
+{
+    Super::BeginPlay();
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::BeginPlay"));
 }
 
 void UOdinSynthComponent::BeginDestroy()
@@ -37,19 +43,32 @@ void UOdinSynthComponent::BeginDestroy()
 void UOdinSynthComponent::OnRegister()
 {
     Super::OnRegister();
-    if (nullptr != playback_media_ && 0 != StreamHandle) {
+    if (playback_media_.IsValid() && 0 != playback_media_->GetMediaHandle()) {
         Start();
     }
 }
 
+void UOdinSynthComponent::Activate(bool bReset)
+{
+    Super::Activate(bReset);
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::Activate"));
+}
+
+void UOdinSynthComponent::Deactivate()
+{
+    Super::Deactivate();
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::Deactivate"));
+}
+
 int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
-    if (StreamHandle == 0 || !IsActive()) {
+    if (!playback_media_.IsValid() || !IsActive()) {
         return 0;
     }
 
     // Will return the number of read samples, if successful, error code otherwise
-    OdinReturnCode ReadResult = odin_audio_read_data(StreamHandle, OutAudio, NumSamples);
+    OdinReturnCode ReadResult =
+        playback_media_->ReadData(PlaybackMediaReadIndex, OutAudio, NumSamples);
     if (odin_is_error(ReadResult)) {
         const FString FormattedError = UOdinFunctionLibrary::FormatError(ReadResult, false);
         UE_LOG(Odin, Verbose,
@@ -76,7 +95,6 @@ int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
 {
     ResetOdinStream(NewStreamHandle);
-    this->StreamHandle = NewStreamHandle;
 }
 
 void UOdinSynthComponent::ResetOdinStream(OdinMediaStreamHandle HandleToReset)
@@ -88,6 +106,8 @@ void UOdinSynthComponent::ResetOdinStream(OdinMediaStreamHandle HandleToReset)
 
 void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia*& media)
 {
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::Odin_AssignSynthToMedia called"));
+
     if (nullptr != media) {
         this->playback_media_ = media;
         SetOdinStream(media->GetMediaHandle());

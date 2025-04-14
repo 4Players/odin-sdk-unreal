@@ -364,16 +364,20 @@ void UOdinAudioCapture::InitializeGenerator()
 {
     FOdinCaptureDeviceInfo CurrentDevice;
     GetCurrentAudioCaptureDevice(CurrentDevice);
-    if (!CurrentDevice.DeviceId.IsEmpty()) {
-        const FAudioCaptureDeviceInfo AudioCaptureDeviceInfo = CurrentDevice.AudioCaptureInfo;
-        Init(AudioCaptureDeviceInfo.SampleRate, AudioCaptureDeviceInfo.NumInputChannels);
+    int32 CurrentSampleRate = CurrentDevice.AudioCaptureInfo.SampleRate;
+    int32 CurrentChannels   = CurrentDevice.AudioCaptureInfo.NumInputChannels;
+    if (CurrentSampleRate >= 8000 && CurrentChannels >= 1) {
+        Init(CurrentSampleRate, CurrentChannels);
         UE_LOG(Odin, Display,
-               TEXT("Starting up generator with input device %s, Sample Rate: %d, Channels: %d"),
-               *AudioCaptureDeviceInfo.DeviceName.ToString(), AudioCaptureDeviceInfo.SampleRate,
-               AudioCaptureDeviceInfo.NumInputChannels);
+               TEXT("Starting up generator with input device %s, Device Id %s,  Sample Rate: %d, "
+                    "Channels: %d"),
+               *CurrentDevice.AudioCaptureInfo.DeviceName.ToString(), *CurrentDevice.DeviceId,
+               CurrentSampleRate, CurrentChannels);
     } else {
         UE_LOG(Odin, Error,
-               TEXT("Could not retrieve Current Capture Device, InitializeGenerator failed."));
+               TEXT("Current Capture Device Data is invalid, Sample Rate: %d, Input Channels: %d, "
+                    "InitializeGenerator failed."),
+               CurrentSampleRate, CurrentChannels);
     }
 }
 
@@ -389,12 +393,22 @@ void UOdinAudioCapture::TryRetrieveDefaultDevice()
     Audio::FCaptureDeviceInfo Current;
     const bool                bSuccess = AudioCapture.GetCaptureDeviceInfo(Current);
     if (bSuccess) {
-        UE_LOG(Odin, Warning,
+        UE_LOG(Odin, Log,
                TEXT("Using Default Device during Restart Stream, Name: %s, Samplerate: %d, "
                     "Channels: %d"),
                *Current.DeviceName, Current.PreferredSampleRate, Current.InputChannels);
 
         CurrentSelectedDeviceIndex = INDEX_NONE;
+        // Default init with available data, works even if platform does not return valid device
+        // ids.
+        CurrentSelectedDevice                  = FOdinCaptureDeviceInfo();
+        CurrentSelectedDevice.DeviceId         = Current.DeviceId;
+        CurrentSelectedDevice.AudioCaptureInfo = FAudioCaptureDeviceInfo{
+            FName(Current.DeviceName), Current.InputChannels, Current.PreferredSampleRate};
+        DefaultDeviceId = CurrentSelectedDevice.DeviceId;
+        UE_LOG(Odin, Log, TEXT("Retrieved Current Default Device with Id %s"), *Current.DeviceId);
+
+        // Try to get actual data
         TArray<FOdinCaptureDeviceInfo> OutDevices;
         GetCaptureDevicesAvailable(OutDevices);
         for (int i = 0; i < OutDevices.Num(); ++i) {

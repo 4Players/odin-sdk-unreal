@@ -94,6 +94,10 @@ void UOdinRoom::CleanUp()
                TEXT("UOdinRoom::Cleanup(): Aborted starting destroy room task, room handle is "
                     "already invalid."));
     }
+
+    if (submix_listener_) {
+        submix_listener_->StopSubmixListener();
+    }
 }
 
 void UOdinRoom::DeregisterRoomFromSubsystem()
@@ -110,7 +114,20 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
     UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
     if (!OdinSubsystem) {
         UE_LOG(Odin, Error,
-               TEXT("Aborted Odin Room Construction due to invalid Odin Subsystem reference."));
+               TEXT("UOdinRoom::ConstructRoom: Aborted Odin Room Construction due to invalid Odin "
+                    "Subsystem reference."));
+        return nullptr;
+    }
+
+    if (!WorldContextObject || !WorldContextObject->GetWorld()) {
+        UE_LOG(Odin, Error,
+               TEXT("UOdinRoom::ConstructRoom: Referenced World Context Object is not valid, "
+                    "aborting."));
+        return nullptr;
+    }
+
+    if (WorldContextObject->GetWorld()->IsPlayingReplay()) {
+        UE_LOG(Odin, Log, TEXT("UOdinRoom::ConstructRoom: Aborting room creation during replay."));
         return nullptr;
     }
 

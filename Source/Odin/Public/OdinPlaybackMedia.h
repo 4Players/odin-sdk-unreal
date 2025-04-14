@@ -9,9 +9,29 @@
 
 #include <memory>
 
+#include "Odin.h"
 #include "OdinPlaybackMedia.generated.h"
 
 class UOdinRoom;
+
+class ODIN_API FOdinAudioRingBuffer
+{
+  public:
+    FOdinAudioRingBuffer(const int32 InCapacity);
+
+    int32 Write(const float* InData, const int32 NumSamples);
+
+    int32 Read(const int32 ReaderIndex, float* OutData, const int32 NumSamples);
+
+    int32 GetAvailableSamples(const int32 ReaderIndex) const;
+
+  private:
+    int32         Capacity;
+    TArray<float> Buffer;
+
+    FCriticalSection   BufferSection;
+    FThreadSafeCounter WriteIndex;
+};
 
 USTRUCT(BlueprintType)
 struct ODIN_API FOdinAudioStreamStats {
@@ -70,14 +90,14 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
 
   public:
     UOdinPlaybackMedia();
-    UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom *room);
+    UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom* room);
 
     /**
      * Sets the room for the playback media object to the provided room pointer.
      *
      * @param room Pointer to the UOdinRoom object to set as the room for the playback media.
      */
-    void SetRoom(UOdinRoom *room)
+    void SetRoom(UOdinRoom* room)
     {
         this->Room = room;
     }
@@ -116,9 +136,14 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
                       Category = "Odin|Debug"))
     FOdinAudioStreamStats AudioStreamStats();
 
+    OdinReturnCode ReadData(int32& RefReaderIndex, float* OutAudio, int32 NumSamples);
+
   protected:
     void BeginDestroy() override;
 
     UPROPERTY(BlueprintReadOnly, Category = "Room")
-    UOdinRoom *Room;
+    UOdinRoom* Room;
+
+    TSharedPtr<FOdinAudioRingBuffer, ESPMode::ThreadSafe> MultipleAccessCacheBuffer;
+    OdinReturnCode                                        CachedReturnCode = 0;
 };

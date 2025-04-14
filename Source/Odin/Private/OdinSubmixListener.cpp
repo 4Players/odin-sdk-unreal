@@ -35,6 +35,11 @@ void UOdinSubmixListener::StartSubmixListener()
         return;
     }
 
+    if (GetWorld()->IsPlayingReplay()) {
+        UE_LOG(Odin, Log, TEXT("OdinSubmixListener: StartSubmixListener aborted, playing replay."));
+        return;
+    }
+
     if (IsListening()) {
         UE_LOG(Odin, Verbose,
                TEXT("OdinSubmixListener, StartSubmixListener: Already listening, restarting submix "
@@ -67,6 +72,8 @@ void UOdinSubmixListener::StartSubmixListener()
            OdinSampleRate, OdinChannels);
 
     FAudioDeviceHandle AudioDeviceHandle = GetWorld()->GetAudioDevice();
+    RegisteredDeviceId                   = AudioDeviceHandle->DeviceID;
+
     UE_LOG(Odin, Verbose, TEXT("OdinSubmixListener: Retrieved Audio Device with Handle Id: %d"),
            AudioDeviceHandle.GetDeviceID());
     if (!AudioDeviceHandle.IsValid()) {
@@ -104,10 +111,12 @@ void UOdinSubmixListener::StartSubmixListener()
 
 void UOdinSubmixListener::StopSubmixListener()
 {
-    if (!GetWorld() || !IsListening() || !SubmixBufferListener.IsValid())
+    if (!GetWorld() || !IsListening() || !SubmixBufferListener.IsValid()
+        || !FAudioDeviceManager::Get())
         return;
 
-    FAudioDeviceHandle AudioDeviceHandle = GetWorld()->GetAudioDevice();
+    FAudioDeviceHandle AudioDeviceHandle =
+        FAudioDeviceManager::Get()->GetAudioDevice(RegisteredDeviceId);
     if (!AudioDeviceHandle.IsValid()) {
         return;
     }

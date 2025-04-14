@@ -155,5 +155,5 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
     float* volume_adjusted_audio_      = nullptr;
     int32  volume_adjusted_audio_size_ = 0;
 
-    bool bIsMuted = false;
+    FThreadSafeBool bIsMuted = false;
 };
