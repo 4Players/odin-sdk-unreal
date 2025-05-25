@@ -3,55 +3,61 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "odin_sdk.h"
-#include "Subsystems/EngineSubsystem.h"
+#include "Odin.h"
+#include "OdinAudioPushDataThread.h"
+#include "Subsystems/GameInstanceSubsystem.h"
 #include "OdinSubsystem.generated.h"
 
-class UOdinRoom;
-
 /**
- * Manages Odin rooms within the subsystem, handling registration, deregistration, and retrieval of
- * rooms by their handles. Allows us to retrieve the Unreal UOdinRoom UObjects connected to the Odin
- * Native OdinRoomHandles that are supplied by event callbacks from Odin. Also allows us to do
- * thread safe checks on whether the UObjects connected to a room handle are still valid or in the
- * process of being destroyed.
+ * UOdinSubsystem is a subclass of UGameInstanceSubsystem responsible for initializing
+ * and deinitializing the native Odin Library with the correct sample rate and channel count.
+ *
+ * Handles pushing capture data to odin in a seperate Thread.
  */
 UCLASS()
-class ODIN_API UOdinSubsystem : public UEngineSubsystem
+class ODIN_API UOdinSubsystem : public UGameInstanceSubsystem
 {
     GENERATED_BODY()
   public:
-    static UOdinSubsystem* Get();
-    static bool            GlobalIsRoomValid(OdinRoomHandle);
+    /**
+     * Returns the sample rate configured for the Odin Native Library.
+     */
+    int32 GetSampleRate() const;
+    /**
+     * Returns the number of audio channels configured for the Odin Native Library.
+     */
+    int32 GetChannelCount() const;
 
+    /**
+     * Verifies if the Odin library has been successfully initialized.
+     *
+     * This function checks the internal state of the UOdinSubsystem instance to determine
+     * whether the Odin Native Library is currently initialized and operational.
+     *
+     * @return True if the Odin library is initialized, false otherwise.
+     */
+    bool IsOdinInitialized() const;
+
+    /**
+     * Pushes audio sample data to the Odin audio processing thread for the specified media stream.
+     *
+     * This method forwards audio data to the internal thread responsible for processing
+     * and transmitting audio to the Odin network.
+     *
+     * @param MediaHandle The handle identifying the media stream to which the audio data belongs.
+     * @param AudioData A pointer to an array containing the floating-point audio sample data.
+     * @param NumSamples The number of audio samples present in the provided data array.
+     */
+    void PushAudio(OdinMediaStreamHandle MediaHandle, const float* AudioData, int32 NumSamples);
+
+  protected:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
-    /**
-     * @param RoomHandle The Odin Native handle of the room being registered.
-     * @param Room Pointer to the UOdinRoom object that is being registered.
-     */
-    void RegisterRoom(OdinRoomHandle RoomHandle, UOdinRoom* Room);
-    /**
-     * @param RoomHandle The unique handle of the room to deregister
-     */
-    void DeregisterRoom(OdinRoomHandle RoomHandle);
-    /**
-     * @brief Retrieve Odin room by its handle.
-     *
-     * @param RoomHandle The Odin Native handle of the room to retrieve.
-     * @return The Odin room associated with the given handle, or nullptr if not found.
-     */
-    TWeakObjectPtr<UOdinRoom> GetRoomByHandle(OdinRoomHandle RoomHandle);
-    /**
-     * Check if a room with the given handle is registered in the OdinSubsystem.
-     *
-     * @param Handle The handle of the room to check for registration.
-     * @return True if the room is registered, false otherwise.
-     */
-    bool IsRoomRegistered(OdinRoomHandle) const;
+  private:
+    TUniquePtr<FOdinAudioPushDataThread> PushDataThread;
 
-  protected:
-    TMap<uint64, TWeakObjectPtr<UOdinRoom>> RegisteredRooms;
-    FCriticalSection                        RegisteredRoomsLock;
+    int32 SampleRate    = ODIN_DEFAULT_SAMPLE_RATE;
+    int32 ChannelCount  = ODIN_DEFAULT_CHANNEL_COUNT;
+    bool  IsInitialized = false;
 };

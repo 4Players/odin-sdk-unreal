@@ -14,7 +14,7 @@
 
 #include "AudioDevice.h"
 #include "OdinFunctionLibrary.h"
-#include "OdinInitializationSubsystem.h"
+#include "OdinSubsystem.h"
 #include "Engine/GameInstance.h"
 #include "Engine/World.h"
 
@@ -54,8 +54,8 @@ void UOdinSubmixListener::StartSubmixListener()
         return;
     }
 
-    const UOdinInitializationSubsystem* OdinInitializationSubsystem =
-        GameInstance->GetSubsystem<UOdinInitializationSubsystem>();
+    const UOdinSubsystem* OdinInitializationSubsystem =
+        GameInstance->GetSubsystem<UOdinSubsystem>();
     if (!OdinInitializationSubsystem) {
         UE_LOG(Odin, Error,
                TEXT("OdinSubmixListener: StartSubmixListener failed, UOdinInitializationSubsystem "

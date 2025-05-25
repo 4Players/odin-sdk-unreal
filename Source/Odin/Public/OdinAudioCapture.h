@@ -14,6 +14,10 @@
 
 #include "OdinAudioCapture.generated.h"
 
+/**
+ * Represents additional information about an audio capture device and makes it available to
+ * blueprints.
+ */
 USTRUCT(BlueprintType)
 struct ODIN_API FOdinCaptureDeviceInfo {
     GENERATED_BODY()

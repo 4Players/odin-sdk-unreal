@@ -9,6 +9,9 @@
 
 #include "OdinFunctionLibrary.generated.h"
 
+/**
+ * @brief A library class that provides various utility functions for Odin Voice chat.
+ */
 UCLASS()
 class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 {

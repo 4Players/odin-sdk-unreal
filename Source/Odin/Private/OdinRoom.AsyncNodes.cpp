@@ -4,7 +4,7 @@
 #include "OdinRoom.AsyncTasks.h"
 #include "odin_sdk.h"
 #include "Odin.h"
-#include "OdinSubsystem.h"
+#include "OdinRegistrationSubsystem.h"
 #include "Async/AsyncWork.h"
 #include "GenericPlatform/GenericPlatform.h"
 #include "Async/Async.h"
@@ -29,7 +29,7 @@ UOdinRoomJoin* UOdinRoomJoin::JoinRoom(UObject* WorldContextObject, UPARAM(ref) 
 
 void UOdinRoomJoin::Activate()
 {
-    if (Room && UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (Room && UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         FScopeLock lock(&Room->joined_callbacks_cs_);
         Room->joined_callbacks_.Reset();
         const FOdinRoomJoinSuccess OnSuccessCallback = OnSuccess;
@@ -79,7 +79,7 @@ UOdinRoomAddMedia* UOdinRoomAddMedia::AddMedia(UObject*                        W
 void UOdinRoomAddMedia::Activate()
 {
     bool bIsError = false;
-    if (!Room.IsValid() || !UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (!Room.IsValid() || !UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         UE_LOG(Odin, Error,
                TEXT("Provided invalid UOdinRoom pointer while trying to call "
                     "UOdinRoomAddMedia::AddMedia. Please provide a valid Odin room "
@@ -195,7 +195,7 @@ UOdinRoomRemoveMedia* UOdinRoomRemoveMedia::RemoveMedia(
 
 void UOdinRoomRemoveMedia::Activate()
 {
-    if (Room.IsValid() && UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (Room.IsValid() && UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         OdinRoomHandle Handle = Room->RoomHandle();
         (new FAutoDeleteAsyncTask<RemoveMediaTask>(Handle, CaptureMedia, OnResponse, OnError,
                                                    OnSuccess))
@@ -228,7 +228,7 @@ UOdinRoomUpdatePosition* UOdinRoomUpdatePosition::UpdatePosition(
 void UOdinRoomUpdatePosition::Activate()
 {
 
-    if (Room.IsValid() && UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (Room.IsValid() && UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         (new FAutoDeleteAsyncTask<UpdatePositionTask>(this->Room->RoomHandle(), this->Position,
                                                       this->OnResponse, this->OnError,
                                                       this->OnSuccess))
@@ -267,7 +267,7 @@ UOdinRoomUpdatePeerUserData* UOdinRoomUpdatePeerUserData::UpdatePeerUserData(
 
 void UOdinRoomUpdatePeerUserData::Activate()
 {
-    if (Room.IsValid() && UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (Room.IsValid() && UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         (new FAutoDeleteAsyncTask<UpdatePeerUserDataTask>(this->Room->room_handle_, this->Data,
                                                           this->OnResponse, this->OnError,
                                                           this->OnSuccess))
@@ -308,7 +308,7 @@ UOdinRoomSendMessage::SendMessage(UObject* WorldContextObject, UPARAM(ref) UOdin
 
 void UOdinRoomSendMessage::Activate()
 {
-    if (Room.IsValid() && UOdinSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
+    if (Room.IsValid() && UOdinRegistrationSubsystem::GlobalIsRoomValid(Room->RoomHandle())) {
         (new FAutoDeleteAsyncTask<SendMessageTask>(this->Room->room_handle_, this->Targets,
                                                    this->Data, this->OnResponse, this->OnError,
                                                    this->OnSuccess))

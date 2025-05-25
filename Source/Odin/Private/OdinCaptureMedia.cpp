@@ -4,7 +4,11 @@
 #include "Async/Async.h"
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
+#include "OdinSubsystem.h"
 #include "odin_sdk.h"
+#include "Components/SynthComponent.h"
+#include "Engine/World.h"
+#include "Engine/GameInstance.h"
 
 UOdinCaptureMedia::UOdinCaptureMedia(const class FObjectInitializer& PCIP)
     : Super(PCIP)
@@ -46,20 +50,18 @@ void UOdinCaptureMedia::SetAudioGenerator(UAudioGenerator* audioGenerator)
     }
 
     if (audio_capture_) {
-        stream_sample_rate_  = audio_capture_->GetSampleRate();
-        stream_num_channels_ = audio_capture_->GetNumChannels();
+        GeneratorSampleRate  = audio_capture_->GetSampleRate();
+        GeneratorNumChannels = audio_capture_->GetNumChannels();
     }
     {
         TRACE_CPUPROFILER_EVENT_SCOPE(UOdinCaptureMedia::SetAudioCapture Odin Create Audio Stream)
 
         UE_LOG(Odin, Log,
                TEXT("Initializing Audio Capture stream with Sample Rate: %d and Channels: %d"),
-               stream_sample_rate_, stream_num_channels_);
+               GetSampleRate(), GetNumChannels());
 
-        const int32 OdinForcedNumChannels = GetEnableMonoMixing() ? 1 : stream_num_channels_;
-        this->stream_handle_              = odin_audio_stream_create(
-            OdinAudioStreamConfig{static_cast<uint32_t>(stream_sample_rate_),
-                                  static_cast<uint8_t>(OdinForcedNumChannels)});
+        this->stream_handle_ = odin_audio_stream_create(OdinAudioStreamConfig{
+            static_cast<uint32_t>(GetSampleRate()), static_cast<uint8_t>(GetNumChannels())});
     }
 
     TWeakObjectPtr<UOdinCaptureMedia> WeakThisPtr = this;
@@ -69,8 +71,8 @@ void UOdinCaptureMedia::SetAudioGenerator(UAudioGenerator* audioGenerator)
         TFunction<void(const float* InAudio, int32 NumSamples)> audioGeneratorDelegate =
             [WeakThisPtr, WeakAudioGenerator](const float* InAudio, int32 NumSamples) {
                 if (UOdinCaptureMedia* This = WeakThisPtr.Get()) {
-                    if (UAudioGenerator* AudioCapture = WeakAudioGenerator.Get()) {
-                        AudioGeneratorCallback(This, AudioCapture, InAudio, NumSamples);
+                    if (const UAudioGenerator* Generator = WeakAudioGenerator.Get()) {
+                        AudioGeneratorCallback(This, Generator, InAudio, NumSamples);
                     }
                 }
             };
@@ -175,6 +177,8 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
                                                const UAudioGenerator* AudioGenerator,
                                                const float* InAudio, int32 NumSamples)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE("UOdinAudioCapture::AudioGeneratorCallback: Entire Call");
+
     if (!Media) {
         UE_LOG(
             Odin, Error,
@@ -188,8 +192,9 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
         return;
     }
 
-    const int32 StreamSampleRate  = Media->stream_sample_rate_;
-    const int32 StreamNumChannels = Media->stream_num_channels_;
+    const int32 StreamSampleRate = Media->GetSampleRate();
+    // specifically use the generator channel count here, otherwise we will keep switching devices
+    const int32 StreamNumChannels = Media->GeneratorNumChannels;
     if (StreamSampleRate != AudioGenerator->GetSampleRate()
         || StreamNumChannels != AudioGenerator->GetNumChannels()) {
 
@@ -213,6 +218,7 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
             Media->volume_adjusted_audio_size_ = TargetSampleCount;
         }
 
+        const float VolumeMultiplier = Media->GetVolumeMultiplierAdjusted();
         if (Media->GetEnableMonoMixing()) {
             // Simple mix to mono
             for (int32 i = 0; i < TargetSampleCount; ++i) {
@@ -222,18 +228,48 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
                     MixingResult += Sample;
                 }
                 Media->volume_adjusted_audio_[i] =
-                    (MixingResult / StreamNumChannels) * Media->GetVolumeMultiplierAdjusted();
+                    (MixingResult / StreamNumChannels) * VolumeMultiplier;
             }
         } else {
             for (int32 i = 0; i < TargetSampleCount; ++i) {
-                Media->volume_adjusted_audio_[i] =
-                    InAudio[i] * Media->GetVolumeMultiplierAdjusted();
+                Media->volume_adjusted_audio_[i] = InAudio[i] * VolumeMultiplier;
             }
         }
 
-        odin_audio_push_data(Media->stream_handle_, Media->volume_adjusted_audio_,
-                             TargetSampleCount);
+        if (const UWorld* World = Media->GetWorld()) {
+            if (const UGameInstance* GameInstance = World->GetGameInstance()) {
+                if (UOdinSubsystem* OdinSubsystem = GameInstance->GetSubsystem<UOdinSubsystem>()) {
+                    TRACE_CPUPROFILER_EVENT_SCOPE(
+                        UOdinAudioCapture::AudioGeneratorCallback : OdinSubsystem->PushAudio);
+                    OdinSubsystem->PushAudio(Media->stream_handle_, Media->volume_adjusted_audio_,
+                                             TargetSampleCount);
+                }
+            }
+        }
+
+        {
+            TRACE_CPUPROFILER_EVENT_SCOPE(
+                UOdinAudioCapture::AudioGeneratorCallback : Audio Buffer Listener Callbacks);
+            for (IAudioBufferListener* AudioBufferListener : Media->AudioBufferListeners) {
+                if (AudioBufferListener) {
+                    const int32 OdinForcedNumChannels =
+                        Media->GetEnableMonoMixing() ? 1 : StreamNumChannels;
+                    AudioBufferListener->OnGeneratedBuffer(
+                        Media->volume_adjusted_audio_, TargetSampleCount, OdinForcedNumChannels);
+                }
+            }
+        }
     }
+}
+
+int32 UOdinCaptureMedia::GetSampleRate() const
+{
+    return GeneratorSampleRate;
+}
+
+int32 UOdinCaptureMedia::GetNumChannels() const
+{
+    return GetEnableMonoMixing() ? 1 : GeneratorNumChannels;
 }
 
 void UOdinCaptureMedia::ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia)

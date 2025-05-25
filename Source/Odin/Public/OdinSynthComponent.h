@@ -65,6 +65,13 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     virtual void OnRegister() override;
 
     virtual int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override;
+    /**
+     * Called (c++ only) before changing from the OldMedia to the NewMedia Playback Stream.
+     * @param OldMedia Media that is replaced by the new media
+     * @param NewMedia Media that is replacing the old media
+     */
+    virtual void NativeOnPreChangePlaybackMedia(UOdinPlaybackMedia* OldMedia,
+                                                UOdinPlaybackMedia* NewMedia);
 
     void SetOdinStream(OdinMediaStreamHandle NewStreamHandle);
     void ResetOdinStream(OdinMediaStreamHandle HandleToReset);
@@ -73,7 +80,12 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UPROPERTY()
     TWeakObjectPtr<UOdinPlaybackMedia> playback_media_ = nullptr;
 
-    // TSharedPtr<OdinMediaSoundGenerator, ESPMode::ThreadSafe> sound_generator_;
     TArray<IAudioBufferListener*> AudioBufferListeners;
-    int32                         PlaybackMediaReadIndex = 0;
+
+    /**
+     * Used to keep track of our read progress on the circular buffer of the playback media. This
+     * way multiple Synth Components can playback audio from the same odin media stream without
+     * leading to an audio buffer underrun.
+     */
+    int32 PlaybackMediaReadIndex = 0;
 };

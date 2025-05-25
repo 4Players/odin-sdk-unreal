@@ -6,6 +6,7 @@
 #include "Runtime/Launch/Resources/Version.h"
 #include "odin_sdk.h"
 #include "SampleBuffer.h"
+#include "AudioDefines.h"
 #if ENGINE_MAJOR_VERSION == 5 && ENGINE_MINOR_VERSION >= 3
 #include "ISubmixBufferListener.h"
 #else
@@ -62,8 +63,8 @@ class ODIN_API UOdinSubmixListener : public UObject
     void StopRecording();
 
   private:
-    OdinRoomHandle CurrentRoomHandle;
-    uint32         RegisteredDeviceId;
+    OdinRoomHandle   CurrentRoomHandle;
+    Audio::FDeviceId RegisteredDeviceId;
 
     TSharedPtr<FOdinSubmixBufferListenerImplementation> SubmixBufferListener;
     TWeakObjectPtr<USoundSubmix>                        ConnectedSubmix;

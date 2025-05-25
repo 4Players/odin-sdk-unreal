@@ -3,14 +3,14 @@
 #include "OdinRoom.AsyncTasks.h"
 
 #include "Odin.h"
-#include "OdinSubsystem.h"
+#include "OdinRegistrationSubsystem.h"
 #include "GenericPlatform/GenericPlatform.h"
 #include "Async/Async.h"
 
 void JoinRoomTask::DoWork()
 {
     // Make sure the room handle is registered
-    if (!UOdinSubsystem::GlobalIsRoomValid(RoomHandle)) {
+    if (!UOdinRegistrationSubsystem::GlobalIsRoomValid(RoomHandle)) {
         UE_LOG(Odin, Error,
                TEXT("JoinRoomTask::DoWork: Trying to join room by handle that is not registered. "
                     "Aborting join room."));
@@ -85,8 +85,8 @@ void AddMediaTask::DoWork()
         [RoomHandle = RoomHandle, CaptureMedia = CaptureMedia, Response = Response,
          OnError = OnError, OnSuccess = OnSuccess, Result]() {
             const bool bIsOdinError =
-                odin_is_error(Result) || !UOdinSubsystem::GlobalIsRoomValid(RoomHandle);
-            UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+                odin_is_error(Result) || !UOdinRegistrationSubsystem::GlobalIsRoomValid(RoomHandle);
+            UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
             if (!bIsOdinError) {
                 TWeakObjectPtr<UOdinRoom> OdinRoom = OdinSubsystem->GetRoomByHandle(RoomHandle);
                 if (OdinRoom.IsValid() && CaptureMedia.IsValid()) {
@@ -114,9 +114,9 @@ void AddMediaTask::DoWork()
 void RemoveMediaTask::DoWork()
 {
     // TODO: refactor to prevent potential sound generator errors
-    OdinReturnCode            result        = ODIN_GENERAL_CLIENT_ERROR_CODE;
-    UOdinSubsystem*           OdinSubsystem = UOdinSubsystem::Get();
-    TWeakObjectPtr<UOdinRoom> Room          = nullptr;
+    OdinReturnCode              result        = ODIN_GENERAL_CLIENT_ERROR_CODE;
+    UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
+    TWeakObjectPtr<UOdinRoom>   Room          = nullptr;
     if (OdinSubsystem) {
         Room = OdinSubsystem->GetRoomByHandle(RoomHandle);
     }
@@ -235,7 +235,7 @@ void UpdatePositionTask::DoWork()
 void UpdateScalingTask::DoWork()
 {
     OdinReturnCode Result = ODIN_GENERAL_CLIENT_ERROR_CODE;
-    if (UOdinSubsystem::GlobalIsRoomValid(RoomHandle)) {
+    if (UOdinRegistrationSubsystem::GlobalIsRoomValid(RoomHandle)) {
         Result = odin_room_set_position_scale(RoomHandle, Scale);
     }
 
@@ -247,7 +247,7 @@ void UpdateScalingTask::DoWork()
 void UpdatePeerUserDataTask::DoWork()
 {
     OdinReturnCode Result = ODIN_GENERAL_CLIENT_ERROR_CODE;
-    if (UOdinSubsystem::GlobalIsRoomValid(RoomHandle)) {
+    if (UOdinRegistrationSubsystem::GlobalIsRoomValid(RoomHandle)) {
         Result = odin_room_update_peer_user_data(RoomHandle, Data.GetData(), Data.Num());
     }
 
@@ -276,7 +276,7 @@ void UpdatePeerUserDataTask::DoWork()
 void SendMessageTask::DoWork()
 {
     OdinReturnCode Result = ODIN_GENERAL_CLIENT_ERROR_CODE;
-    if (UOdinSubsystem::GlobalIsRoomValid(RoomHandle)) {
+    if (UOdinRegistrationSubsystem::GlobalIsRoomValid(RoomHandle)) {
         // Todo: Check if this cast here is dangerous or not
         Result = odin_room_send_message(RoomHandle, (const uint64_t*)Targets.GetData(),
                                         Targets.Num(), Data.GetData(), Data.Num());
@@ -321,7 +321,7 @@ void DestroyRoomTask::DoWork()
             FOdinModule::LogErrorCode(
                 TEXT("Destroy Room Task: Error while reseting event callback"), ReturnCode);
         }
-        UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+        UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
         if (OdinSubsystem) {
             OdinSubsystem->DeregisterRoom(roomHandle);
         }

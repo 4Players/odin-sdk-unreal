@@ -11,6 +11,12 @@
 
 #include "OdinCaptureMedia.generated.h"
 
+/**
+ * @brief Represents an Odin Media stream for pushing audio to Odin servers. Needs to be connected
+ * to an Audio Generator like an Audio Capture object.
+ *
+ * Implements IOdinAudioControl interface.
+ */
 UCLASS(BlueprintType, ClassGroup = Odin)
 class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioControl
 {
@@ -36,7 +42,7 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
 
     void SetAudioGenerator(UAudioGenerator* audioGenerator);
     /**
-     * @brief Reset auf audio capture and media stream
+     * @brief Reset audio capture and media stream
      */
     void Reset();
     /**
@@ -137,6 +143,9 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
               Category = "Odin|Audio Capture")
     float max_volume_multiplier_ = 3.0f;
 
+    virtual int32 GetSampleRate() const override;
+    virtual int32 GetNumChannels() const override;
+
   private:
     static void ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia);
     float       GetVolumeMultiplierAdjusted() const;
@@ -147,8 +156,8 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
 
     TWeakObjectPtr<UOdinRoom> connected_room_;
 
-    int32 stream_sample_rate_  = ODIN_DEFAULT_SAMPLE_RATE;
-    int32 stream_num_channels_ = ODIN_DEFAULT_CHANNEL_COUNT;
+    int32 GeneratorSampleRate  = ODIN_DEFAULT_SAMPLE_RATE;
+    int32 GeneratorNumChannels = ODIN_DEFAULT_CHANNEL_COUNT;
 
     FThreadSafeBool bIsBeingReset = false;
 

@@ -10,9 +10,9 @@
 
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
-#include "OdinInitializationSubsystem.h"
-#include "OdinRoom.AsyncTasks.h"
 #include "OdinSubsystem.h"
+#include "OdinRoom.AsyncTasks.h"
+#include "OdinRegistrationSubsystem.h"
 #include "Engine/Engine.h"
 #include "Engine/GameInstance.h"
 
@@ -41,7 +41,7 @@ void UOdinRoom::Destroy()
 
 bool UOdinRoom::IsConnected() const
 {
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
     if (OdinSubsystem) {
 
         const bool bIsRegistered = OdinSubsystem->IsRoomRegistered(room_handle_);
@@ -77,8 +77,7 @@ void UOdinRoom::CleanUp()
     bool bIsInitialized = false;
     if (UWorld* World = GetWorld()) {
         if (UGameInstance* GameInstance = World->GetGameInstance()) {
-            if (UOdinInitializationSubsystem* OdinSubsystem =
-                    GameInstance->GetSubsystem<UOdinInitializationSubsystem>()) {
+            if (UOdinSubsystem* OdinSubsystem = GameInstance->GetSubsystem<UOdinSubsystem>()) {
                 bIsInitialized = OdinSubsystem->IsOdinInitialized();
             }
         }
@@ -102,7 +101,7 @@ void UOdinRoom::CleanUp()
 
 void UOdinRoom::DeregisterRoomFromSubsystem()
 {
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
     if (OdinSubsystem) {
         OdinSubsystem->DeregisterRoom(this->room_handle_);
     }
@@ -111,7 +110,7 @@ void UOdinRoom::DeregisterRoomFromSubsystem()
 UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
                                     const FOdinApmSettings& InitialAPMSettings)
 {
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
     if (!OdinSubsystem) {
         UE_LOG(Odin, Error,
                TEXT("UOdinRoom::ConstructRoom: Aborted Odin Room Construction due to invalid Odin "
@@ -296,7 +295,7 @@ UOdinSubmixListener* UOdinRoom::GetSubmixListener() const
 
 void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event)
 {
-    UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get();
+    UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get();
     if (!OdinSubsystem) {
         UE_LOG(Odin, Error,
                TEXT("Aborting HandleOdinEvent due to invalid OdinSubsystem reference."));

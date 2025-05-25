@@ -2,8 +2,8 @@
 
 #include "OdinPlaybackMedia.h"
 #include "OdinRoom.h"
-
 #include "odin_sdk.h"
+#include "Components/SynthComponent.h"
 
 FOdinAudioRingBuffer::FOdinAudioRingBuffer(const int32 InCapacity)
     : Capacity(InCapacity)
@@ -128,13 +128,23 @@ FOdinAudioStreamStats UOdinPlaybackMedia::AudioStreamStats()
 OdinReturnCode UOdinPlaybackMedia::ReadData(int32& RefReaderIndex, float* OutAudio,
                                             int32 NumSamples)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData)
+
     int32 AvailableSamples = MultipleAccessCacheBuffer->GetAvailableSamples(RefReaderIndex);
     if (AvailableSamples < NumSamples) {
+        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData - odin_audio_read_data call)
         CachedReturnCode = odin_audio_read_data(GetMediaHandle(), OutAudio, NumSamples);
         if (!odin_is_error(CachedReturnCode)) {
             RefReaderIndex = MultipleAccessCacheBuffer->Write(OutAudio, NumSamples);
+            for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
+                if (AudioBufferListener) {
+                    AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples,
+                                                           ODIN_DEFAULT_CHANNEL_COUNT);
+                }
+            }
         }
     } else {
+        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData - cached access call)
         RefReaderIndex = MultipleAccessCacheBuffer->Read(RefReaderIndex, OutAudio, NumSamples);
     }
     return CachedReturnCode;

@@ -10,9 +10,10 @@
 
 #include "OdinMediaBase.generated.h"
 
+class IAudioBufferListener;
 class UOdinRoom;
 
-UCLASS(ClassGroup = Odin)
+UCLASS(ClassGroup = Odin, NotBlueprintable, BlueprintType, Abstract)
 class ODIN_API UOdinMediaBase : public UObject
 {
     GENERATED_UCLASS_BODY()
@@ -28,11 +29,19 @@ class ODIN_API UOdinMediaBase : public UObject
         return this->stream_handle_;
     }
 
+    void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+    void RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener);
+
+    virtual int32 GetSampleRate() const;
+    virtual int32 GetNumChannels() const;
+
   protected:
     inline void SetMediaHandle(OdinMediaStreamHandle handle)
     {
         this->stream_handle_ = handle;
     }
+
+    TSet<IAudioBufferListener*> AudioBufferListeners;
 
   private:
     OdinMediaStreamHandle stream_handle_ = 0;

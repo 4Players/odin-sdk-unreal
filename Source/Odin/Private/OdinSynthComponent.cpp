@@ -4,7 +4,7 @@
 #include "Engine/Engine.h"
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
-#include "OdinInitializationSubsystem.h"
+#include "OdinSubsystem.h"
 #include "OdinMediaSoundGenerator.h"
 #include "Engine/GameInstance.h"
 
@@ -14,8 +14,8 @@ bool UOdinSynthComponent::Init(int32& SampleRate)
     SampleRate  = ODIN_DEFAULT_SAMPLE_RATE;
 
     if (GetWorld() && GetWorld()->GetGameInstance()) {
-        const UOdinInitializationSubsystem* OdinInitSubsystem =
-            GetWorld()->GetGameInstance()->GetSubsystem<UOdinInitializationSubsystem>();
+        const UOdinSubsystem* OdinInitSubsystem =
+            GetWorld()->GetGameInstance()->GetSubsystem<UOdinSubsystem>();
         if (OdinInitSubsystem) {
             NumChannels = OdinInitSubsystem->GetChannelCount();
             SampleRate  = OdinInitSubsystem->GetSampleRate();
@@ -62,6 +62,7 @@ void UOdinSynthComponent::Deactivate()
 
 int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinSynthComponent::OnGenerateAudio)
     if (!playback_media_.IsValid() || !IsActive()) {
         return 0;
     }
@@ -92,6 +93,11 @@ int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
     return ReadResult;
 }
 
+void UOdinSynthComponent::NativeOnPreChangePlaybackMedia(UOdinPlaybackMedia* OldMedia,
+                                                         UOdinPlaybackMedia* NewMedia)
+{
+}
+
 void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
 {
     ResetOdinStream(NewStreamHandle);
@@ -109,6 +115,7 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia
     UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::Odin_AssignSynthToMedia called"));
 
     if (nullptr != media) {
+        NativeOnPreChangePlaybackMedia(playback_media_.Get(), media);
         this->playback_media_ = media;
         SetOdinStream(media->GetMediaHandle());
     } else {
