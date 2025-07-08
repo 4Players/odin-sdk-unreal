@@ -15,6 +15,7 @@
 void UOdinAudioCapture::BeginDestroy()
 {
     Super::BeginDestroy();
+    UE_LOG(Odin, Verbose, TEXT("UOdinAudioCapture::BeginDestroy()"));
     AudioCapture.CloseStream();
     StopCapturingAudio();
 }
@@ -519,7 +520,7 @@ bool UOdinAudioCapture::GetIsPaused() const
 
 void UOdinAudioCapture::SetIsPaused(bool bNewValue)
 {
-    SetVolumeMultiplier(bNewValue);
+    SetIsMuted(bNewValue);
 }
 
 bool UOdinAudioCapture::GetIsMuted() const

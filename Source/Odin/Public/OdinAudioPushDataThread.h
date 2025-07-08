@@ -62,5 +62,5 @@ class FOdinAudioPushDataThread : public FRunnable
      * @var PushDataQueue
      * Thread-safe queue for managing audio push data objects.
      */
-    TQueue<FOdinAudioPushData> PushDataQueue;
+    TQueue<FOdinAudioPushData, EQueueMode::Mpsc> PushDataQueue;
 };

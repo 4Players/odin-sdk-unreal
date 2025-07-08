@@ -3,6 +3,7 @@
 #include "GenericPlatform/GenericPlatformAffinity.h"
 #include "GenericPlatform/GenericPlatformProcess.h"
 #include "Odin.h"
+#include "OdinFunctionLibrary.h"
 #include "HAL/PlatformProcess.h"
 
 FOdinAudioPushDataThread::FOdinAudioPushDataThread()
@@ -47,9 +48,17 @@ uint32 FOdinAudioPushDataThread::Run()
                 FOdinAudioPushDataThread::Run : odin_audio_push_data calls)
             FOdinAudioPushData DequeuedData;
             while (PushDataQueue.Dequeue(DequeuedData)) {
-                odin_audio_push_data(DequeuedData.MediaStreamHandle,
-                                     DequeuedData.AudioData.GetData(),
-                                     DequeuedData.AudioData.Num());
+                const OdinReturnCode PushResult = odin_audio_push_data(
+                    DequeuedData.MediaStreamHandle, DequeuedData.AudioData.GetData(),
+                    DequeuedData.AudioData.Num());
+                if (odin_is_error(PushResult)) {
+                    FString FormatOdinError =
+                        UOdinFunctionLibrary::FormatOdinError(PushResult, false);
+                    UE_LOG(Odin, Error,
+                           TEXT("FOdinAudioPushDataThread failed calling odin_audio_push_data, "
+                                "reason: %s"),
+                           *FormatOdinError);
+                }
             }
         }
 

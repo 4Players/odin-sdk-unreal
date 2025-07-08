@@ -11,6 +11,7 @@
 
 #include "OdinCaptureMedia.generated.h"
 
+class UOdinSubsystem;
 /**
  * @brief Represents an Odin Media stream for pushing audio to Odin servers. Needs to be connected
  * to an Audio Generator like an Audio Capture object.
@@ -165,4 +166,6 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
     int32  volume_adjusted_audio_size_ = 0;
 
     FThreadSafeBool bIsMuted = false;
+
+    TWeakObjectPtr<UOdinSubsystem> OdinSubsystemPtr;
 };
