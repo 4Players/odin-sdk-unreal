@@ -64,7 +64,9 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     virtual void BeginDestroy() override;
     virtual void OnRegister() override;
 
+    virtual void  OnBeginGenerate() override;
     virtual int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override;
+    virtual void  OnEndGenerate() override;
     /**
      * Called (c++ only) before changing from the OldMedia to the NewMedia Playback Stream.
      * @param OldMedia Media that is replaced by the new media
@@ -80,6 +82,7 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UPROPERTY()
     TWeakObjectPtr<UOdinPlaybackMedia> playback_media_ = nullptr;
 
+    FCriticalSection              AudioBufferListenerAccess;
     TArray<IAudioBufferListener*> AudioBufferListeners;
 
     /**

@@ -37,6 +37,10 @@ void UOdinSynthComponent::BeginPlay()
 void UOdinSynthComponent::BeginDestroy()
 {
     this->playback_media_ = nullptr;
+    {
+        FScopeLock ListenerLock(&AudioBufferListenerAccess);
+        AudioBufferListeners.Empty();
+    }
     Super::BeginDestroy();
 }
 
@@ -46,6 +50,12 @@ void UOdinSynthComponent::OnRegister()
     if (playback_media_.IsValid() && 0 != playback_media_->GetMediaHandle()) {
         Start();
     }
+}
+
+void UOdinSynthComponent::OnBeginGenerate()
+{
+    Super::OnBeginGenerate();
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::OnBeginGenerate"));
 }
 
 void UOdinSynthComponent::Activate(bool bReset)
@@ -79,7 +89,8 @@ int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
         return 0;
     }
 
-    if (ReadResult > static_cast<uint32>(NumSamples)) {
+    int32 ReadSamples = static_cast<int32>(ReadResult);
+    if (ReadSamples > NumSamples || ReadSamples < 0) {
         UE_LOG(Odin, Verbose,
                TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
                     "number of read samples returned by Odin is larger than requested number of "
@@ -87,10 +98,20 @@ int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
         return 0;
     }
 
-    for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
-        AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
+    {
+        FScopeLock ListenerLock(&AudioBufferListenerAccess);
+        for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
+            AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
+        }
     }
+
     return ReadResult;
+}
+
+void UOdinSynthComponent::OnEndGenerate()
+{
+    Super::OnEndGenerate();
+    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::OnEndGenerate"));
 }
 
 void UOdinSynthComponent::NativeOnPreChangePlaybackMedia(UOdinPlaybackMedia* OldMedia,
@@ -156,10 +177,12 @@ UOdinPlaybackMedia* UOdinSynthComponent::GetConnectedPlaybackMedia() const
 
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
+    FScopeLock ListenerLock(&AudioBufferListenerAccess);
     AudioBufferListeners.AddUnique(InAudioBufferListener);
 }
 
 void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
+    FScopeLock ListenerLock(&AudioBufferListenerAccess);
     AudioBufferListeners.Remove(InAudioBufferListener);
 }

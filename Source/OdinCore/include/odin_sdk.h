@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "1.7.0"
+#define ODIN_VERSION "1.7.3"
 
 /**
  * Available Gain Controller Versions
