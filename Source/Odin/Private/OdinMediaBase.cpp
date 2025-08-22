@@ -13,6 +13,7 @@ UOdinMediaBase::UOdinMediaBase(const class FObjectInitializer& PCIP)
 void UOdinMediaBase::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
     if (InAudioBufferListener) {
+        FScopeLock BufferListenerAccessLock(&AudioBufferListenerSection);
         AudioBufferListeners.Add(InAudioBufferListener);
     }
 }
@@ -20,6 +21,8 @@ void UOdinMediaBase::AddAudioBufferListener(IAudioBufferListener* InAudioBufferL
 void UOdinMediaBase::RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener)
 {
     if (AudioBufferListeners.Contains(AudioBufferListener)) {
+        FScopeLock BufferListenerAccessLock(&AudioBufferListenerSection);
+
         AudioBufferListeners.Remove(AudioBufferListener);
     }
 }
@@ -32,4 +35,15 @@ int32 UOdinMediaBase::GetSampleRate() const
 int32 UOdinMediaBase::GetNumChannels() const
 {
     return ODIN_DEFAULT_SAMPLE_RATE;
+}
+
+void UOdinMediaBase::SetMediaHandle(OdinMediaStreamHandle handle)
+{
+    this->stream_handle_ = handle;
+}
+
+TArray<IAudioBufferListener*> UOdinMediaBase::GetAudioBufferListeners() const
+{
+    FScopeLock BufferListenerAccessLock(&AudioBufferListenerSection);
+    return AudioBufferListeners.Array();
 }

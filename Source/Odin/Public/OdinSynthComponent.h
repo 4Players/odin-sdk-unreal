@@ -4,12 +4,12 @@
 
 #include "Components/SynthComponent.h"
 #include "CoreMinimal.h"
+#include "odin_sdk.h"
 #include "Runtime/Launch/Resources/Version.h"
-
-#include "OdinPlaybackMedia.h"
-
+#include "OdinMediaSoundGenerator.h"
 #include "OdinSynthComponent.generated.h"
 
+class UOdinPlaybackMedia;
 class OdinMediaSoundGenerator;
 
 /**
@@ -21,6 +21,8 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     GENERATED_BODY()
 
   public:
+    UOdinSynthComponent(const FObjectInitializer& ObjInitializer);
+
     UFUNCTION(BlueprintCallable, meta = (Category    = "Odin|Sound",
                                          DisplayName = "Assign Odin Synth Component to Media"))
     void Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia*& media);
@@ -64,9 +66,13 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     virtual void BeginDestroy() override;
     virtual void OnRegister() override;
 
-    virtual void  OnBeginGenerate() override;
-    virtual int32 OnGenerateAudio(float* OutAudio, int32 NumSamples) override;
-    virtual void  OnEndGenerate() override;
+#if ENGINE_MAJOR_VERSION >= 5
+    virtual ISoundGeneratorPtr
+    CreateSoundGenerator(const FSoundGeneratorInitParams& InParams) override;
+#else
+    virtual ISoundGeneratorPtr CreateSoundGenerator(int32 InSampleRate,
+                                                    int32 InNumChannels) override;
+#endif
     /**
      * Called (c++ only) before changing from the OldMedia to the NewMedia Playback Stream.
      * @param OldMedia Media that is replaced by the new media
@@ -78,12 +84,10 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     void SetOdinStream(OdinMediaStreamHandle NewStreamHandle);
     void ResetOdinStream(OdinMediaStreamHandle HandleToReset);
 
-  private:
     UPROPERTY()
     TWeakObjectPtr<UOdinPlaybackMedia> playback_media_ = nullptr;
 
-    FCriticalSection              AudioBufferListenerAccess;
-    TArray<IAudioBufferListener*> AudioBufferListeners;
+    TSharedRef<OdinMediaSoundGenerator, ESPMode::ThreadSafe> SoundGenerator;
 
     /**
      * Used to keep track of our read progress on the circular buffer of the playback media. This

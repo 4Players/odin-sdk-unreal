@@ -5,8 +5,13 @@
 #include "Odin.h"
 #include "OdinFunctionLibrary.h"
 #include "OdinSubsystem.h"
-#include "OdinMediaSoundGenerator.h"
 #include "Engine/GameInstance.h"
+
+UOdinSynthComponent::UOdinSynthComponent(const FObjectInitializer& ObjInitializer)
+    : Super(ObjInitializer)
+    , SoundGenerator(MakeShared<OdinMediaSoundGenerator, ESPMode::ThreadSafe>())
+{
+}
 
 bool UOdinSynthComponent::Init(int32& SampleRate)
 {
@@ -37,10 +42,6 @@ void UOdinSynthComponent::BeginPlay()
 void UOdinSynthComponent::BeginDestroy()
 {
     this->playback_media_ = nullptr;
-    {
-        FScopeLock ListenerLock(&AudioBufferListenerAccess);
-        AudioBufferListeners.Empty();
-    }
     Super::BeginDestroy();
 }
 
@@ -52,12 +53,19 @@ void UOdinSynthComponent::OnRegister()
     }
 }
 
-void UOdinSynthComponent::OnBeginGenerate()
+#if ENGINE_MAJOR_VERSION >= 5
+ISoundGeneratorPtr
+UOdinSynthComponent::CreateSoundGenerator(const FSoundGeneratorInitParams& InParams)
 {
-    Super::OnBeginGenerate();
-    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::OnBeginGenerate"));
+    return SoundGenerator;
 }
-
+#else
+ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
+                                                             int32 InNumChannels)
+{
+    return SoundGenerator;
+}
+#endif
 void UOdinSynthComponent::Activate(bool bReset)
 {
     Super::Activate(bReset);
@@ -70,53 +78,10 @@ void UOdinSynthComponent::Deactivate()
     UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::Deactivate"));
 }
 
-int32 UOdinSynthComponent::OnGenerateAudio(float* OutAudio, int32 NumSamples)
-{
-    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinSynthComponent::OnGenerateAudio)
-    if (!playback_media_.IsValid() || !IsActive()) {
-        return 0;
-    }
-
-    // Will return the number of read samples, if successful, error code otherwise
-    OdinReturnCode ReadResult =
-        playback_media_->ReadData(PlaybackMediaReadIndex, OutAudio, NumSamples);
-    if (odin_is_error(ReadResult)) {
-        const FString FormattedError = UOdinFunctionLibrary::FormatError(ReadResult, false);
-        UE_LOG(Odin, Verbose,
-               TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
-                    "Error Message: %s, could be due to media being removed."),
-               *FormattedError);
-        return 0;
-    }
-
-    int32 ReadSamples = static_cast<int32>(ReadResult);
-    if (ReadSamples > NumSamples || ReadSamples < 0) {
-        UE_LOG(Odin, Verbose,
-               TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
-                    "number of read samples returned by Odin is larger than requested number of "
-                    "samples."));
-        return 0;
-    }
-
-    {
-        FScopeLock ListenerLock(&AudioBufferListenerAccess);
-        for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
-            AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples, NumChannels);
-        }
-    }
-
-    return ReadResult;
-}
-
-void UOdinSynthComponent::OnEndGenerate()
-{
-    Super::OnEndGenerate();
-    UE_LOG(Odin, Verbose, TEXT("UOdinSynthComponent::OnEndGenerate"));
-}
-
 void UOdinSynthComponent::NativeOnPreChangePlaybackMedia(UOdinPlaybackMedia* OldMedia,
                                                          UOdinPlaybackMedia* NewMedia)
 {
+    // Do nothing
 }
 
 void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
@@ -138,6 +103,8 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia
     if (nullptr != media) {
         NativeOnPreChangePlaybackMedia(playback_media_.Get(), media);
         this->playback_media_ = media;
+        SoundGenerator->SetStreamReader(playback_media_->GetPlaybackStreamReader());
+
         SetOdinStream(media->GetMediaHandle());
     } else {
         UE_LOG(Odin, Error,
@@ -162,8 +129,7 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings& InA
     bOverrideAttenuation = true;
     AttenuationOverrides = InAttenuationSettings;
 
-    auto AudioComponentPointer = GetAudioComponent();
-    if (AudioComponentPointer) {
+    if (auto AudioComponentPointer = GetAudioComponent()) {
         AudioComponentPointer->AdjustAttenuation(InAttenuationSettings);
     }
 
@@ -177,12 +143,10 @@ UOdinPlaybackMedia* UOdinSynthComponent::GetConnectedPlaybackMedia() const
 
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
-    FScopeLock ListenerLock(&AudioBufferListenerAccess);
-    AudioBufferListeners.AddUnique(InAudioBufferListener);
+    SoundGenerator->AddAudioBufferListener(InAudioBufferListener);
 }
 
 void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
-    FScopeLock ListenerLock(&AudioBufferListenerAccess);
-    AudioBufferListeners.Remove(InAudioBufferListener);
+    SoundGenerator->RemoveAudioBufferListener(InAudioBufferListener);
 }

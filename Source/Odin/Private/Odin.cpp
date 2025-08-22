@@ -125,6 +125,12 @@ void FOdinModule::LogErrorCode(FString Prefix, uint32_t ErrorCode)
     UE_LOG(Odin, Error, TEXT("%s, Error: %s"), *Prefix, *ErrorMessage);
 }
 
+void FOdinModule::LogReturnCode(FString Prefix, uint32_t ReturnCode)
+{
+    FString Message = UOdinFunctionLibrary::FormatError(ReturnCode, false);
+    UE_LOG(Odin, Display, TEXT("%s Reason: %s"), *Prefix, *Message);
+}
+
 #undef LOCTEXT_NAMESPACE
 
 IMPLEMENT_MODULE(FOdinModule, Odin)

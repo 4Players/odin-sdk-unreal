@@ -29,21 +29,21 @@ class ODIN_API UOdinMediaBase : public UObject
         return this->stream_handle_;
     }
 
-    void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
-    void RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener);
+    virtual void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
+    virtual void RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener);
 
     virtual int32 GetSampleRate() const;
     virtual int32 GetNumChannels() const;
 
   protected:
-    inline void SetMediaHandle(OdinMediaStreamHandle handle)
-    {
-        this->stream_handle_ = handle;
-    }
+    virtual void SetMediaHandle(OdinMediaStreamHandle handle);
 
-    TSet<IAudioBufferListener*> AudioBufferListeners;
+    TArray<IAudioBufferListener*> GetAudioBufferListeners() const;
 
   private:
+    TSet<IAudioBufferListener*> AudioBufferListeners;
+    mutable FCriticalSection    AudioBufferListenerSection;
+
     OdinMediaStreamHandle stream_handle_ = 0;
 
     friend class UOdinPlaybackMedia;

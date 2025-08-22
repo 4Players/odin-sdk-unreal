@@ -24,6 +24,14 @@ class ODIN_API FOdinModule : public IModuleInterface
      */
     static void LogErrorCode(FString Prefix, uint32_t ErrorCode);
 
+    /**
+     * Log an Odin Return Code with a specified prefix. Same as LogErrorCode, but with Display
+     * Verbosity.
+     * @param Prefix The prefix to be included in the log message.
+     * @param ReturnCode The Odin code that should be formatted and logged.
+     */
+    static void LogReturnCode(FString Prefix, uint32_t ReturnCode);
+
   private:
     void* OdinLibraryHandle = nullptr;
 };

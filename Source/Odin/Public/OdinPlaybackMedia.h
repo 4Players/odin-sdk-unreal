@@ -6,32 +6,13 @@
 #include "OdinMediaBase.h"
 #include "UObject/Object.h"
 #include "odin_sdk.h"
-
+#include "OdinPlaybackStreamReader.h"
 #include <memory>
 
 #include "Odin.h"
 #include "OdinPlaybackMedia.generated.h"
 
 class UOdinRoom;
-
-class ODIN_API FOdinAudioRingBuffer
-{
-  public:
-    FOdinAudioRingBuffer(const int32 InCapacity);
-
-    int32 Write(const float* InData, const int32 NumSamples);
-
-    int32 Read(const int32 ReaderIndex, float* OutData, const int32 NumSamples);
-
-    int32 GetAvailableSamples(const int32 ReaderIndex) const;
-
-  private:
-    int32         Capacity;
-    TArray<float> Buffer;
-
-    FCriticalSection   BufferSection;
-    FThreadSafeCounter WriteIndex;
-};
 
 USTRUCT(BlueprintType)
 struct ODIN_API FOdinAudioStreamStats {
@@ -112,6 +93,8 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
                       ToolTip = "Get the internal ID of an output media", Category = "Odin|Debug"))
     int32 GetMediaId();
 
+    virtual void SetMediaHandle(OdinMediaStreamHandle handle) override;
+
     /**
      * @brief Get the peer ID associated with the media stream.
      *
@@ -136,14 +119,26 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
                       Category = "Odin|Debug"))
     FOdinAudioStreamStats AudioStreamStats();
 
+    [[deprecated("Please use GetPlaybackStreamReader() to access the "
+                 "FOdinPlaybackStreamReader::ReadData function.")]]
     OdinReturnCode ReadData(int32& RefReaderIndex, float* OutAudio, int32 NumSamples);
 
-  protected:
-    void BeginDestroy() override;
+    TSharedPtr<FOdinPlaybackStreamReader, ESPMode::ThreadSafe> GetPlaybackStreamReader() const;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Room")
+    virtual void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener) override;
+    virtual void RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener) override;
+
+  protected:
+    virtual void BeginDestroy() override;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Odin | Playback")
     UOdinRoom* Room;
 
-    TSharedPtr<FOdinAudioRingBuffer, ESPMode::ThreadSafe> MultipleAccessCacheBuffer;
-    OdinReturnCode                                        CachedReturnCode = 0;
+    /**
+     * The Audio Buffer Capacity in seconds.
+     */
+    UPROPERTY(BlueprintReadOnly, EditDefaultsOnly, Category = "Odin | Playback")
+    float AudioBufferCapacity = 0.1f;
+
+    TSharedPtr<FOdinPlaybackStreamReader, ESPMode::ThreadSafe> PlaybackStreamReader;
 };

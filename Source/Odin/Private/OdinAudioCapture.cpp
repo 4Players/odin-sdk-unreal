@@ -16,8 +16,9 @@ void UOdinAudioCapture::BeginDestroy()
 {
     Super::BeginDestroy();
     UE_LOG(Odin, Verbose, TEXT("UOdinAudioCapture::BeginDestroy()"));
-    AudioCapture.CloseStream();
-    StopCapturingAudio();
+    if (AudioCapture.IsStreamOpen()) {
+        AudioCapture.AbortStream();
+    }
 }
 
 #if ENGINE_MAJOR_VERSION >= 5

@@ -257,7 +257,7 @@ void UOdinCaptureMedia::AudioGeneratorCallback(UOdinCaptureMedia*     Media,
         {
             TRACE_CPUPROFILER_EVENT_SCOPE(
                 UOdinAudioCapture::AudioGeneratorCallback : Audio Buffer Listener Callbacks);
-            for (IAudioBufferListener* AudioBufferListener : Media->AudioBufferListeners) {
+            for (IAudioBufferListener* AudioBufferListener : Media->GetAudioBufferListeners()) {
                 if (AudioBufferListener) {
                     const int32 OdinForcedNumChannels =
                         Media->GetEnableMonoMixing() ? 1 : StreamNumChannels;

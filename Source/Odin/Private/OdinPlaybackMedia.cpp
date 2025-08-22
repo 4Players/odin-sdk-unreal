@@ -3,88 +3,14 @@
 #include "OdinPlaybackMedia.h"
 #include "OdinRoom.h"
 #include "odin_sdk.h"
-#include "Components/SynthComponent.h"
 
-FOdinAudioRingBuffer::FOdinAudioRingBuffer(const int32 InCapacity)
-    : Capacity(InCapacity)
-    , WriteIndex(0)
-{
-    Buffer.Init(0, Capacity);
-}
-
-int32 FOdinAudioRingBuffer::Write(const float* InData, const int32 NumSamples)
-{
-    if (NumSamples > Capacity) {
-        UE_LOG(Odin, Error,
-               TEXT("Tried Writing more Samples than Capacity in Buffer from FAudioRingBuffer, "
-                    "aborting Write."));
-        return WriteIndex.GetValue();
-    }
-
-    FScopeLock WriteLock(&BufferSection);
-    int32      CurrentWriteIndex = WriteIndex.GetValue();
-
-    int32 NumFirstCopy = FMath::Min(NumSamples, Capacity - CurrentWriteIndex);
-    FMemory::Memcpy(Buffer.GetData() + CurrentWriteIndex, InData, sizeof(float) * NumFirstCopy);
-
-    if (NumFirstCopy < NumSamples) {
-        int32 NumSecondCopy = NumSamples - NumFirstCopy;
-        FMemory::Memcpy(Buffer.GetData(), InData + NumFirstCopy, sizeof(float) * NumSecondCopy);
-    }
-
-    WriteIndex.Set((WriteIndex.GetValue() + NumSamples) % Capacity);
-    return WriteIndex.GetValue();
-}
-
-int32 FOdinAudioRingBuffer::Read(const int32 ReaderIndex, float* OutData, const int32 NumSamples)
-{
-    if (NumSamples > Capacity) {
-        UE_LOG(Odin, Error,
-               TEXT("Tried Reading more Samples than available in Buffer from FAudioRingBuffer, "
-                    "aborting Write."));
-        return ReaderIndex;
-    }
-
-    if (ReaderIndex >= Capacity) {
-        UE_LOG(Odin, Error,
-               TEXT("Invalid ReaderIndex when trying to read data from FAudioRingBuffer"));
-        return ReaderIndex;
-    }
-
-    FScopeLock ReadLock(&BufferSection);
-
-    int32 NumFirstCopy = FMath::Min(NumSamples, Capacity - ReaderIndex);
-    FMemory::Memcpy(OutData, Buffer.GetData() + ReaderIndex, sizeof(float) * NumFirstCopy);
-
-    if (NumFirstCopy < Capacity) {
-        int32 NumSecondCopy = NumSamples - NumFirstCopy;
-        FMemory::Memcpy(OutData + NumFirstCopy, Buffer.GetData(), sizeof(float) * NumSecondCopy);
-    }
-    return (ReaderIndex + NumSamples) % Capacity;
-}
-
-int32 FOdinAudioRingBuffer::GetAvailableSamples(const int32 ReaderIndex) const
-{
-    if (ReaderIndex >= Capacity) {
-        UE_LOG(Odin, Error, TEXT("Invalid ReaderIndex when trying to get available sample count."));
-        return 0;
-    }
-    if (WriteIndex.GetValue() >= ReaderIndex) {
-        return WriteIndex.GetValue() - ReaderIndex;
-    }
-    return Capacity - (ReaderIndex - WriteIndex.GetValue());
-}
-
-UOdinPlaybackMedia::UOdinPlaybackMedia()
-{
-    MultipleAccessCacheBuffer = MakeShared<FOdinAudioRingBuffer, ESPMode::ThreadSafe>(1024 * 4);
-}
+UOdinPlaybackMedia::UOdinPlaybackMedia() {}
 
 UOdinPlaybackMedia::UOdinPlaybackMedia(OdinMediaStreamHandle streamHandle, UOdinRoom* Room)
     : UOdinPlaybackMedia()
 {
-    this->stream_handle_ = streamHandle;
-    this->Room           = Room;
+    UOdinPlaybackMedia::SetMediaHandle(streamHandle);
+    SetRoom(Room);
 }
 
 int32 UOdinPlaybackMedia::GetMediaId()
@@ -92,6 +18,15 @@ int32 UOdinPlaybackMedia::GetMediaId()
     uint16_t media_id;
     odin_media_stream_media_id(stream_handle_, &media_id);
     return media_id;
+}
+
+void UOdinPlaybackMedia::SetMediaHandle(OdinMediaStreamHandle handle)
+{
+    Super::SetMediaHandle(handle);
+    const int32 Capacity =
+        ODIN_DEFAULT_CHANNEL_COUNT * ODIN_DEFAULT_SAMPLE_RATE * AudioBufferCapacity;
+    PlaybackStreamReader =
+        MakeShared<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>(handle, Capacity);
 }
 
 int64 UOdinPlaybackMedia::GetPeerId()
@@ -107,7 +42,7 @@ FOdinAudioStreamStats UOdinPlaybackMedia::AudioStreamStats()
     auto                 result = odin_audio_stats(this->stream_handle_, &stats);
 
     if (odin_is_error(result)) {
-        UE_LOG(LogTemp, Warning, TEXT("odin_audio_stats result: %d"), result);
+        UE_LOG(Odin, Warning, TEXT("odin_audio_stats result: %d"), result);
     } else {
         FOdinAudioStreamStats audio_stats;
         audio_stats.packets_total             = stats.packets_total;
@@ -129,25 +64,30 @@ OdinReturnCode UOdinPlaybackMedia::ReadData(int32& RefReaderIndex, float* OutAud
                                             int32 NumSamples)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData)
-
-    int32 AvailableSamples = MultipleAccessCacheBuffer->GetAvailableSamples(RefReaderIndex);
-    if (AvailableSamples < NumSamples) {
-        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData - odin_audio_read_data call)
-        CachedReturnCode = odin_audio_read_data(GetMediaHandle(), OutAudio, NumSamples);
-        if (!odin_is_error(CachedReturnCode)) {
-            RefReaderIndex = MultipleAccessCacheBuffer->Write(OutAudio, NumSamples);
-            for (IAudioBufferListener* AudioBufferListener : AudioBufferListeners) {
-                if (AudioBufferListener) {
-                    AudioBufferListener->OnGeneratedBuffer(OutAudio, NumSamples,
-                                                           ODIN_DEFAULT_CHANNEL_COUNT);
-                }
-            }
-        }
-    } else {
-        TRACE_CPUPROFILER_EVENT_SCOPE(UOdinPlaybackMedia::ReadData - cached access call)
-        RefReaderIndex = MultipleAccessCacheBuffer->Read(RefReaderIndex, OutAudio, NumSamples);
+    if (PlaybackStreamReader.IsValid()) {
+        return PlaybackStreamReader->ReadData(RefReaderIndex, OutAudio, NumSamples);
     }
-    return CachedReturnCode;
+    return 0;
+}
+
+TSharedPtr<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>
+UOdinPlaybackMedia::GetPlaybackStreamReader() const
+{
+    return PlaybackStreamReader;
+}
+
+void UOdinPlaybackMedia::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
+{
+    if (PlaybackStreamReader.IsValid()) {
+        PlaybackStreamReader->AddAudioBufferListener(InAudioBufferListener);
+    }
+}
+
+void UOdinPlaybackMedia::RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener)
+{
+    if (PlaybackStreamReader.IsValid()) {
+        PlaybackStreamReader->RemoveAudioBufferListener(AudioBufferListener);
+    }
 }
 
 void UOdinPlaybackMedia::BeginDestroy()
