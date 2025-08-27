@@ -156,11 +156,11 @@ void UOdinAudioCapture::ChangeCaptureDeviceById(FString NewDeviceId, bool& bSucc
 
 void UOdinAudioCapture::StartCapturing(bool& bSuccess)
 {
-    if (AudioCapture.IsStreamOpen()) {
+    if (!AudioCapture.IsStreamOpen()) {
         bSuccess = AudioCapture.StartStream();
         return;
     }
-    bSuccess = false;
+    bSuccess = AudioCapture.IsCapturing();
 }
 
 void UOdinAudioCapture::AsyncChangeCaptureDeviceById(FString                      NewDeviceId,
