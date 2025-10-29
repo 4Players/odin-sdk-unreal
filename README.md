@@ -8,7 +8,7 @@ You can choose between a managed cloud and a self-hosted solution. Let [4Players
 
 The ODIN SDK for Unreal enables you to add real-time VoIP communication to your Unreal Engine 4/5 game, thus making it more social and interactive.
 
-[Online Documentation](https://docs.4players.io/voice/unreal)
+[Online Documentation](https://docs.4players.io/voice/unreal/)
 
 ## Supported Platforms
 
@@ -63,7 +63,7 @@ Contact us through the listed methods below to receive answers to your questions
 
 Join our official Discord server to chat with us directly and become a part of the 4Players ODIN community.
 
-[![Join us on Discord](https://developers.4players.io/images/join_discord.png)](https://4np.de/discord)
+[![Join us on Discord](https://docs.4players.io/img/join_discord.png)](https://4np.de/discord)
 
 ### Twitter
 
