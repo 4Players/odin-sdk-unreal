@@ -48,6 +48,10 @@ uint32 FOdinAudioPushDataThread::Run()
                 FOdinAudioPushDataThread::Run : odin_audio_push_data calls)
             FOdinAudioPushData DequeuedData;
             while (PushDataQueue.Dequeue(DequeuedData)) {
+                UE_LOG(
+                    Odin, VeryVerbose,
+                    TEXT("FOdinAudioPushDataThread::Run Pushing %d Samples for Media Stream %llu"),
+                    DequeuedData.AudioData.Num(), DequeuedData.MediaStreamHandle);
                 const OdinReturnCode PushResult = odin_audio_push_data(
                     DequeuedData.MediaStreamHandle, DequeuedData.AudioData.GetData(),
                     DequeuedData.AudioData.Num());

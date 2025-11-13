@@ -23,10 +23,16 @@ int32 UOdinPlaybackMedia::GetMediaId()
 void UOdinPlaybackMedia::SetMediaHandle(OdinMediaStreamHandle handle)
 {
     Super::SetMediaHandle(handle);
-    const int32 Capacity =
-        ODIN_DEFAULT_CHANNEL_COUNT * ODIN_DEFAULT_SAMPLE_RATE * AudioBufferCapacity;
-    PlaybackStreamReader =
-        MakeShared<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>(handle, Capacity);
+
+    if (handle > 0) {
+        const int32 Capacity =
+            ODIN_DEFAULT_CHANNEL_COUNT * ODIN_DEFAULT_SAMPLE_RATE * AudioBufferCapacity;
+
+        PlaybackStreamReader =
+            MakeShared<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>(handle, Capacity);
+    } else {
+        PlaybackStreamReader.Reset();
+    }
 }
 
 int64 UOdinPlaybackMedia::GetPeerId()

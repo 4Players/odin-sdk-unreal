@@ -18,18 +18,22 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
         PlaybackStreamReader->ReadData(PlaybackStreamReadIndex, OutAudio, NumSamples);
     if (odin_is_error(ReturnCode)) {
         const FString FormattedError = UOdinFunctionLibrary::FormatError(ReturnCode, false);
-        UE_LOG(
-            Odin, Verbose,
-            TEXT("Error while reading data from Odin in OdinMediaSoundGenerator::OnGenerateAudio, "
-                 "Error Message: %s, could be due to media being removed."),
-            *FormattedError);
+        UE_LOG(Odin, Verbose,
+               TEXT("Notification while reading data from Odin in "
+                    "OdinMediaSoundGenerator::OnGenerateAudio, "
+                    "Message: %s, could be due to media being removed. This message is expected to "
+                    "appear a few times during normal usage."),
+               *FormattedError);
+        PlaybackStreamReader.Reset();
+        bWasMediaStreamInvalid = true;
         return 0;
     }
 
     int32 ReadSamples = static_cast<int32>(ReturnCode);
     if (ReadSamples > NumSamples || ReadSamples < 0) {
         UE_LOG(Odin, Verbose,
-               TEXT("Error while reading data from Odin in UOdinSynthComponent::OnGenerateAudio, "
+               TEXT("Notification while reading data from Odin in "
+                    "UOdinSynthComponent::OnGenerateAudio, "
                     "number of read samples returned by Odin is larger than requested number of "
                     "samples."));
         return 0;
@@ -47,6 +51,7 @@ void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle NewStreamHandl
            TEXT("OdinMediaSoundGenerator::SetOdinStream was called. This is being deprecated, "
                 "please provide an FOdinPlaybackStreamReader pointer instead. Creating new "
                 "FOdinPlaybackStreamReader."));
+    bWasMediaStreamInvalid = false;
 
     // use default values, 20ms audio frames and 1 second of audio buffer capacity.
     constexpr int32 Capacity = ODIN_DEFAULT_CHANNEL_COUNT * (ODIN_DEFAULT_SAMPLE_RATE * 0.02f);
@@ -57,9 +62,19 @@ void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle NewStreamHandl
 void OdinMediaSoundGenerator::SetStreamReader(
     const TSharedPtr<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>& StreamReader)
 {
-    PlaybackStreamReader    = StreamReader;
-    PlaybackStreamReadIndex = StreamReader->GetLatestReadIndex();
+    PlaybackStreamReader = StreamReader;
+    if (StreamReader.IsValid()) {
+        bWasMediaStreamInvalid  = false;
+        PlaybackStreamReadIndex = StreamReader->GetLatestReadIndex();
+    }
 }
+
+#if ENGINE_MAJOR_VERSION >= 5
+bool OdinMediaSoundGenerator::IsFinished() const
+{
+    return bWasMediaStreamInvalid;
+}
+#endif
 
 void OdinMediaSoundGenerator::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {

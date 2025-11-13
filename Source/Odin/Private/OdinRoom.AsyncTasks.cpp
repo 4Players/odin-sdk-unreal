@@ -38,7 +38,7 @@ void JoinRoomTask::DoWork()
     auto update_position_result = odin_room_update_position(RoomHandle, InitialPosition.X,
                                                             InitialPosition.Y, InitialPosition.Z);
     if (odin_is_error(update_position_result)) {
-        FOdinModule::LogErrorCode(TEXT("Call to odin_room_update_position returned error: "),
+        FOdinModule::LogErrorCode(TEXT("Call to odin_room_update_position returned error."),
                                   update_position_result);
     }
 
@@ -47,7 +47,7 @@ void JoinRoomTask::DoWork()
                                            StringCast<ANSICHAR>(*RoomToken).Get());
 
     if (odin_is_error(join_room_result)) {
-        FOdinModule::LogErrorCode(TEXT("Call to odin_room_join returned error: "),
+        FOdinModule::LogErrorCode(TEXT("Call to odin_room_join returned error. "),
                                   join_room_result);
 
         FFunctionGraphTask::CreateAndDispatchWhenReady(

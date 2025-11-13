@@ -24,6 +24,7 @@ UOdinSubmixListener::UOdinSubmixListener(const class FObjectInitializer& PCIP)
     : Super(PCIP)
     , CurrentRoomHandle(0)
 {
+    UE_LOG(Odin, Verbose, TEXT("OdinSubmixListener: Constructor Called."))
 }
 
 void UOdinSubmixListener::StartSubmixListener()

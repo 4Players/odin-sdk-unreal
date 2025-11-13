@@ -67,7 +67,9 @@ class ODIN_API UOdinSubmixListener : public UObject
     Audio::FDeviceId RegisteredDeviceId;
 
     TSharedPtr<FOdinSubmixBufferListenerImplementation> SubmixBufferListener;
-    TWeakObjectPtr<USoundSubmix>                        ConnectedSubmix;
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 4
+    TWeakObjectPtr<USoundSubmix> ConnectedSubmix;
+#endif
 };
 
 #if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 5
