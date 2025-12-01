@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #include "OdinJsonValue.h"
 #include "CoreMinimal.h"
@@ -19,8 +19,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueNumber(UObject *WorldContextOb
     return NewValue;
 }
 
-UOdinJsonValue *UOdinJsonValue::ConstructJsonValueString(UObject       *WorldContextObject,
-                                                         const FString &StringValue)
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValueString(UObject *WorldContextObject, const FString &StringValue)
 {
     TSharedPtr<FJsonValue> NewVal = MakeShareable(new FJsonValueString(StringValue));
 
@@ -40,8 +39,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueBool(UObject *WorldContextObje
     return NewValue;
 }
 
-UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObject,
-                                                        const TArray<UOdinJsonValue *> &InArray)
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObject, const TArray<UOdinJsonValue *> &InArray)
 {
     TArray<TSharedPtr<FJsonValue>> ValueArray;
     for (auto InVal : InArray) {
@@ -56,11 +54,19 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObj
     return NewValue;
 }
 
-UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject         *WorldContextObject,
-                                                         UOdinJsonObject *JsonObject)
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject *WorldContextObject, UOdinJsonObject *JsonObject)
 {
-    TSharedPtr<FJsonValue> NewVal =
-        MakeShareable(new FJsonValueObject(JsonObject->GetRootObject()));
+    TSharedPtr<FJsonValue> NewVal = MakeShareable(new FJsonValueObject(JsonObject->GetRootObject()));
+
+    UOdinJsonValue *NewValue = NewObject<UOdinJsonValue>();
+    NewValue->SetRootValue(NewVal);
+
+    return NewValue;
+}
+
+UOdinJsonValue *ConstructJsonValue(UObject *WorldContextObject, const TSharedPtr<FJsonValue> &InValue)
+{
+    TSharedPtr<FJsonValue> NewVal = InValue;
 
     UOdinJsonValue *NewValue = NewObject<UOdinJsonValue>();
     NewValue->SetRootValue(NewVal);
@@ -203,7 +209,7 @@ TArray<UOdinJsonValue *> UOdinJsonValue::AsArray() const
     return OutArray;
 }
 
-UOdinJsonObject *UOdinJsonValue::AsObject()
+UOdinJsonObject *UOdinJsonValue::AsObject() const
 {
     if (!JsonVal.IsValid()) {
         ErrorMessage(TEXT("Object"));

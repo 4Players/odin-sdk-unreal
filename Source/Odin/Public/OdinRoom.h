@@ -1,785 +1,286 @@
-/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
 
 #pragma once
 
-#include "Kismet/BlueprintAsyncActionBase.h"
+#include "OdinCore/include/odin.h"
 
-#include "OdinCaptureMedia.h"
-#include "OdinJsonObject.h"
-
-#include "OdinPlaybackMedia.h"
-#include "OdinSubmixListener.h"
+#include "CoreMinimal.h"
+#include "OdinCryptoExtension.h"
+#include "OdinNative/OdinNativeHandle.h"
+#include "OdinNative/OdinNativeRpc.h"
 
 #include "OdinRoom.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FJoinRoomResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAddMediaResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FPauseMediaResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FResumeMediaResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FRemoveMediaResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePositionResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FUpdatePeerUserDataResponsePin, bool, success);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FSendMessageResponsePin, bool, success);
+class UOdinEncoder;
+struct FOdinConnectionStats;
 
 /**
- * Gain Controller Version to use.
+ * An opaque type representing an ODIN room handle, which is managed by the underlying connection.
+ * This abstraction provides a high-level interface for joining rooms, managing persistent state
+ * and sending/receiving data, making it easier to integrate room-based interactions into your
+ * application.
  */
-UENUM(BlueprintType)
-enum class EOdinGainControllerVersion : uint8 {
-    /// Automatic gain control is disabled
-    None,
-    /// Use version 1 of the gain controller
-    V1 UMETA(DisplayName = "Version 1"),
-    /// Use version 2 of the gain controller
-    V2 UMETA(DisplayName = "Version 2"),
-};
-
-/**
- * All valid connection states for an ODIN room.
- */
-UENUM(BlueprintType)
-enum class EOdinRoomConnectionState : uint8 {
-    /**
-     * Connection is closed
-     */
-    Disconnected,
-    /**
-     * Connection is being closed
-     */
-    Disconnecting,
-    /**
-     * Connection is being established
-     */
-    Connecting,
-    /**
-     * Connection is established
-     */
-    Connected,
-};
-
-/**
- * Possible reasons for connection state changes of an ODIN room.
- */
-UENUM(BlueprintType)
-enum class EOdinRoomConnectionStateChangeReason : uint8 {
-    /**
-     * Connection state change was initiated by the user
-     */
-    ClientRequested,
-    /**
-     * Connection state change was initiated by the server (e.g. peer was kicked)
-     */
-    ServerRequested,
-    /**
-     * Connection state change was caused by a timeout
-     */
-    ConnectionLost
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomJoinError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE_FiveParams(FOdinRoomJoinSuccess, FString, roomId, const TArray<uint8> &,
-                                    roomUserData, FString, customer, int64, ownPeerId, FString,
-                                    ownUserId);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomJoin : public UBlueprintAsyncActionBase
+UCLASS(ClassGroup = Odin, Blueprintable, BlueprintType)
+class ODIN_API UOdinRoom : public UObject
 {
     GENERATED_BODY()
+
   public:
+    UOdinRoom(const class FObjectInitializer& PCIP);
+    /**
+     * Internal OnDatagram hook to redirect incoming callback for datagrams
+     * @remarks This should only be changed if the underlying callback has to call a custom implementation of handling callbacks
+     */
+    void (*OnDatagramFunc)(OdinRoom* room, const struct OdinDatagramProperties* properties, const uint8_t* bytes, uint32_t bytes_length, void* user_data) =
+        [](OdinRoom* room, const struct OdinDatagramProperties* properties, const uint8_t* bytes, uint32_t bytes_length, void* user_data) {
+            TArray<uint8> Datagram = TArray<uint8>(bytes, bytes_length);
+            ODIN_LOG(VeryVerbose, "Handle Odin Datagram with Channel Mask: %llu", properties->channel_mask);
+            HandleOdinEventDatagram(room, properties->peer_id, properties->channel_mask, properties->ssrc_id, Datagram);
+        };
+
+    UDELEGATE(BlueprintAuthorityOnly)
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomRpcDelegate, UOdinRoom*, room, FString, json);
+
+    /**
+     * JSON-encoded RPC message from the server
+     */
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinRoomRpcDelegate OnRpcBP;
+    /**
+     * Internal OnRpc hook to redirect incoming callback for rpc messages
+     * @remarks This should only be changed if the underlying callback has to call a custom implementation of handling callbacks
+     */
+    void (*OnRpcFunc)(struct OdinRoom* room, const char* json, void* user_data) = [](struct OdinRoom* room, const char* json, void* user_data) {
+        HandleOdinEventRpc(room, FString(json));
+    };
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomStatusChangedDelegate, UOdinRoom*, room, FOdinRoomStatusChanged, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinRoomStatusChangedDelegate OnRoomStatusChangedBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinNewReconnectTokenDelegate, UOdinRoom*, room, FOdinNewReconnectToken, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinNewReconnectTokenDelegate OnRoomNewReconnectTokenBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinMessageReceivedDelegate, UOdinRoom*, room, FOdinMessageReceived, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinMessageReceivedDelegate OnRoomMessageReceivedBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinJoinedDelegate, UOdinRoom*, room, FOdinJoined, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinJoinedDelegate OnRoomJoinedBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerJoinedDelegate, UOdinRoom*, room, FOdinPeerJoined, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinPeerJoinedDelegate OnRoomPeerJoinedBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerChangedDelegate, UOdinRoom*, room, FOdinPeerChanged, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinPeerChangedDelegate OnRoomPeerChangedBP;
+
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerLeftDelegate, UOdinRoom*, room, FOdinPeerLeft, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinPeerLeftDelegate OnRoomPeerLeftBP;
+
+    /**
+     * Creates a new ODIN room handle and starts the asynchronous connection process.
+     */
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
-                      DisplayName  = "Join Room",
-                      ToolTip      = "Joins the room specified in a given authentication token",
-                      WorldContext = "WorldContextObject",
-                      AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
-    static UOdinRoomJoin *JoinRoom(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room,
-                                   const FString url, const FString token,
-                                   const TArray<uint8> &initialPeerUserData,
-                                   FVector initialPosition, const FOdinRoomJoinError &onError,
-                                   const FOdinRoomJoinSuccess &onSuccess);
+              meta     = (DisplayName = "Construct Room", ToolTip = "Creates a new room", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                      Keywords = "Create,Create Room"),
+              Category = "Odin")
+    static UOdinRoom* ConstructRoom(UObject* WorldContextObject);
 
-    virtual void Activate() override;
+    static UOdinRoom* ConstructRoom(UObject* WorldContextObject, OdinRoom* handle, OdinCipher* crypto = nullptr);
 
-    UPROPERTY(BlueprintAssignable)
-    FJoinRoomResponsePin OnResponse;
+    /**
+     * Closes the specified ODIN room handle, thus making our own peer leave the room on the server and closing the connection if needed.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Odin", meta = (Keywords = "Disconnect,Close Connection,Destroy Room"))
+    bool CloseRoom();
 
-    UPROPERTY()
-    UOdinRoom *Room;
+    /**
+     * Closes the specified ODIN room handle, thus making our own peer leave the room on the server
+     * and closing the connection if needed.
+     * @remarks To release resources, call `FreeRoomByHandle`.
+     */
+    static bool CloseOdinRoomByHandle(OdinRoom* room);
 
-    FString              Url;
-    FString              Token;
-    TArray<uint8>        InitialPeerUserData;
-    FVector              InitialPosition;
-    FOdinRoomJoinError   OnError;
-    FOdinRoomJoinSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomAddMediaError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomAddMediaSuccess, int32, mediaId);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomAddMedia : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
+    /**
+     * Destroys the specified ODIN room handle in addition to close.
+     */
     UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
-                      DisplayName  = "Add Media to Room",
-                      ToolTip      = "Adds a capture media handle to the room",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomAddMedia *AddMedia(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room,
-                                       UPARAM(ref) UOdinCaptureMedia *&media,
-                                       const FOdinRoomAddMediaError   &onError,
-                                       const FOdinRoomAddMediaSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FAddMediaResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinRoom> Room;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia;
-
-    FOdinRoomAddMediaError   OnError;
-    FOdinRoomAddMediaSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomPauseMediaError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomPauseMediaSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomPauseMedia : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(
-        BlueprintCallable,
-        meta =
-            (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
-             DisplayName = "Pause Playback Media",
-             ToolTip = "Pause the specified playback media handle, ceasing the reception of data",
-             WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomPauseMedia *PauseMedia(UObject                          *WorldContextObject,
-                                           UPARAM(ref) UOdinPlaybackMedia  *&media,
-                                           const FOdinRoomPauseMediaError   &onError,
-                                           const FOdinRoomPauseMediaSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FPauseMediaResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinPlaybackMedia> PlaybackMedia;
-
-    FOdinRoomPauseMediaError   OnError;
-    FOdinRoomPauseMediaSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomResumeMediaError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomResumeMediaSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomResumeMedia : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(
-        BlueprintCallable,
-        meta =
-            (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
-             DisplayName = "Resume Playback Media",
-             ToolTip =
-                 "Resume the specified playback media handle, re-initiating the reception of data",
-             WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomResumeMedia *ResumeMedia(UObject                           *WorldContextObject,
-                                             UPARAM(ref) UOdinPlaybackMedia   *&media,
-                                             const FOdinRoomResumeMediaError   &onError,
-                                             const FOdinRoomResumeMediaSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FResumeMediaResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinPlaybackMedia> PlaybackMedia;
-
-    FOdinRoomResumeMediaError   OnError;
-    FOdinRoomResumeMediaSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomRemoveMediaError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomRemoveMediaSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomRemoveMedia : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Sound",
-                      DisplayName  = "Remove Media from Room",
-                      ToolTip      = "Removes a capture media handle from the room and destroys it",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomRemoveMedia *RemoveMedia(UObject                *WorldContextObject,
-                                             UPARAM(ref) UOdinRoom *&room, UOdinCaptureMedia *media,
-                                             const FOdinRoomRemoveMediaError   &onError,
-                                             const FOdinRoomRemoveMediaSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FRemoveMediaResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinRoom> Room;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia;
-
-    FOdinRoomRemoveMediaError   OnError;
-    FOdinRoomRemoveMediaSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdatePositionError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomUpdatePositionSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomUpdatePosition : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Room",
-                      DisplayName = "Update Peer Position",
-                      ToolTip = "Updates the two-dimensional position of the own peer in the room",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomUpdatePosition *UpdatePosition(UObject                *WorldContextObject,
-                                                   UPARAM(ref) UOdinRoom *&room, FVector position,
-                                                   const FOdinRoomUpdatePositionError   &onError,
-                                                   const FOdinRoomUpdatePositionSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FUpdatePositionResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinRoom> Room;
-
-    FVector Position;
-
-    FOdinRoomUpdatePositionError   OnError;
-    FOdinRoomUpdatePositionSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomUpdatePeerUserDataError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomUpdatePeerUserDataSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomUpdatePeerUserData : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Custom Data",
-                      DisplayName  = "Update Peer User Data",
-                      ToolTip      = "Updates the custom user data of the own peer in the room",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomUpdatePeerUserData *
-    UpdatePeerUserData(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room,
-                       const TArray<uint8> &data, const FOdinRoomUpdatePeerUserDataError &onError,
-                       const FOdinRoomUpdatePeerUserDataSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FUpdatePeerUserDataResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinRoom> Room;
-
-    TArray<uint8> Data;
-
-    FOdinRoomUpdatePeerUserDataError   OnError;
-    FOdinRoomUpdatePeerUserDataSuccess OnSuccess;
-};
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinRoomSendMessageError, int64, errorCode);
-DECLARE_DYNAMIC_DELEGATE(FOdinRoomSendMessageSuccess);
-UCLASS(ClassGroup = Odin)
-class ODIN_API UOdinRoomSendMessage : public UBlueprintAsyncActionBase
-{
-    GENERATED_BODY()
-  public:
-    UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Custom Data",
-                      DisplayName  = "Send Message",
-                      ToolTip      = "Sends arbitrary data to a list of target peers in the room",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
-    static UOdinRoomSendMessage *SendMessage(UObject                           *WorldContextObject,
-                                             UPARAM(ref) UOdinRoom            *&room,
-                                             const TArray<int64>               &targets,
-                                             const TArray<uint8>               &data,
-                                             const FOdinRoomSendMessageError   &onError,
-                                             const FOdinRoomSendMessageSuccess &onSuccess);
-
-    virtual void Activate() override;
-
-    UPROPERTY(BlueprintAssignable)
-    FSendMessageResponsePin OnResponse;
-
-    UPROPERTY()
-    TWeakObjectPtr<UOdinRoom> Room;
-
-    TArray<uint8> Data;
-    TArray<int64> Targets;
-
-    FOdinRoomSendMessageError   OnError;
-    FOdinRoomSendMessageSuccess OnSuccess;
-};
-
-UENUM(BlueprintType)
-enum class EOdinNoiseSuppressionLevel : uint8 {
-    OdinNS_None UMETA(DisplayName = "Disabled"),
+              meta     = (DisplayName = "Free Room", ToolTip = "Frees a room and handle immediately.", DefaultToSelf = "Room",
+                      Keywords = "Destroy Immediate,Destroy Room"),
+              Category = "Odin")
+    bool FreeRoom();
     /**
-     * Use low suppression (6 dB)
+     * Destroys the specified ODIN room handle and releases all underlying resources.
+     * @remarks Since the handle could be invalid for the SDK while connecting, manual call `odin_room_free` would work, even if the
+     * room is still connecting.
      */
-    OdinNS_Low UMETA(DisplayName = "Low"),
-    /**
-     * Use moderate suppression (12 dB)
-     */
-    OdinNS_Moderate UMETA(DisplayName = "Moderate"),
-    /**
-     * Use high suppression (18 dB)
-     */
-    OdinNS_High UMETA(DisplayName = "High"),
-    /**
-     * Use very high suppression (21 dB)
-     */
-    OdinNS_VeryHigh UMETA(DisplayName = "VeryHigh"),
-};
-
-USTRUCT(BlueprintType)
-struct ODIN_API FOdinConnectionStats {
-    GENERATED_BODY()
-
-    /**
-     * The amount of outgoing UDP datagrams observed
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats",
-              meta = (DisplayName = "Outgoing UDP datagrams"))
-    int64 udp_tx_datagrams = 0;
-    /**
-     * The amount of outgoing acknowledgement frames observed
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing ACK frames"))
-    int64 udp_tx_acks = 0;
-    /**
-     * The total amount of bytes which have been transferred inside outgoing UDP datagrams
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Outgoing bytes"))
-    int64 udp_tx_bytes = 0;
-    /**
-     * The amount of incoming UDP datagrams observed
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats",
-              meta = (DisplayName = "Incoming UDP datagrams"))
-    int64 udp_rx_datagrams = 0;
-    /**
-     * The amount of incoming acknowledgement frames observed
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming ACK frames"))
-    int64 udp_rx_acks = 0;
-    /**
-     * The total amount of bytes which have been transferred inside incoming UDP datagrams
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats", meta = (DisplayName = "Incoming bytes"))
-    int64 udp_rx_bytes = 0;
-    /**
-     * Current congestion window of the connection
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats",
-              meta = (DisplayName = "Congestion window of connection"))
-    int64 cwnd = 0;
-    /**
-     * Congestion events on the connection
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats",
-              meta = (DisplayName = "Congestion events of connection"))
-    int64 congestion_events = 0;
-    /**
-     * Current best estimate of the connection latency (round-trip-time) in milliseconds
-     */
-    UPROPERTY(BlueprintReadOnly, Category = "Stats",
-              meta = (DisplayName = "Estimated round-trip-time"))
-    float rtt = 0;
-};
-
-USTRUCT(BlueprintType)
-struct ODIN_API FOdinApmSettings {
-    GENERATED_BODY()
-
-    /**
-     * When enabled, ODIN will analyze the audio input signal using smart voice detection algorithm
-     * to determine the presence of speech. You can define both the probability required to start
-     * and stop transmitting.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
-              meta = (DisplayName = "Enable Voice Activity Detection"))
-    bool bVoiceActivityDetection = true;
-
-    /**
-     * Voice probability value when the VAD should engage.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
-              meta = (DisplayName = "Attack Probability", ClampMin = "0.0", ClampMax = "1.0",
-                      UIMin = "0.0", UIMax = "1.0"))
-    float fVadAttackProbability = 0.9f;
-
-    /**
-     * Voice probability value when the VAD should disengage. It's recommended to keep this value
-     * 0.1 lower than the attack probability.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = VAD,
-              meta = (DisplayName = "Release Probability", ClampMin = "0.0", ClampMax = "1.0",
-                      UIMin = "0.0", UIMax = "1.0"))
-    float fVadReleaseProbability = 0.8f;
-
-    /**
-     * When enabled, the volume gate will measure the volume of the input audio signal, thus
-     * deciding when a user is speaking loud enough to transmit voice data. You can define both the
-     * root mean square power (dBFS) for when the gate should engage and disengage.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Enable Volume Gate"))
-    bool bEnableVolumeGate = false;
-
-    /**
-     * Root mean square power (dBFS) when the volume gate should engage.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Attack Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0",
-                      UIMin = "-90.0", UIMax = "0.0"))
-    float fVolumeGateAttackLoudness = -90.0;
-
-    /**
-     * Root mean square power (dBFS) when the volume gate should disengage. It's recommended to keep
-     * this value 10 lower than the attack loudness.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Volume Gate",
-              meta = (DisplayName = "Release Loudness (dBFS)", ClampMin = "-90.0", ClampMax = "0.0",
-                      UIMin = "-90.0", UIMax = "0.0"))
-    float fVolumeGateReleaseLoudness = -90.0;
-
-    /**
-     * When enabled, aligns the original and the reverse audio stream to negate the output inside
-     * the input, resulting in effective echo cancellation
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Echo Canceller"),
-              Category = "Filters")
-    bool bEchoCanceller = false;
-    /**
-     * When enabled, the high-pass filter will remove low-frequency content from the input audio
-     * signal, thus making it sound cleaner and more focused.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "High Pass Filter"),
-              Category = "Filters")
-    bool bHighPassFilter = false;
-    /**
-     * When enabled, the noise suppressor will remove distracting background noise from the input
-     * audio signal. You can control the aggressiveness of the suppression. Increasing the level
-     * will reduce the noise level at the expense of a higher speech distortion.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Noise Suppression"),
-              Category = "Filters")
-    EOdinNoiseSuppressionLevel noise_suppression_level =
-        EOdinNoiseSuppressionLevel::OdinNS_Moderate;
-    /**
-     * When enabled, the transient suppressor will try to detect and attenuate keyboard clicks.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Transient Suppression"),
-              Category = "Filters")
-    bool bTransientSuppresor = false;
-    /**
-     * When enabled, the gain controller will automatically bring the signal to an appropriate
-     * range. This means input signals with low volume will be amplified and high volume will be
-     * limited.
-     */
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Gain Controller"),
-              Category = "Filters")
-    EOdinGainControllerVersion GainControllerVersion = EOdinGainControllerVersion::None;
-};
-
-USTRUCT(BlueprintType)
-struct ODIN_API FRoomConnectionStateChangedData {
-    GENERATED_BODY()
-    /**
-     *  The new ODIN connection state.
-     */
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
-              meta = (DisplayName = "Connection State"))
-    EOdinRoomConnectionState State = EOdinRoomConnectionState::Disconnected;
-
-    /**
-     * The reason for the connection state change.
-     */
-    UPROPERTY(BlueprintReadOnly, VisibleAnywhere, Category = "Odin|Room|StateChange",
-              meta = (DisplayName = "Reason"))
-    EOdinRoomConnectionStateChangeReason Reason =
-        EOdinRoomConnectionStateChangeReason::ClientRequested;
-
-    static FRoomConnectionStateChangedData
-    FromOdinEventData(OdinEvent_RoomConnectionStateChangedData data);
-};
-
-UCLASS(ClassGroup     = Odin, BlueprintType,
-       hidecategories = (Activation, Transform, Object, ActorComponent, Physics, Rendering,
-                         Mobility, LOD))
-class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
-{
-    GENERATED_BODY()
-
-  public:
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinRoomJoined, int64, peerId,
-                                                   const TArray<uint8> &, roomUserData, UOdinRoom *,
-                                                   room);
-
-    /**
-     * Handles Room Joined events which are called once the local user has successfully joined a
-     * room. Connect a Bind to On Room Joined delegate node to handle this event for the specified
-     * room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinRoomJoined onRoomJoined;
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomUserDataChanged, const TArray<uint8> &,
-                                                 userData, UOdinRoom *, room);
-
-    /**
-     * Called whenever the user data of the room changed. Connect a Bind to On Room User Data
-     * Changed delegate node to handle this event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinRoomUserDataChanged onRoomUserDataChanged;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaAdded, int64, peerId,
-                                                  UOdinPlaybackMedia *, media, UOdinJsonObject *,
-                                                  properties, UOdinRoom *, room);
-
-    /**
-     * Called whenever a peer has added a media (i.e. activated the microphone). Connect to a Bind
-     * to On Media Added delegate node to handle this event for the specified room. Will not be
-     * called for the local player.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinMediaAdded onMediaAdded;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMediaRemoved, int64, peerId,
-                                                   UOdinPlaybackMedia *, media, UOdinRoom *, room);
-
-    /**
-     * Called whenever a peer has removed a media stream. Connect to a Bind to On Media Removed
-     * delegate node to handle this event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinMediaRemoved onMediaRemoved;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinMediaActiveStateChanged, int64, peerId,
-                                                  UOdinMediaBase *const, media, bool, active,
-                                                  UOdinRoom *, room);
-
-    /**
-     * Called whenever a peer's media changed its active state, either starting to transmit a signal
-     * or ending a currently active transmission. Connect to a Bind to On Media Active State Changed
-     * delegate node to handle this event for the specified room. Will not be called for the local
-     * player.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinMediaActiveStateChanged onMediaActiveStateChanged;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinMessageReceived, int64, peerId,
-                                                   const TArray<uint8> &, data, UOdinRoom *, room);
-
-    /**
-     * Called whenever another peer has sent a message. Connect to a Bind to On Message Received
-     * delegate node to handle this event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinMessageReceived onMessageReceived;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOdinPeerJoined, int64, peerId, FString, userId,
-                                                  const TArray<uint8> &, userData, UOdinRoom *,
-                                                  room);
-
-    /**
-     * Called whenever a peer joins the room. Connect a Bind to On Peer Joined delegate node to
-     * handle this event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinPeerJoined onPeerJoined;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerLeft, int64, peerId, UOdinRoom *, room);
-
-    /**
-     * Called whenever a peer leaves the room. Connect to a Bind to On Peer Left node to handle this
-     * event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinPeerLeft onPeerLeft;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOdinPeerUserDataChanged, int64, peerId,
-                                                   const TArray<uint8> &, userData, UOdinRoom *,
-                                                   room);
-
-    /**
-     * Called whenever a peer has changed its user data. Connect to a Bind to On Peer User Data
-     * Changed node to handle this event for the specified room.
-     */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinPeerUserDataChanged onPeerUserDataChanged;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStatChanged_DEPRECATED,
-                                                 EOdinRoomConnectionState, connectionState,
-                                                 UOdinRoom *, room);
-    UPROPERTY(
-        BlueprintAssignable, Category = "Odin|Room|Events",
-        meta = (DisplayName        = "onConnectionStateChanged", DeprecatedProperty,
-                DeprecationMessage = "Use \"On Room Connection State Changed\" instead please."))
-    FOdinRoomConnectionStatChanged_DEPRECATED onConnectionStateChanged_DEPRECATED;
-
-    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomConnectionStateChanged,
-                                                 FRoomConnectionStateChangedData, stateChangedData,
-                                                 UOdinRoom *, room);
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
-    FOdinRoomConnectionStateChanged onRoomConnectionStateChanged;
-
-  public:
-    UOdinRoom(const FObjectInitializer &ObjectInitializer);
-
-    UFUNCTION(BlueprintCallable, BlueprintPure,
-              meta     = (DisplayName = "Construct Local Room Handle",
-                      ToolTip     = "Creates a new local room handle in an unconnected state",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                      AutoCreateRefTerm = "InitialAPMSettings"),
-              Category = "Odin|Room")
-    static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
-                                    const FOdinApmSettings &InitialAPMSettings);
-
-    UFUNCTION(
-        BlueprintCallable,
-        meta =
-            (DisplayName = "Set Room Position Scale",
-             ToolTip = "Sets the multiplicative scale for all coordinates used in position updates",
-             HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-             Category = "Odin|Room"))
-    void SetPositionScale(float Scale);
+    static bool FreeRoomByHandle(OdinRoom* room);
 
     UFUNCTION(BlueprintCallable,
-              meta = (DisplayName = "Get Room Connection Stats",
-                      ToolTip     = "Get statistics for a room connection",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                      Category = "Odin|Debug"))
-    FOdinConnectionStats ConnectionStats();
+              meta     = (DisplayName = "Connect Room", ToolTip = "Creates the room in a connection pool", Keywords = "Start Connection,Start Room"),
+              Category = "Odin")
+    UOdinRoom* ConnectRoom(FString gateway, FString authentication, bool& bSuccess, UOdinCrypto* crypto = nullptr);
+    /**
+     * Get last retrieved peer id that represents "self".
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get own Peer ID", ToolTip = "Gets the own peer id from an already connected room"),
+              Category = "Odin|Room|Info")
+    int64 GetOwnPeerId();
+    /**
+     * Get last retrieved reconnect token.
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Reconnect Token", ToolTip = "Gets the latest reconnect token of the connected room"),
+              Category = "Odin|Room|Info")
+    FString GetReconnectToken();
+    /**
+     * Retrieves the name from the current room.
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Room Name", ToolTip = "Gets the name of the connected room"),
+              Category = "Odin|Room|Info")
+    FName GetRoomName();
+    /**
+     * Retrieves the connection stats.
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Connection Stats", ToolTip = "Gets the connection stats of the connected room"),
+              Category = "Odin|Room|Info")
+    FOdinConnectionStats GetConnectionStats();
 
+    /**
+     * Sends a JSON-encoded RPC message to the server.
+     * @param json   json rpc string
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send Rpc", ToolTip = "Send raw rpc data"), Category = "Odin|Room|Rpc")
+    bool SendRpc(FString json);
+    /**
+     * Call SendRpc with request format helper.
+     * @param request   Change own peer request
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send ChangeSelf Rpc", ToolTip = "Send change self rpc to set own data"), Category = "Odin|Room|Rpc")
+    bool ChangeSelf(FOdinChangeSelf request);
+    /**
+     * Call SendRpc with request format helper.
+     * @param request   Change channel mask
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
     UFUNCTION(BlueprintCallable,
-              meta = (DisplayName = "Set Room APM Config",
-                      ToolTip     = "Updates audio processing settings for capture media handles",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                      Category = "Odin|Room"))
-    void UpdateAPMConfig(FOdinApmSettings apm_config);
+              meta     = (DisplayName = "Send SetChannelMasks Rpc", ToolTip = "Send audio channel masks rpc to set the channel layer mask of peers"),
+              Category = "Odin|Room|Rpc")
+    bool SetChannelMasks(const FOdinSetChannelMasks& request);
+    /**
+     * Call SendRpc to set channel masks.
+     * @param masks Masks to set, with map from peer Id to channel mask
+     * @param reset
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    bool SetChannelMasks(TMap<int64, uint64> masks, bool reset);
 
-    UFUNCTION(
-        BlueprintCallable,
-        meta = (DisplayName = "Set Room APM Stream Delay",
-                ToolTip =
-                    "Updates the delay estimate in ms for reverse stream used in echo cancellation",
-                HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                Category = "Odin|Room"))
-    void UpdateAPMStreamDelay(int64 DelayInMs);
+    /**
+     *
+     * @param request Set Message
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send Message Rpc", ToolTip = "Send a message to a set of peers"), Category = "Odin|Room|Rpc")
+    bool SendMessage(const FOdinSendMessage& request);
+    /**
+     * Drain Encoder pipline for audio data and sends encoded voice packets to the server.
+     * @param encoder   encoder to drain all datagrams
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send Audio", ToolTip = "Send all audio datagrams until the encoder is empty"),
+              Category = "Odin|Room|Audio Pipeline")
+    bool SendAudio(UOdinEncoder* encoder);
 
-    UFUNCTION(
-        BlueprintCallable,
-        meta = (DisplayName = "Destroy Local Room Handle",
-                ToolTip = "Closes the connection to the server and destroys the local room handle",
-                HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                Category = "Odin|Room"))
-    void Destroy();
+    /**
+     * Get room name
+     * @return room as string representation
+     */
+    UFUNCTION(BlueprintPure, Category = "Odin|Room")
+    FString GetOdinRoomName() const;
 
-    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (Category = "Odin|Room"))
+    /**
+     * Checks local status state
+     * @return true if JoinedStatus
+     */
+    UFUNCTION(BlueprintPure, Category = "Odin|Room")
     bool IsConnected() const;
 
-    void BindCaptureMedia(UOdinCaptureMedia *media);
-    void UnbindCaptureMedia(UOdinCaptureMedia *media);
+    void            SetRoomEvents(const OdinRoomEvents& roomcb);
+    OdinRoomEvents* GetRoomEvents();
+    void            RemoveRoomEvents();
+    OdinCipher*     GetRoomCipher();
 
-    OdinRoomHandle RoomHandle() const
+    inline OdinRoom* GetHandle() const
     {
-        return this->room_handle_;
+        return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinRoom*>(Handle->GetHandle()) : nullptr;
     }
 
+    inline void SetHandle(OdinRoom* handle)
+    {
+        if (handle == nullptr && IsValid(this->Handle)) {
+            this->Handle->SetHandle(nullptr);
+            return;
+        }
+
+        this->Handle = NewObject<UOdinHandle>();
+        this->Handle->SetHandle(handle);
+    }
+
+    /**
+     * Optional instance of pluggable encryption module for room communications. A cipher can be attached to the room on creation to enable customizable,
+     * end-to-end encryption(E2EE). Needs ODIN_USE_CRYPTO with CryptoExtention and associated library.
+     */
+    UPROPERTY(BlueprintReadWrite, Category = "Odin|Room|Extensions")
+    UOdinCrypto* Crypto;
+
+    /**
+     * Set a string password as arbitary shared secret.
+     * @param  Password   shared secret
+     */
     UFUNCTION(BlueprintCallable,
-              meta = (DisplayName = "Get Current Room APM Config", Category = "Odin|Room"))
-    FOdinApmSettings GetCurrentApmSettings() const
-    {
-        return this->current_apm_settings_;
-    }
+              meta     = (DisplayName = "Set Crypto Password",
+                      ToolTip     = "Set string password as bytes if Crypto is set and valid (result may not align outside of UnrealEngine)"),
+              Category = "Odin|Room|Extensions")
+    void SetPassword(const FString Password) const;
 
   protected:
     virtual void BeginDestroy() override;
     virtual void FinishDestroy() override;
 
-    UPROPERTY(BlueprintReadOnly, Category = "Odin|Room|StateChange")
-    FRoomConnectionStateChangedData LastRoomConnectionStateChangedData;
+    OdinRoomEvents Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .user_data = this};
 
-    /**
-     * The default apm stream delay in ms. Will be set once when echo cancellation is first
-     * activated. Will not be used, if @UpdateAPMStreamDelay was used previously to set a custom
-     * value.
-     */
-    UPROPERTY(BlueprintReadWrite, Category = "Odin|Room")
-    int64 DefaultAPMStreamDelay = 200;
+    UPROPERTY(BlueprintReadOnly, Category = "Odin|Room")
+    FOdinRoomStatusChanged Status;
+    UPROPERTY(BlueprintReadOnly, Category = "Odin|Room")
+    FOdinNewReconnectToken ReconnectToken;
+    UPROPERTY(BlueprintReadOnly, Category = "Odin|Room")
+    FOdinJoined State;
 
-    /**
-     * Retrieves the Submix listener object used for echo cancellation
-     * @remark You can use the SetRecordSubmixOutput function of UOdinSubmixListener to create a
-     * .wav file of the Submix Output. This helps with checking if the echo cancellation is being
-     * supplied with the correct output.
-     * @return The submix listener object used for Echo Cancellation
-     */
-    UFUNCTION(BlueprintCallable, Category = "Odin|Room")
-    UOdinSubmixListener *GetSubmixListener() const;
+    template <typename EventType>
+    static bool DeserializeAndBroadcast(const TSharedPtr<FJsonObject> EventObject, TWeakObjectPtr<UOdinRoom> Room,
+                                        TFunction<void(TWeakObjectPtr<UOdinRoom>, EventType)> Delegate);
 
   private:
-    static void HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent Event);
+    UPROPERTY()
+    UOdinHandle*     Handle;
+    FCriticalSection Room_CS;
+    FCriticalSection Encoder_CS;
+    static void      HandleOdinEventDatagram(OdinRoom* RoomHandle, uint32 PeerId, uint64 ChannelMask, uint32 SsrcId, TArray<uint8>& Datagram);
+    static void      HandleOdinEventRpc(OdinRoom* RoomHandle, const FString& JsonString);
+    static bool      StringifyRpcField(const TSharedPtr<FJsonObject>* EventObj, const FString& Field);
+    static void      DeregisterRoom(OdinRoom* NativeRoomHandle);
 
-    void CleanUp();
-    void DeregisterRoomFromSubsystem();
-
-    OdinRoomHandle room_handle_;
-
-    UPROPERTY(BlueprintGetter = GetCurrentApmSettings, Category = "Odin|Room",
-              meta = (DisplayName = "Current Room APM Config"))
-    FOdinApmSettings current_apm_settings_;
-
-    FCriticalSection capture_medias_cs_;
-    UPROPERTY(transient)
-    TArray<UOdinCaptureMedia *> capture_medias_;
-
-    FCriticalSection medias_cs_;
-    UPROPERTY(transient)
-    TMap<uint64, UOdinMediaBase *> medias_;
-
-    FCriticalSection joined_callbacks_cs_;
-
-    TArray<TFunction<void(FString roomId, FString roomCustomer, TArray<uint8> roomUserData,
-                          int64 ownPeerId, FString ownUserId)>>
-        joined_callbacks_;
-
-    UPROPERTY(transient, BlueprintGetter = GetSubmixListener, Category = "Odin|Room")
-    UOdinSubmixListener *submix_listener_;
-
-    friend class UOdinRoomJoin;
-    friend class UOdinRoomAddMedia;
-    friend class UOdinRoomUpdatePosition;
-    friend class UOdinRoomUpdatePeerUserData;
-    friend class UOdinRoomSendMessage;
-    friend class UOdinRoomJoinTask;
-
-    bool bWasStreamDelayInitialized = false;
+    void CleanupRoomInternal();
 };

@@ -1,103 +1,116 @@
-﻿/* Copyright (c) 2022-2024 4Players GmbH. All rights reserved. */
+﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
 
 #pragma once
 
-#include "AudioCapture.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
-
-#include "OdinRoom.h"
-
+#include "OdinAudio/OdinChannelMask.h"
+#include "OdinNative/OdinNativeBlueprint.h"
 #include "OdinFunctionLibrary.generated.h"
 
-/**
- * @brief A library class that provides various utility functions for Odin Voice chat.
- */
+class UOdinDecoder;
+class UOdinAudioCapture;
+class UOdinPipeline;
+class UOdinRoom;
+class UOdinEncoder;
+class UAudioGenerator;
+
 UCLASS()
 class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 {
-    GENERATED_UCLASS_BODY()
-    /**
-     * @brief Returns the singleton instance of UOdinFunctionLibrary.
-     *
-     * @return UOdinFunctionLibrary* - The singleton instance of UOdinFunctionLibrary.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Static")
-    static UOdinFunctionLibrary *getOdinFunctionLibrary();
+    GENERATED_BODY()
 
-    /**
-     * @brief Creates an Odin media instance with the provided audio generator object. Sets up the
-     * Odin media stream based on the generator object's sample rate and channel count.
-     *
-     * @param audioCapture The audio generator object used (i.e. an Audio Capture object for
-     * capturing microphone data) for setting up Odin media stream based on the generator object's
-     * sample rate and channel count.
-     *
-     * @return The created UOdinCaptureMedia instance.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure,
-              meta = (Category = "Odin|Sound", DisplayName = "Construct Local Media"))
-    static UOdinCaptureMedia *Odin_CreateMedia(UPARAM(ref) UAudioGenerator *&audioCapture);
-
-    /**
-     * @brief Generate a new access key using the Odin SDK.
-     *
-     * This method generates a new access key using the Odin SDK. The access key is a unique
-     * identifier that can be used for authentication purposes.
-     *
-     * @warning It is ok for development and testing purposes to create access keys room tokens on
-     * client side - but in production you should switch to server side generation of room tokens!
-     *
-     * @return The generated access key as a FString. The format of the access key may vary
-     * depending on the engine version.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Authentication")
+  public:
+    UFUNCTION(BlueprintPure, Category = "Odin|Authentication")
     static FString GenerateAccessKey();
 
-    /**
-     * Formats an Odin error message based on the given error code and additional flag to include
-     * Unreal Engine stack trace.
-     *
-     * @param code The error code to be formatted.
-     * @param ueTrace Flag indicating whether to include Unreal Engine stack trace in the error
-     * message.
-     *
-     * @return Formatted error message as a FString.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Error Handling")
-    static FString FormatOdinError(int64 code, bool ueTrace);
+    UFUNCTION(BlueprintPure, Category = "Odin|Error Handling")
+    static FString FormatOdinError(EOdinError Code, bool bUETrace);
 
-    /**
-     * @param code The error code to be formatted.
-     * @param ueTrace Indicates whether to include UE stack trace in the log.
-     * @return The formatted error message as a string.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Error Handling")
-    static FString FormatError(int32 code, bool ueTrace);
+    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
+    static FString BytesToString(const TArray<uint8>& Data);
 
-    /**
-     * Converts an array of bytes to a string representation.
-     *
-     * @param data The array of bytes to convert to a string.
-     * @return A string representation of the data.
-     */
-    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Custom Data")
-    static FString BytesToString(const TArray<uint8> &data);
+    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
+    static void OdinStringToBytes(const FString& Str, TArray<uint8>& Buffer);
 
-    /**
-     * @param WorldContextObject The world context object from which to create the OdinAudioCapture
-     * instance.
-     * @return A pointer to the created OdinAudioCapture instance if successful, nullptr otherwise.
-     */
+    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
+    static void OdinHexStringToBytes(const FString& Str, TArray<uint8>& Buffer);
+
+    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
+    static void OdinBytesToString(const TArray<uint8>& Buffer, FString& Str);
+
+    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
+    static void OdinBytesToHexString(const TArray<uint8>& Buffer, FString& Str);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Audio Capture", meta = (WorldContext = "WorldContextObject"))
+    static UOdinAudioCapture* CreateOdinAudioCapture(UObject* WorldContextObject);
+
     UFUNCTION(BlueprintCallable, Category = "Odin|Audio Capture",
-              meta = (WorldContext = "WorldContextObject"))
-    static class UOdinAudioCapture *CreateOdinAudioCapture(UObject *WorldContextObject);
+              meta = (WorldContext = "WorldContextObject",
+                      ToolTip      = "Creates encoder with calculated samplerates and clamped channels (or use \"Construct Encoder\")"))
+    static UOdinEncoder* CreateOdinEncoderFromGenerator(UObject* WorldContextObject, UPARAM(ref) UOdinRoom*& OdinRoom,
+                                                        UPARAM(ref) UAudioGenerator*& AudioGenerator);
 
+    static void LinkEncoderToRoom(UOdinEncoder* Encoder, UOdinRoom* Room);
+    static void UnlinkEncoderFromRoom(UOdinEncoder* Encoder);
+
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Register Decoder to Peer", ToolTip = "Register Decoder to Peer for a specific Odin Room."),
+              Category = "Odin|Audio Pipeline")
+    static void RegisterDecoder(UOdinDecoder* Decoder, UOdinRoom* Room, int64 PeerId);
+
+    UFUNCTION(BlueprintPure,
+              meta     = (DisplayName = "Get Decoders for Peer",
+                      ToolTip     = "Retrieves all decoders that have been registered for this room with the given peer id."),
+              Category = "Odin|Audio Pipeline")
+    static TArray<UOdinDecoder*> GetDecodersForPeer(UOdinRoom* Room, int64 PeerId);
+
+    UFUNCTION(BlueprintPure, meta = (ToolTip = "Retrieves all Odin Rooms that have been created with the given Room Id."), Category = "Odin|Audio Pipeline")
+    static TArray<UOdinRoom*> GetRoomsByName(const FString& RoomId);
     /**
-     * @param ObjectToCheck A weak object pointer to check for validity.
-     * @param CheckReferenceName The reference name associated with the object being checked. Used
-     * for debug logging, if the checked Reference Name is invalid.
-     * @return True if the object is valid, false if it is invalid.
+     * Deregisters the specified decoder from all active connections.
+     * @param Decoder The decoder to deregister.
      */
-    static bool Check(const TWeakObjectPtr<UObject> ObjectToCheck,
-                      const FString                &CheckReferenceName);
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Deregister Decoder From All", ToolTip = "Deregisters a Decoder from all connections it receives audio from."),
+              Category = "Odin|Audio Pipeline")
+    static void DeregisterDecoderFromAllConnections(UOdinDecoder* Decoder);
+
+    UFUNCTION(BlueprintPure,
+              meta     = (DisplayName = "To Vector", CompactNodeTitle = "->", ScriptMethod = "OdinPosition", Keywords = "cast convert", BlueprintAutocast),
+              Category = "Odin|Conversions")
+    static FVector Conv_OdinPositionToVector(FOdinPosition InPosition);
+
+    UFUNCTION(BlueprintPure,
+              meta     = (DisplayName = "To Odin Position", CompactNodeTitle = "->", ScriptMethod = "Vector", Keywords = "cast convert", BlueprintAutocast),
+              Category = "Odin|Conversions")
+    static FOdinPosition Conv_VectorToOdinPosition(const FVector& InPosition);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Channel Mask"))
+    static FOdinChannelMask CreateChannelMask(const TMap<int32, bool>& Channels, bool bDefaultValue);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels")
+    static void SetChannels(UPARAM(ref) FOdinChannelMask& Mask, const TMap<int32, bool>& Channels);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels")
+    static void SetChannelsEnabled(UPARAM(ref) FOdinChannelMask& Mask, const TArray<int32>& EnabledChannels);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels")
+    static void SetChannelsDisabled(UPARAM(ref) FOdinChannelMask& Mask, const TArray<int32>& DisabledChannels);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Channel Mask From Enabled"))
+    static FOdinChannelMask CreateChannelMaskFromEnabled(const TArray<int32>& EnabledChannels);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Channel Mask From Disabled"))
+    static FOdinChannelMask CreateChannelMaskFromDisabled(const TArray<int32>& DisabledChannels);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels")
+    static void SetChannelInMask(UPARAM(ref) FOdinChannelMask& Mask, int32 ChannelIndex, bool bEnabled);
+
+    UFUNCTION(BlueprintPure, Category = "Odin|Channels")
+    static bool IsChannelEnabledInMask(const FOdinChannelMask& Mask, const int32 ChannelIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Full Channel Mask"))
+    static FOdinChannelMask CreateFullMask();
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Empty Channel Mask"))
+    static FOdinChannelMask CreateEmptyMask();
 };
