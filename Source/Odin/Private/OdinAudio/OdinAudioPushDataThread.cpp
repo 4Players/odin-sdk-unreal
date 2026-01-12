@@ -106,9 +106,15 @@ void FOdinAudioPushDataThread::CleanupLinks()
 void FOdinAudioPushDataThread::PushQueuedAudio()
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::PushQueuedAudio);
-    FOdinEncoderAudioFrame Frame;
+    FOdinEncoderAudioFrame        Frame;
+    TMap<OdinEncoder*, OdinRoom*> LocalLinksCopy;
+    {
+        FScopeLock Lock(&EncoderRoomLinkCS);
+        LocalLinksCopy = EncoderRoomLinks;
+    }
+
     while (AudioPushQueue.Dequeue(Frame) && bIsRunning) {
-        if (Frame.EncoderHandle && !Frame.Audio.IsEmpty()) {
+        if (Frame.EncoderHandle && LocalLinksCopy.Contains(Frame.EncoderHandle) && !Frame.Audio.IsEmpty()) {
             TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread - odin_encoder_push);
             const OdinError Result = odin_encoder_push(Frame.EncoderHandle, Frame.Audio.GetData(), Frame.Audio.Num());
             ODIN_LOG(VeryVerbose, "%s calling odin_encoder_push.", ANSI_TO_TCHAR(__FUNCTION__));
@@ -123,8 +129,12 @@ void FOdinAudioPushDataThread::PopAllEncoders(TArray<uint8>& DatagramBuffer)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::PopAllEncoders);
 
-    FScopeLock Lock(&EncoderRoomLinkCS);
-    for (const TPair<OdinEncoder*, OdinRoom*>& Pair : EncoderRoomLinks) {
+    TMap<OdinEncoder*, OdinRoom*> LocalLinksCopy;
+    {
+        FScopeLock Lock(&EncoderRoomLinkCS);
+        LocalLinksCopy = EncoderRoomLinks;
+    }
+    for (const TPair<OdinEncoder*, OdinRoom*>& Pair : LocalLinksCopy) {
         OdinEncoder* EncoderHandle = Pair.Key;
         OdinRoom*    TargetRoom    = Pair.Value;
 
@@ -151,6 +161,13 @@ void FOdinAudioPushDataThread::PopAllEncoders(TArray<uint8>& DatagramBuffer)
                 } break;
                 case ODIN_ERROR_NO_DATA: {
                     ODIN_LOG(VeryVerbose, "%s: No data on odin_encoder_pop", ANSI_TO_TCHAR(__FUNCTION__));
+                    bHasData = false;
+                } break;
+                case ODIN_ERROR_ARGUMENT_INVALID_HANDLE: {
+                    ODIN_LOG(Log,
+                             "Invalid handle result during odin_encoder_pop. Single occurences of this line are expected. Many occurences can indicate an "
+                             "issue. Message: %s",
+                             *UOdinFunctionLibrary::FormatOdinError(static_cast<EOdinError>(EncoderPopResult), false));
                     bHasData = false;
                 } break;
                 default: {

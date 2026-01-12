@@ -173,7 +173,7 @@ enum class EOdinAudioEvents : uint8 {
     /**
      * Enables all available audio events.
      */
-    AUDIO_EVENTS_ALL = -1 UMETA(DisplayName = "ALL"),
+    AUDIO_EVENTS_ALL = static_cast<uint8>(-1) UMETA(DisplayName = "ALL"),
 };
 inline bool operator==(int a, EOdinAudioEvents b)
 {

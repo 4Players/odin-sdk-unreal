@@ -271,3 +271,8 @@ FOdinChannelMask UOdinFunctionLibrary::CreateEmptyMask()
 {
     return FOdinChannelMask::CreateEmpty();
 }
+
+bool UOdinFunctionLibrary::DoesAudioEventMatchFilter(EOdinAudioEvents Event, const int32 Filter)
+{
+    return (static_cast<int32>(Event) & Filter) != 0;
+}

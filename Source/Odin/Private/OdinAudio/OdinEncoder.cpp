@@ -184,12 +184,12 @@ bool UOdinEncoder::GetIsSilent() const
     return odin_encoder_is_silent(this->GetHandle());
 }
 
-bool UOdinEncoder::SetAudioEventHandler(int EFilter, UOdinEncoder* UserData) const
+bool UOdinEncoder::SetAudioEventHandler(int EFilter)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinEncoder::SetAudioEventHandler);
-    const TWeakObjectPtr<UOdinEncoder> DataPtr = UserData;
-    auto Result = odin_encoder_set_event_callback(this->GetHandle(), static_cast<enum OdinAudioEvents>(EFilter), this->OdinEncoderEventCallbackFunc,
-                                                  DataPtr.IsValid() ? DataPtr.Get() : nullptr);
+    const TWeakObjectPtr<UOdinEncoder> DataPtr = this;
+    const auto Result = odin_encoder_set_event_callback(this->GetHandle(), static_cast<enum OdinAudioEvents>(EFilter), this->OdinEncoderEventCallbackFunc,
+                                                        DataPtr.IsValid() ? DataPtr.Get() : nullptr);
     if (Result != OdinError::ODIN_ERROR_SUCCESS) {
         FOdinModule::LogErrorCode("Aborting SetAudioEventHandler due to invalid odin_encoder_set_event_callback call: %s", Result);
         return false;
@@ -197,28 +197,31 @@ bool UOdinEncoder::SetAudioEventHandler(int EFilter, UOdinEncoder* UserData) con
     return true;
 }
 
-void UOdinEncoder::HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> Encoder)
+void UOdinEncoder::HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> WeakEncoderPtr)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinEncoder::HandleOdinAudioEventCallback)
     auto filter = static_cast<EOdinAudioEvents>(Events);
     ODIN_LOG(VeryVerbose, "Received HandleOdinAudioEventCallback for Encoder %p, Event: %s (%d)", EncoderHandle, *UEnum::GetValueAsString(filter), Events);
-    if (!Encoder.IsValid() || Encoder.IsStale(true, true))
+    if (!WeakEncoderPtr.IsValid() || WeakEncoderPtr.IsStale(true, true)) {
+        ODIN_LOG(VeryVerbose, "HandleOdinAudioEventCallback is aborted, referenced Encoder UObject is not valid anymore for Encoder %p, Event: %s, (%d)",
+                 EncoderHandle, *UEnum::GetValueAsString(filter), Events);
         return;
-
-    // it is possible to proxy a callback
-    if (const OdinEncoder* userDataHandle = Encoder->GetHandle(); userDataHandle != EncoderHandle) {
-        ODIN_LOG(Verbose, "Received missmatch Encoder %p != %p in HandleOdinAudioEventCallback. Redirect to %p", EncoderHandle, userDataHandle, userDataHandle);
     }
 
-    if (Encoder->OnAudioEventCallbackBP.IsBound()) {
-        // dispatch
-        FFunctionGraphTask::CreateAndDispatchWhenReady(
-            [Encoder, filter]() {
-                if (Encoder->OnAudioEventCallbackBP.IsBound())
-                    Encoder->OnAudioEventCallbackBP.Broadcast(Encoder.Get(), filter);
-            },
-            TStatId(), nullptr, ENamedThreads::GameThread);
-    }
+    FFunctionGraphTask::CreateAndDispatchWhenReady(
+        [EncoderHandle, WeakEncoderPtr, filter]() {
+            if (UOdinEncoder* EncoderPtr = WeakEncoderPtr.Get()) {
+                // it is possible to proxy a callback
+                if (const OdinEncoder* userDataHandle = EncoderPtr->GetHandle(); userDataHandle != EncoderHandle) {
+                    ODIN_LOG(Verbose, "Received missmatch Encoder %p != %p in HandleOdinAudioEventCallback. Redirect to %p", EncoderHandle, userDataHandle,
+                             userDataHandle);
+                }
+                if (EncoderPtr->OnAudioEventCallbackBP.IsBound()) {
+                    EncoderPtr->OnAudioEventCallbackBP.Broadcast(EncoderPtr, filter);
+                }
+            }
+        },
+        TStatId(), nullptr, ENamedThreads::GameThread);
 }
 
 void UOdinEncoder::SetAudioGenerator(UAudioGenerator* Generator)

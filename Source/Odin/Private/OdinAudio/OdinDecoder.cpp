@@ -144,12 +144,12 @@ bool UOdinDecoder::GetIsSilent() const
     return odin_decoder_is_silent(this->GetNativeHandle());
 }
 
-bool UOdinDecoder::SetAudioEventHandler(int EFilter, UOdinDecoder *UserData) const
+bool UOdinDecoder::SetAudioEventHandler(int EFilter)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinDecoder::SetAudioEventHandler);
-    const TWeakObjectPtr<UOdinDecoder> DataPtr = UserData;
-    auto Result = odin_decoder_set_event_callback(this->GetNativeHandle(), static_cast<enum OdinAudioEvents>(EFilter), this->OdinDecoderEventCallbackFunc,
-                                                  DataPtr.IsValid() ? DataPtr.Get() : nullptr);
+    const TWeakObjectPtr<UOdinDecoder> DataPtr = this;
+    const auto Result = odin_decoder_set_event_callback(this->GetNativeHandle(), static_cast<enum OdinAudioEvents>(EFilter), this->OdinDecoderEventCallbackFunc,
+                                                        DataPtr.IsValid() ? DataPtr.Get() : nullptr);
     if (Result != OdinError::ODIN_ERROR_SUCCESS) {
         FOdinModule::LogErrorCode("Aborting SetAudioEventHandler due to invalid odin_decoder_set_event_callback call: %s", Result);
         return false;
@@ -162,20 +162,22 @@ void UOdinDecoder::HandleOdinAudioEventCallback(OdinDecoder *DecoderHandle, cons
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinDecoder::HandleOdinAudioEventCallback)
     auto filter = static_cast<EOdinAudioEvents>(Events);
     ODIN_LOG(VeryVerbose, "Received HandleOdinAudioEventCallback for Decoder %p, Event: %s (%d)", DecoderHandle, *UEnum::GetValueAsString(filter), Events);
-    const UOdinSubsystem        *OdinSubsystem    = UOdinSubsystem::Get();
-    TWeakObjectPtr<UOdinDecoder> DecoderObjectPtr = OdinSubsystem->GetDecoderByHandle(DecoderHandle);
-    if (!DecoderObjectPtr.IsValid() || DecoderObjectPtr.IsStale(true, true))
-        return;
 
-    if (DecoderObjectPtr->OnAudioEventCallbackBP.IsBound()) {
-        // dispatch
-        FFunctionGraphTask::CreateAndDispatchWhenReady(
-            [DecoderObjectPtr, filter]() {
-                if (DecoderObjectPtr->OnAudioEventCallbackBP.IsBound())
-                    DecoderObjectPtr->OnAudioEventCallbackBP.Broadcast(DecoderObjectPtr.Get(), filter);
-            },
-            TStatId(), nullptr, ENamedThreads::GameThread);
-    }
+    FFunctionGraphTask::CreateAndDispatchWhenReady(
+        [DecoderHandle, filter, Events]() {
+            const UOdinSubsystem        *OdinSubsystem    = UOdinSubsystem::Get();
+            TWeakObjectPtr<UOdinDecoder> DecoderObjectPtr = OdinSubsystem->GetDecoderByHandle(DecoderHandle);
+            if (!DecoderObjectPtr.IsValid() || DecoderObjectPtr.IsStale(true, true)) {
+                ODIN_LOG(VeryVerbose,
+                         "HandleOdinAudioEventCallback is aborted, referenced Decoder UObject is not valid anymore for Decoder %p, Event: %s, (%d)",
+                         DecoderHandle, *UEnum::GetValueAsString(filter), Events);
+                return;
+            }
+            if (DecoderObjectPtr->OnAudioEventCallbackBP.IsBound()) {
+                DecoderObjectPtr->OnAudioEventCallbackBP.Broadcast(DecoderObjectPtr.Get(), filter);
+            }
+        },
+        TStatId(), nullptr, ENamedThreads::GameThread);
 }
 
 int64 UOdinDecoder::GetActiveChannelMask() const

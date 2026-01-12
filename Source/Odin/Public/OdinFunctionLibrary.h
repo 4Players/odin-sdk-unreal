@@ -113,4 +113,8 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 
     UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Empty Channel Mask"))
     static FOdinChannelMask CreateEmptyMask();
+
+    UFUNCTION(BlueprintPure, Category = "Odin|Audio Pipeline|Events", meta = (CompactNodeTitle = "In Filter"), meta = (Keywords = "Audio Event Filter"))
+    static bool DoesAudioEventMatchFilter(EOdinAudioEvents                                                                                      Event,
+                                          UPARAM(meta = (DisplayName = "Filter", Bitmask, BitmaskEnum = "/Script/Odin.EOdinAudioEvents")) int32 Filter);
 };

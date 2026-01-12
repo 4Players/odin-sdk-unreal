@@ -128,7 +128,8 @@ class ODIN_API UOdinEncoder : public UObject
      * silence detection state of the encoder, which updates as audio is processed.
      * @remarks Always returns true, if the passed encoder is invalid.
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get SilentFlag", ToolTip = "Get the silent flag of a encoder"), Category = "Odin|Audio Pipeline")
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Get Silent Flag", ToolTip = "Get the silent flag of a encoder", KeyWords = "IsSilent Silent"),
+              Category = "Odin|Audio Pipeline")
     bool GetIsSilent() const;
 
     /**
@@ -136,18 +137,19 @@ class ODIN_API UOdinEncoder : public UObject
      * types will trigger the callback, allowing selective handling.
      * @remarks Any previously registered callback is replaced.
      */
-    UFUNCTION(BlueprintCallable, BlueprintPure = false,
+    UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Register AudioEvent Handler", ToolTip = "Set OnAudioEventCallback of the encoder", DefaultToSelf = "UserData"),
               Category = "Odin|Audio Pipeline|Events")
-    bool SetAudioEventHandler(UPARAM(meta = (DisplayName = "Filter", Bitmask, BitmaskEnum = "/Script/Odin.EOdinAudioEvents")) int EFilter,
-                              UOdinEncoder*                                                                                       UserData = nullptr) const;
+    bool SetAudioEventHandler(UPARAM(meta = (DisplayName = "Filter", Bitmask, BitmaskEnum = EOdinAudioEvents)) int32 EFilter = 1);
 
-    UDELEGATE(BlueprintAuthorityOnly)
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinEncoderAudioEventCallbackDelegate, UOdinEncoder*, encoder, EOdinAudioEvents, filter);
     /**
      * A callback invoked when the encoder reports one or more audio events.
+     *
+     * @attention Please remember to start listening by calling SetAudioEventHandler!
      */
-    UPROPERTY(BlueprintAssignable, Category = "Odin|Audio Pipeline|Events")
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Audio Pipeline|Events",
+              meta = (ToolTip = "Invoked when the encoder reports an audio event. Don't forget to start listening by calling SetAudioEventHandler!"))
     FOdinEncoderAudioEventCallbackDelegate OnAudioEventCallbackBP;
     /**
      * Internal Encoder callback hook to redirect incoming callback for audio events
@@ -277,7 +279,7 @@ class ODIN_API UOdinEncoder : public UObject
     UPROPERTY()
     UOdinHandle*          Handle;
     FAudioGeneratorHandle Audio_Generator_Handle;
-    static void           HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> Encoder);
+    static void           HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> WeakEncoderPtr);
 
     TUniquePtr<FOdinSubmixListener> SubmixListener;
 };
