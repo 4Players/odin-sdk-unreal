@@ -21,10 +21,14 @@
                 <isArch arch="x86_64">
                     <copyFile src="$S(AbsPluginDir)/x64/Android/libodin.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin.so" />
                     <log text="Copying libodin.so" />
+                    <copyFile src="$S(AbsPluginDir)/x64/Android/libodin_crypto.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin_crypto.so" />
+                    <log text="Copying libodin_crypto.so" />
                 </isArch>
                 <isArch arch="arm64-v8a">
                     <copyFile src="$S(AbsPluginDir)/arm64/Android/libodin.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin.so" />
                     <log text="Copying libodin.so" />
+                    <copyFile src="$S(AbsPluginDir)/arm64/Android/libodin_crypto.so" dst="$S(BuildDir)/libs/$S(Architecture)/libodin_crypto.so" />
+                    <log text="Copying libodin_crypto.so" />
                 </isArch>
             </true>
         </if>

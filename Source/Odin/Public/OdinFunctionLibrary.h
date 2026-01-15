@@ -53,7 +53,8 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     static void LinkEncoderToRoom(UOdinEncoder* Encoder, UOdinRoom* Room);
     static void UnlinkEncoderFromRoom(UOdinEncoder* Encoder);
 
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Register Decoder to Peer", ToolTip = "Register Decoder to Peer for a specific Odin Room."),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Register Decoder to Peer", ToolTip = "Register Decoder to Peer for a specific Odin Room.", Keywords = "Link"),
               Category = "Odin|Audio Pipeline")
     static void RegisterDecoder(UOdinDecoder* Decoder, UOdinRoom* Room, int64 PeerId);
 
@@ -70,7 +71,8 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
      * @param Decoder The decoder to deregister.
      */
     UFUNCTION(BlueprintCallable,
-              meta     = (DisplayName = "Deregister Decoder From All", ToolTip = "Deregisters a Decoder from all connections it receives audio from."),
+              meta     = (DisplayName = "Deregister Decoder From All", ToolTip = "Deregisters a Decoder from all connections it receives audio from.",
+                      Keywords = "Unlink"),
               Category = "Odin|Audio Pipeline")
     static void DeregisterDecoderFromAllConnections(UOdinDecoder* Decoder);
 
