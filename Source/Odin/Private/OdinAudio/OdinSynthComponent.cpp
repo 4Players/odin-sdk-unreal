@@ -63,7 +63,7 @@ void UOdinSynthComponent::SetDecoder(UOdinDecoder* InDecoder)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinSynthComponent::SetDecoder);
 
-    if (InDecoder && InDecoder != Decoder) {
+    if (InDecoder != Decoder) {
         Decoder = InDecoder;
 
         if (OdinSoundGeneratorPtr.IsValid()) {
@@ -100,9 +100,7 @@ void UOdinSynthComponent::BeginPlay()
 
 void UOdinSynthComponent::BeginDestroy()
 {
-    if (OdinSoundGeneratorPtr.IsValid()) {
-        OdinSoundGeneratorPtr.Reset();
-    }
+    CloseSoundGenerator();
     Super::BeginDestroy();
     ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
 }
@@ -125,8 +123,17 @@ void UOdinSynthComponent::OnUnregister()
     ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
 }
 
+void UOdinSynthComponent::CloseSoundGenerator()
+{
+    if (OdinSoundGeneratorPtr.IsValid()) {
+        OdinSoundGeneratorPtr->Close();
+        OdinSoundGeneratorPtr.Reset();
+    }
+}
+
 void UOdinSynthComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+    CloseSoundGenerator();
     Super::EndPlay(EndPlayReason);
     ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
 }

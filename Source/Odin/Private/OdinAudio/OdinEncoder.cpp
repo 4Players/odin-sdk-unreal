@@ -8,11 +8,11 @@
 #include "OdinVoice.h"
 #include "SampleBuffer.h"
 #include "OdinAudio/OdinPipeline.h"
-#include "Engine/Engine.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 UOdinEncoder::UOdinEncoder(const class FObjectInitializer& PCIP)
     : Super(PCIP)
-    , SubmixListener(MakeUnique<FOdinSubmixListener>())
+    , SubmixListener(MakeShared<FOdinSubmixListener>())
 {
 }
 
@@ -29,6 +29,7 @@ void UOdinEncoder::BeginDestroy()
     if (Pipeline) {
         Pipeline->OnApmConfigChanged.RemoveDynamic(this, &UOdinEncoder::OnPipelineApmConfigChanged);
     }
+    SubmixListener->DetachFromSubmix();
     SubmixListener.Reset();
 
     Super::BeginDestroy();
@@ -387,7 +388,6 @@ FOdinSubmixListener::FOdinSubmixListener()
 FOdinSubmixListener::~FOdinSubmixListener()
 {
     ODIN_LOG(Log, "Odin Submix Listener destroyed.");
-    DetachFromSubmix();
     FAudioDeviceManagerDelegates::OnAudioDeviceCreated.Remove(AudioDeviceCreatedCallbackHandle);
     FAudioDeviceManagerDelegates::OnAudioDeviceDestroyed.Remove(AudioDeviceDestroyedCallbackHandle);
 }
@@ -439,7 +439,14 @@ void FOdinSubmixListener::AttachToSubmix()
         bIsListening = true;
         ListenTargetId.Reset();
         ListenTargetId = MakeShared<Audio::DeviceID>(AudioDevice.GetDeviceID());
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 4
+        USoundSubmix* ConnectedSubmix = &AudioDevice->GetMainSubmixObject();
+        AudioDevice->RegisterSubmixBufferListener(AsShared(), *ConnectedSubmix);
+#else
         AudioDevice->RegisterSubmixBufferListener(this);
+#endif
+
         ODIN_LOG(Log, "FOdinSubmixListener::AttachToSubmix Successfully started listening to submix");
     }
 }
@@ -467,7 +474,18 @@ void FOdinSubmixListener::DetachFromSubmix()
     }
 
     if (FAudioDeviceHandle AudioDevice = FAudioDevice::GetAudioDeviceManager()->GetAudioDevice(*ListenTargetId); AudioDevice.IsValid()) {
+
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 4
+        USoundSubmix* ConnectedSubmix = &AudioDevice->GetMainSubmixObject();
+        if (!ConnectedSubmix) {
+            UE_LOG(Odin, Error, TEXT("UOdinSubmixListener: StopSubmixListener failed, Connected Submix is invalid."));
+            return;
+        }
+        AudioDevice->UnregisterSubmixBufferListener(AsShared(), *ConnectedSubmix);
+#else
         AudioDevice->UnregisterSubmixBufferListener(this);
+#endif
+
         bIsListening = false;
         ListenTargetId.Reset();
         ODIN_LOG(Log, "FOdinSubmixListener::DetachFromSubmix Successfully detached from listening to submix");

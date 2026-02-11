@@ -27,9 +27,6 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     static FString FormatOdinError(EOdinError Code, bool bUETrace);
 
     UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
-    static FString BytesToString(const TArray<uint8>& Data);
-
-    UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")
     static void OdinStringToBytes(const FString& Str, TArray<uint8>& Buffer);
 
     UFUNCTION(BlueprintPure, Category = "Odin|Custom Data")

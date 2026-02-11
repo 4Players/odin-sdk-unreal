@@ -281,7 +281,7 @@ class ODIN_API UOdinEncoder : public UObject
     FAudioGeneratorHandle Audio_Generator_Handle;
     static void           HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> WeakEncoderPtr);
 
-    TUniquePtr<FOdinSubmixListener> SubmixListener;
+    TSharedPtr<FOdinSubmixListener> SubmixListener;
 };
 
 class ODIN_API FOdinSubmixListener : public ISubmixBufferListener

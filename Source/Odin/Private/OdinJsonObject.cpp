@@ -33,10 +33,9 @@ UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromString(UObject *WorldCo
 
 UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromBytes(UObject *WorldContextObject, const TArray<uint8> &Data)
 {
-    auto obj    = NewObject<UOdinJsonObject>();
-    auto s_data = UOdinFunctionLibrary::BytesToString(Data);
-    obj->DecodeJson(s_data);
-    return obj;
+    FString Result;
+    UOdinFunctionLibrary::OdinBytesToString(Data, Result);
+    return ConstructJsonObjectFromString(WorldContextObject, Result);
 }
 
 void UOdinJsonObject::Reset()

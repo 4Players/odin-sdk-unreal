@@ -20,6 +20,13 @@ FOdinSoundGenerator::~FOdinSoundGenerator()
     ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
 }
 
+void FOdinSoundGenerator::ResetConnectedDecoder()
+{
+    OdinDecoderHandle.Reset();
+    FScopeLock HandleAccess(&NativeHandleAccessSection);
+    NativeDecoderHandle = nullptr;
+}
+
 void FOdinSoundGenerator::SetOdinDecoder(UOdinDecoder* InDecoder)
 {
     if (InDecoder) {
@@ -34,18 +41,14 @@ void FOdinSoundGenerator::SetOdinDecoder(UOdinDecoder* InDecoder)
         }
 
     } else {
-        ODIN_LOG(Error, "Tried using a nullptr as input. Please provide a valid UOdinDecoder pointer.");
+        ODIN_LOG(Log, "Input decoder pointer was null. Resetting UObject decoder handle and native decoder handle.");
+        ResetConnectedDecoder();
     }
 }
 
 void FOdinSoundGenerator::Close()
 {
-    OdinDecoderHandle.Reset();
-    {
-        FScopeLock HandleAccess(&NativeHandleAccessSection);
-        NativeDecoderHandle = nullptr;
-    }
-
+    ResetConnectedDecoder();
     bIsFinished = true;
 }
 
@@ -54,7 +57,7 @@ int32 FOdinSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
     TRACE_CPUPROFILER_EVENT_SCOPE(OdinSoundGenerator::OnGenerateAudio)
     ODIN_LOG(VeryVerbose, "OnGenerateAudio called, requested NumSamples %d", NumSamples);
     if (nullptr == NativeDecoderHandle) {
-        return 0;
+        return NumSamples;
     }
 
     bool      bIsSilence = false;
@@ -71,18 +74,23 @@ int32 FOdinSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
     if (Result == ODIN_ERROR_SUCCESS) {
         NumGeneratedSamples = NumSamples;
     } else {
-        if (Result != ODIN_ERROR_NO_DATA) {
+        if (Result == ODIN_ERROR_ARGUMENT_INVALID_HANDLE) {
+            ODIN_LOG(Log, "Aborting Pop due to invalid native Odin Decoder handle: %s. Resetting connected Decoder.",
+                     *UOdinFunctionLibrary::FormatOdinError(static_cast<EOdinError>(Result), false));
+            ResetConnectedDecoder();
+
+        } else if (Result != ODIN_ERROR_NO_DATA) {
             ODIN_LOG(Error, "Aborting Pop due to invalid odin_decoder_pop call: %s",
                      *UOdinFunctionLibrary::FormatOdinError(static_cast<EOdinError>(Result), false));
         }
-        NumGeneratedSamples = 0;
+        NumGeneratedSamples = NumSamples;
     }
 
     if (NumGeneratedSamples > NumSamples) {
         ODIN_LOG(Verbose, "Error while reading data from Odin in OdinSoundGenerator::OnGenerateAudio "
                           "number of read samples returned by Odin is larger than requested number of "
                           "samples.")
-        return 0;
+        return NumSamples;
     }
 
     if (NumGeneratedSamples > 0) {

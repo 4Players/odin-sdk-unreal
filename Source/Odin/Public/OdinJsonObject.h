@@ -81,10 +81,10 @@ class ODIN_API UOdinJsonObject : public UObject
     UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
     void MergeJsonObject(UOdinJsonObject* InJsonObject, bool Overwrite);
 
-    UFUNCTION(BlueprintPure, Category = "Odin|Json Utilities")
+    UFUNCTION(BlueprintPure, Category = "Odin|Json Utilities", meta = (keywords = "Get Float Field"))
     float GetNumberField(const FString& FieldName) const;
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities")
+    UFUNCTION(BlueprintCallable, Category = "Odin|Json Utilities", meta = (keywords = "Set Float Field"))
     void SetNumberField(const FString& FieldName, float Number);
 
     UFUNCTION(BlueprintPure, Category = "Odin|Json Utilities")

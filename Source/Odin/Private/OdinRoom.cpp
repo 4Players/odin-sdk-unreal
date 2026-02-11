@@ -306,14 +306,14 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
         if (ParsedRpc->TryGetObjectField(FOdinRoomStatusChanged::Name, EventObject)) {
             if (EventObject) {
                 const bool bSuccess = DeserializeAndBroadcast<FOdinRoomStatusChanged>(
-                    *EventObject, RoomObjectPtr,
-                    [Delegate = RoomObjectPtr->OnRoomStatusChangedBP](TWeakObjectPtr<UOdinRoom> OdinRoom, FOdinRoomStatusChanged EventData) {
+                    *EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> OdinRoom, FOdinRoomStatusChanged EventData) {
                         if (!OdinRoom.IsValid()) {
                             return;
                         }
 
                         OdinRoom->Status = EventData;
 
+                        FOdinRoomStatusChangedDelegate Delegate = OdinRoom->OnRoomStatusChangedBP;
                         if (Delegate.IsBound()) {
                             Delegate.Broadcast(OdinRoom.Get(), EventData);
                         }
@@ -335,13 +335,14 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
         if (ParsedRpc->TryGetObjectField(FOdinNewReconnectToken::Name, EventObject)) {
             if (EventObject
                 && !DeserializeAndBroadcast<FOdinNewReconnectToken>(
-                    *EventObject, RoomObjectPtr,
-                    [Delegate = RoomObjectPtr->OnRoomNewReconnectTokenBP](TWeakObjectPtr<UOdinRoom> room, FOdinNewReconnectToken data) {
-                        if (!room.IsValid())
+                    *EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinNewReconnectToken data) {
+                        if (!room.IsValid()) {
                             return;
+                        }
 
                         room->ReconnectToken = data;
 
+                        FOdinNewReconnectTokenDelegate Delegate = room->OnRoomNewReconnectTokenBP;
                         if (Delegate.IsBound()) {
                             Delegate.Broadcast(room.Get(), data);
                         }
@@ -358,17 +359,17 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
             StringifyRpcField(EventObject, "message");
 
             if (EventObject
-                && !DeserializeAndBroadcast<FOdinMessageReceived>(
-                    *EventObject, RoomObjectPtr,
-                    [Delegate = RoomObjectPtr->OnRoomMessageReceivedBP](TWeakObjectPtr<UOdinRoom> room, FOdinMessageReceived data) {
-                        if (!room.IsValid())
-                            return;
+                && !DeserializeAndBroadcast<FOdinMessageReceived>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinMessageReceived data) {
+                       if (!room.IsValid()) {
+                           return;
+                       }
 
-                        if (Delegate.IsBound()) {
-                            Delegate.Broadcast(room.Get(), data);
-                        }
-                        ODIN_LOG(Verbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinMessageReceived::Name, data.sender_peer_id, *data.message);
-                    })) {
+                       FOdinMessageReceivedDelegate Delegate = room->OnRoomMessageReceivedBP;
+                       if (Delegate.IsBound()) {
+                           Delegate.Broadcast(room.Get(), data);
+                       }
+                       ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinMessageReceived::Name, data.sender_peer_id);
+                   })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinMessageReceived::Name);
             }
             return;
@@ -376,19 +377,17 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
 
         // Joined
         if (ParsedRpc->TryGetObjectField(FOdinJoined::Name, EventObject)) {
-            if (EventObject
-                && !DeserializeAndBroadcast<FOdinJoined>(*EventObject, RoomObjectPtr,
-                                                         [Delegate = RoomObjectPtr->OnRoomJoinedBP](TWeakObjectPtr<UOdinRoom> room, FOdinJoined data) {
-                                                             if (!room.IsValid())
-                                                                 return;
+            if (EventObject && !DeserializeAndBroadcast<FOdinJoined>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinJoined data) {
+                    if (!room.IsValid())
+                        return;
 
-                                                             room->State = data;
-
-                                                             if (Delegate.IsBound()) {
-                                                                 Delegate.Broadcast(room.Get(), data);
-                                                             }
-                                                             ODIN_LOG(Verbose, "Successfully parsed event %s: \"%s\"", *FOdinJoined::Name, *data.room_id);
-                                                         })) {
+                    room->State                  = data;
+                    FOdinJoinedDelegate Delegate = room->OnRoomJoinedBP;
+                    if (Delegate.IsBound()) {
+                        Delegate.Broadcast(room.Get(), data);
+                    }
+                    ODIN_LOG(Verbose, "Successfully parsed event %s: \"%s\"", *FOdinJoined::Name, *data.room_id);
+                })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinJoined::Name);
             }
             return;
@@ -397,19 +396,22 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
         // PeerJoined
         if (ParsedRpc->TryGetObjectField(FOdinPeerJoined::Name, EventObject)) {
             // Stringify (replace) "user_data" to maintain full custom user data
-            StringifyRpcField(EventObject, "user_data");
+            // StringifyRpcField(EventObject, "user_data");
 
-            if (EventObject
-                && !DeserializeAndBroadcast<FOdinPeerJoined>(
-                    *EventObject, RoomObjectPtr, [Delegate = RoomObjectPtr->OnRoomPeerJoinedBP](TWeakObjectPtr<UOdinRoom> room, FOdinPeerJoined data) {
-                        if (!room.IsValid())
-                            return;
+            auto BroadcastDelegate = [](TWeakObjectPtr<UOdinRoom> room, FOdinPeerJoined data) {
+                if (!room.IsValid()) {
+                    return;
+                }
 
-                        if (Delegate.IsBound()) {
-                            Delegate.Broadcast(room.Get(), data);
-                        }
-                        ODIN_LOG(Verbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinPeerJoined::Name, data.peer_id, *data.user_id);
-                    })) {
+                FOdinPeerJoinedDelegate Delegate = room->OnRoomPeerJoinedBP;
+                if (Delegate.IsBound()) {
+                    Delegate.Broadcast(room.Get(), data);
+                }
+                ODIN_LOG(Verbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinPeerJoined::Name, data.peer_id, *data.user_id);
+            };
+
+            const bool bParsingSuccess = !DeserializeAndBroadcast<FOdinPeerJoined>(*EventObject, RoomObjectPtr, BroadcastDelegate);
+            if (EventObject && bParsingSuccess) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerJoined::Name);
             }
             return;
@@ -418,20 +420,21 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
         // PeerChanged
         if (ParsedRpc->TryGetObjectField(FOdinPeerChanged::Name, EventObject)) {
             // Stringify (replace) "user_data" and "parameters"
-            StringifyRpcField(EventObject, "user_data");
+            // StringifyRpcField(EventObject, "user_data");
             StringifyRpcField(EventObject, "parameters");
 
             if (EventObject
-                && !DeserializeAndBroadcast<FOdinPeerChanged>(
-                    *EventObject, RoomObjectPtr, [Delegate = RoomObjectPtr->OnRoomPeerChangedBP](TWeakObjectPtr<UOdinRoom> room, FOdinPeerChanged data) {
-                        if (!room.IsValid())
-                            return;
+                && !DeserializeAndBroadcast<FOdinPeerChanged>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinPeerChanged data) {
+                       if (!room.IsValid()) {
+                           return;
+                       }
 
-                        if (Delegate.IsBound()) {
-                            Delegate.Broadcast(room.Get(), data);
-                        }
-                        ODIN_LOG(Verbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinPeerChanged::Name, data.peer_id, *data.user_data);
-                    })) {
+                       FOdinPeerChangedDelegate Delegate = room->OnRoomPeerChangedBP;
+                       if (Delegate.IsBound()) {
+                           Delegate.Broadcast(room.Get(), data);
+                       }
+                       ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerChanged::Name, data.peer_id);
+                   })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerChanged::Name);
             }
             return;
@@ -439,17 +442,16 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
 
         // PeerLeft
         if (ParsedRpc->TryGetObjectField(FOdinPeerLeft::Name, EventObject)) {
-            if (EventObject
-                && !DeserializeAndBroadcast<FOdinPeerLeft>(*EventObject, RoomObjectPtr,
-                                                           [Delegate = RoomObjectPtr->OnRoomPeerLeftBP](TWeakObjectPtr<UOdinRoom> room, FOdinPeerLeft data) {
-                                                               if (!room.IsValid())
-                                                                   return;
-
-                                                               if (Delegate.IsBound()) {
-                                                                   Delegate.Broadcast(room.Get(), data);
-                                                               }
-                                                               ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
-                                                           })) {
+            if (EventObject && !DeserializeAndBroadcast<FOdinPeerLeft>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinPeerLeft data) {
+                    if (!room.IsValid()) {
+                        return;
+                    }
+                    FOdinPeerLeftDelegate Delegate = room->OnRoomPeerLeftBP;
+                    if (Delegate.IsBound()) {
+                        Delegate.Broadcast(room.Get(), data);
+                    }
+                    ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
+                })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerLeft::Name);
             }
             return;

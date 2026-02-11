@@ -39,22 +39,13 @@ FString UOdinFunctionLibrary::FormatOdinError(EOdinError Code, bool bUETrace)
     return Tag.Append(ErrorString);
 }
 
-FString UOdinFunctionLibrary::BytesToString(const TArray<uint8>& Data)
-{
-    return ::BytesToString(Data.GetData(), Data.Num());
-}
-
 void UOdinFunctionLibrary::OdinStringToBytes(const FString& Input, TArray<uint8>& Buffer)
 {
-    if (0 == Input.Len()) {
-        Buffer.Empty(); // '\0' == NULL
-        return;
-    }
+    const auto   Utf8String = StringCast<UTF8CHAR>(*Input);
+    const uint32 size       = Utf8String.Length();
 
-    const auto   astr = StringCast<ANSICHAR>(*Input);
-    const uint32 size = astr.Length() + 1; // include '\0'
-    Buffer.AddUninitialized(size);
-    FMemory::Memcpy(Buffer.GetData(), astr.Get(), size);
+    Buffer.SetNumUninitialized(size);
+    FMemory::Memcpy(Buffer.GetData(), Utf8String.Get(), size);
 }
 
 void UOdinFunctionLibrary::OdinHexStringToBytes(const FString& Input, TArray<uint8>& Buffer)
@@ -70,13 +61,8 @@ void UOdinFunctionLibrary::OdinHexStringToBytes(const FString& Input, TArray<uin
 
 void UOdinFunctionLibrary::OdinBytesToString(const TArray<uint8>& Buffer, FString& Str)
 {
-    if (0 == Buffer.Num()) {
-        Str = "";
-        return;
-    }
-
-    auto strPtr = StringCast<UTF8CHAR>((UTF8CHAR*)Buffer.GetData(), Buffer.Num());
-    Str         = FString(strPtr);
+    const UTF8CHAR* UTF8Char = reinterpret_cast<const UTF8CHAR*>(Buffer.GetData());
+    Str                      = FString(Buffer.Num(), UTF8Char);
 }
 
 void UOdinFunctionLibrary::OdinBytesToHexString(const TArray<uint8>& Buffer, FString& Str)

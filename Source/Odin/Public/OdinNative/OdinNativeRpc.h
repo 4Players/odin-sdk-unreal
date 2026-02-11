@@ -48,7 +48,7 @@ struct FOdinMessageReceived {
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
     int64 sender_peer_id = 0;
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
-    FString message;
+    TArray<uint8> message;
 
     static const FString Name;
 };
@@ -78,7 +78,7 @@ struct FOdinPeerJoined {
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
     FString user_id;
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
-    FString user_data;
+    TArray<uint8> user_data;
 
     static const FString Name;
 };
@@ -91,7 +91,7 @@ struct FOdinPeerChanged {
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
     int64 peer_id = 0;
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
-    FString user_data;
+    TArray<uint8> user_data;
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Events")
     TArray<FString> tags;
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Events")
@@ -119,7 +119,7 @@ struct FOdinChangeSelf {
 
   public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin|Events")
-    FString user_data;
+    TArray<uint8> user_data;
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Events")
     TArray<FString> tags;
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Events")
@@ -215,7 +215,7 @@ struct FOdinSendMessage {
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin|Events")
     TArray<int64> peer_ids;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin|Events")
-    FString message;
+    TArray<uint8> message;
 
     static const FString Name;
     FString              ToJson() const

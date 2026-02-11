@@ -30,6 +30,12 @@ class FOdinAudioPushDataThread : public FRunnable
      */
     bool UnlinkEncoder(OdinEncoder* EncoderHandle);
 
+    /**
+     * Queues audio data to be pushed to a specific encoder.
+     *
+     * @param TargetEncoder The encoder to which the audio data belongs.
+     * @param Audio The audio data buffer to be processed.
+     */
     void PushAudioToEncoder(OdinEncoder* TargetEncoder, TArray<float>&& Audio);
 
     virtual uint32 Run() override;

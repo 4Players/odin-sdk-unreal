@@ -40,6 +40,10 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UFUNCTION(BlueprintPure, Category = "Odin|Sound")
     UOdinDecoder* GetDecoder() const;
 
+    /**
+     * Returns the internal audio component associated with this synth component.
+     * @return The connected UAudioComponent.
+     */
     UFUNCTION(BlueprintPure, Category = "Sound")
     UAudioComponent* GetConnectedAudioComponent();
 
@@ -63,6 +67,7 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     virtual void BeginDestroy() override;
     virtual void OnRegister() override;
     virtual void OnUnregister() override;
+    void         CloseSoundGenerator();
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     /**
      * Holds a reference to an Odin Decoder instance for retrieving audio data in the Odin Synth Component.
