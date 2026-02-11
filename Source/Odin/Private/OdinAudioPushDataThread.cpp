@@ -58,7 +58,7 @@ uint32 FOdinAudioPushDataThread::Run()
                 if (odin_is_error(PushResult)) {
                     FString FormatOdinError =
                         UOdinFunctionLibrary::FormatOdinError(PushResult, false);
-                    UE_LOG(Odin, Error,
+                    UE_LOG(Odin, Verbose,
                            TEXT("FOdinAudioPushDataThread failed calling odin_audio_push_data, "
                                 "reason: %s"),
                            *FormatOdinError);

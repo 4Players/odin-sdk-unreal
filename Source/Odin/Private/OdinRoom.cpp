@@ -453,7 +453,7 @@ void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event
                     }
                     TWeakObjectPtr<UOdinMediaBase> media =
                         *WeakOdinRoom->medias_.Find(media_handle);
-                    if (media.IsValid()) {
+                    if (media.IsValid() && WeakOdinRoom->onMediaActiveStateChanged.IsBound()) {
                         WeakOdinRoom->onMediaActiveStateChanged.Broadcast(
                             peer_id, media.Get(), active, WeakOdinRoom.Get());
                     }

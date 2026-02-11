@@ -11,22 +11,32 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(OdinMediaSoundGenerator::OnGenerateAudio)
     if (!PlaybackStreamReader.IsValid()) {
-        return 0;
+        return NumSamples;
     }
 
     const OdinReturnCode& ReturnCode =
         PlaybackStreamReader->ReadData(PlaybackStreamReadIndex, OutAudio, NumSamples);
     if (odin_is_error(ReturnCode)) {
         const FString FormattedError = UOdinFunctionLibrary::FormatError(ReturnCode, false);
-        UE_LOG(Odin, Verbose,
-               TEXT("Notification while reading data from Odin in "
+        if (FormattedError == "media is invalid") {
+            UE_LOG(
+                Odin, Verbose,
+                TEXT(
+                    "Notification while reading data from Odin in "
                     "OdinMediaSoundGenerator::OnGenerateAudio, "
                     "Message: %s, could be due to media being removed. This message is expected to "
                     "appear a few times during normal usage."),
-               *FormattedError);
-        PlaybackStreamReader.Reset();
-        bWasMediaStreamInvalid = true;
-        return 0;
+                *FormattedError);
+            PlaybackStreamReader.Reset();
+            bWasMediaStreamInvalid = true;
+        } else {
+            UE_LOG(Odin, Error,
+                   TEXT("Error while reading data from Odin in "
+                        "OdinMediaSoundGenerator::OnGenerateAudio, Message: %s"),
+                   *FormattedError);
+        }
+
+        return NumSamples;
     }
 
     int32 ReadSamples = static_cast<int32>(ReturnCode);
@@ -36,7 +46,7 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
                     "UOdinSynthComponent::OnGenerateAudio, "
                     "number of read samples returned by Odin is larger than requested number of "
                     "samples."));
-        return 0;
+        return NumSamples;
     }
     return ReturnCode;
 }

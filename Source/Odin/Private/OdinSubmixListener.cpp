@@ -83,14 +83,6 @@ void UOdinSubmixListener::StartSubmixListener()
                     "available."));
         return;
     }
-    const int32 SampleRate = AudioDeviceHandle->SampleRate;
-    if (SampleRate != OdinSampleRate) {
-        UE_LOG(Odin, Warning,
-               TEXT("OdinSubmixListener: Detected difference in sample rate: %d In Sample Rate and "
-                    "%d Odin Sample "
-                    "Rate. Echo Cancellation will not work correctly!"),
-               SampleRate, OdinSampleRate);
-    }
 
     const FOnSubmixBufferListenerError ErrorDelegate =
         FOnSubmixBufferListenerError::CreateUObject(this, &UOdinSubmixListener::StopSubmixListener);
