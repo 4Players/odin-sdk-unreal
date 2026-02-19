@@ -145,8 +145,10 @@ bool UOdinPipeline::SetVadConfig(int32 EffectId, FOdinVadConfig Config)
 {
     OdinVadConfig cfg = Config;
     auto          ret = odin_pipeline_set_vad_config(this->GetHandle(), EffectId, &cfg);
-    if (ret == OdinError::ODIN_ERROR_SUCCESS)
+    if (ret == OdinError::ODIN_ERROR_SUCCESS) {
+        ODIN_LOG(Log, "Successfully changed VAD Configuration.");
         return true;
+    }
 
     FOdinModule::LogErrorCode("Aborting SetVadConfig due to invalid odin_pipeline_set_vad_config call: %s", ret);
     return false;

@@ -100,7 +100,7 @@ void UOdinSubsystem::DeregisterRoom(OdinRoom* Handle)
         ODIN_LOG(Log, "Deregistering Odin Room with handle %p", Handle);
         RegisteredRooms.Remove(Handle);
     } else {
-        ODIN_LOG(Warning, "Failed deregistering Odin room with handle %p - room handle was never registered.", Handle);
+        ODIN_LOG(Log, "Could not deregister Odin room with handle %p: Room handle was not registered or already deregistered.", Handle);
     }
 }
 

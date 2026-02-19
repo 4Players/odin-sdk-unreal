@@ -309,7 +309,7 @@ class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
     TArray<uint32>                ApmEffectIds;
     mutable FCriticalSection      EffectIdAccessSection;
     std::atomic<int32>            DelayMs      = 15;
-    bool                          bIsListening = false;
+    std::atomic<bool>             bIsListening = false;
 
     TSharedPtr<Audio::FDeviceId, ESPMode::ThreadSafe> ListenTargetId;
     FDelegateHandle                                   AudioDeviceCreatedCallbackHandle;
