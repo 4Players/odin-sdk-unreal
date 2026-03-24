@@ -10,8 +10,13 @@ void UOdinInitializationSubsystem::Initialize(FSubsystemCollectionBase& Collecti
 
     UE_LOG(Odin, Log, TEXT("Odin initializing with Channel Count %d, Sample Rate %d"), ChannelCount,
            SampleRate);
+
+#if UE_SERVER
+    IsInitialized = false;
+#else
     IsInitialized = odin_startup_ex(
         ODIN_VERSION, OdinAudioStreamConfig{(uint32_t)SampleRate, (uint8_t)ChannelCount});
+#endif
 
     if (!IsOdinInitialized()) {
         UE_LOG(Odin, Warning, TEXT("Odin startup failed."));
