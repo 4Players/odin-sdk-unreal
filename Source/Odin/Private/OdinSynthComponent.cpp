@@ -56,15 +56,11 @@ void UOdinSynthComponent::OnRegister()
 #if ENGINE_MAJOR_VERSION >= 5
 ISoundGeneratorPtr
 UOdinSynthComponent::CreateSoundGenerator(const FSoundGeneratorInitParams& InParams)
-{
-    return SoundGenerator;
-}
+{ return SoundGenerator; }
 #else
 ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(int32 InSampleRate,
                                                              int32 InNumChannels)
-{
-    return SoundGenerator;
-}
+{ return SoundGenerator; }
 #endif
 void UOdinSynthComponent::Activate(bool bReset)
 {
@@ -85,9 +81,7 @@ void UOdinSynthComponent::NativeOnPreChangePlaybackMedia(UOdinPlaybackMedia* Old
 }
 
 void UOdinSynthComponent::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
-{
-    ResetOdinStream(NewStreamHandle);
-}
+{ ResetOdinStream(NewStreamHandle); }
 
 void UOdinSynthComponent::ResetOdinStream(OdinMediaStreamHandle HandleToReset)
 {
@@ -137,16 +131,10 @@ void UOdinSynthComponent::AdjustAttenuation(const FSoundAttenuationSettings& InA
 }
 
 UOdinPlaybackMedia* UOdinSynthComponent::GetConnectedPlaybackMedia() const
-{
-    return playback_media_.Get();
-}
+{ return playback_media_.Get(); }
 
 void UOdinSynthComponent::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
-{
-    SoundGenerator->AddAudioBufferListener(InAudioBufferListener);
-}
+{ SoundGenerator->AddAudioBufferListener(InAudioBufferListener); }
 
 void UOdinSynthComponent::RemoveAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
-{
-    SoundGenerator->RemoveAudioBufferListener(InAudioBufferListener);
-}
+{ SoundGenerator->RemoveAudioBufferListener(InAudioBufferListener); }

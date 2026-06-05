@@ -5,9 +5,7 @@
 FOdinAudioRingBuffer::FOdinAudioRingBuffer(const int32 InCapacity)
     : Capacity(InCapacity)
     , WriteIndex(0)
-{
-    Buffer.Init(0, Capacity);
-}
+{ Buffer.Init(0, Capacity); }
 
 int32 FOdinAudioRingBuffer::Write(const float* InData, const int32 NumSamples)
 {
@@ -76,16 +74,12 @@ int32 FOdinAudioRingBuffer::GetAvailableSamples(const int32 ReaderIndex) const
 }
 
 int32 FOdinAudioRingBuffer::GetCurrentWriteIndex() const
-{
-    return WriteIndex.GetValue();
-}
+{ return WriteIndex.GetValue(); }
 
 FOdinPlaybackStreamReader::FOdinPlaybackStreamReader(OdinMediaStreamHandle MediaHandle,
                                                      int32                 BufferCapacity)
     : MediaHandle(MediaHandle)
-{
-    MultipleAccessCache = MakeShared<FOdinAudioRingBuffer, ESPMode::ThreadSafe>(BufferCapacity);
-}
+{ MultipleAccessCache = MakeShared<FOdinAudioRingBuffer, ESPMode::ThreadSafe>(BufferCapacity); }
 
 FOdinPlaybackStreamReader::~FOdinPlaybackStreamReader()
 {
@@ -142,6 +136,7 @@ void FOdinPlaybackStreamReader::RemoveAudioBufferListener(
 }
 
 int32 FOdinPlaybackStreamReader::GetLatestReadIndex() const
-{
-    return LatestReadIndex.GetValue();
-}
+{ return LatestReadIndex.GetValue(); }
+
+bool FOdinPlaybackStreamReader::HasValidConnection() const
+{ return !odin_is_error(CachedReturnCode); }

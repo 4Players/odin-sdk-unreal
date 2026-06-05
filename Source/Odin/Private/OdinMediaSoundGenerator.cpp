@@ -10,7 +10,8 @@
 int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(OdinMediaSoundGenerator::OnGenerateAudio)
-    if (!PlaybackStreamReader.IsValid()) {
+    if (!PlaybackStreamReader.IsValid() || !PlaybackStreamReader->HasValidConnection()) {
+        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
 
@@ -36,6 +37,7 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
                    *FormattedError);
         }
 
+        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
 
@@ -46,6 +48,7 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
                     "UOdinSynthComponent::OnGenerateAudio, "
                     "number of read samples returned by Odin is larger than requested number of "
                     "samples."));
+        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
     return ReturnCode;
@@ -63,8 +66,8 @@ void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle NewStreamHandl
                 "FOdinPlaybackStreamReader."));
     bWasMediaStreamInvalid = false;
 
-    // use default values, 20ms audio frames and 1 second of audio buffer capacity.
-    constexpr int32 Capacity = ODIN_DEFAULT_CHANNEL_COUNT * (ODIN_DEFAULT_SAMPLE_RATE * 0.02f);
+    // use default values, 20ms audio frames and 0.1 second of audio buffer capacity.
+    constexpr int32 Capacity = ODIN_DEFAULT_CHANNEL_COUNT * (ODIN_DEFAULT_SAMPLE_RATE * 0.1f);
     SetStreamReader(
         MakeShared<FOdinPlaybackStreamReader, ESPMode::ThreadSafe>(NewStreamHandle, Capacity));
 }
@@ -79,13 +82,6 @@ void OdinMediaSoundGenerator::SetStreamReader(
     }
 }
 
-#if ENGINE_MAJOR_VERSION >= 5
-bool OdinMediaSoundGenerator::IsFinished() const
-{
-    return bWasMediaStreamInvalid;
-}
-#endif
-
 void OdinMediaSoundGenerator::AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener)
 {
     if (PlaybackStreamReader.IsValid()) {
@@ -99,3 +95,6 @@ void OdinMediaSoundGenerator::RemoveAudioBufferListener(IAudioBufferListener* In
         PlaybackStreamReader->RemoveAudioBufferListener(InAudioBufferListener);
     }
 }
+
+void OdinMediaSoundGenerator::NullInput(float* OutAudio, int32 NumSamples)
+{ FMemory::Memzero(OutAudio, NumSamples * sizeof(float)); }

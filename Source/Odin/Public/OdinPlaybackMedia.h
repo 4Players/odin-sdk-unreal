@@ -79,9 +79,7 @@ class ODIN_API UOdinPlaybackMedia : public UOdinMediaBase
      * @param room Pointer to the UOdinRoom object to set as the room for the playback media.
      */
     void SetRoom(UOdinRoom* room)
-    {
-        this->Room = room;
-    }
+    { this->Room = room; }
 
     /**
      * Retrieves the internal ID of the media from the Odin SDK.

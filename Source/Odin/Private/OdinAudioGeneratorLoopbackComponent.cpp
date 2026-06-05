@@ -50,9 +50,7 @@ void UOdinAudioGeneratorLoopbackComponent::RemoveGeneratorDelegate()
 }
 
 float UOdinAudioGeneratorLoopbackComponent::GetBufferSize() const
-{
-    return BufferSize;
-}
+{ return BufferSize; }
 
 void UOdinAudioGeneratorLoopbackComponent::SetBufferSize(float NewSize)
 {

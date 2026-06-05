@@ -71,6 +71,4 @@ TWeakObjectPtr<UOdinRoom> UOdinRegistrationSubsystem::GetRoomByHandle(OdinRoomHa
 }
 
 bool UOdinRegistrationSubsystem::IsRoomRegistered(OdinRoomHandle Handle) const
-{
-    return RegisteredRooms.Contains(Handle);
-}
+{ return RegisteredRooms.Contains(Handle); }

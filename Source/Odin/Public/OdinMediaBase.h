@@ -25,9 +25,7 @@ class ODIN_API UOdinMediaBase : public UObject
      * @return The Odin media stream handle.
      */
     OdinMediaStreamHandle GetMediaHandle() const
-    {
-        return this->stream_handle_;
-    }
+    { return this->stream_handle_; }
 
     virtual void AddAudioBufferListener(IAudioBufferListener* InAudioBufferListener);
     virtual void RemoveAudioBufferListener(IAudioBufferListener* AudioBufferListener);
@@ -45,7 +43,4 @@ class ODIN_API UOdinMediaBase : public UObject
     mutable FCriticalSection    AudioBufferListenerSection;
 
     OdinMediaStreamHandle stream_handle_ = 0;
-
-    friend class UOdinPlaybackMedia;
-    friend class UOdinCaptureMedia;
 };

@@ -31,14 +31,10 @@ void UOdinRoom::BeginDestroy()
 }
 
 void UOdinRoom::FinishDestroy()
-{
-    Super::FinishDestroy();
-}
+{ Super::FinishDestroy(); }
 
 void UOdinRoom::Destroy()
-{
-    CleanUp();
-}
+{ CleanUp(); }
 
 bool UOdinRoom::IsConnected() const
 {
@@ -142,9 +138,7 @@ UOdinRoom* UOdinRoom::ConstructRoom(UObject*                WorldContextObject,
 }
 
 void UOdinRoom::SetPositionScale(float Scale)
-{
-    (new FAutoDeleteAsyncTask<UpdateScalingTask>(this->room_handle_, Scale))->StartBackgroundTask();
-}
+{ (new FAutoDeleteAsyncTask<UpdateScalingTask>(this->room_handle_, Scale))->StartBackgroundTask(); }
 
 FOdinConnectionStats UOdinRoom::ConnectionStats()
 {
@@ -278,9 +272,7 @@ void UOdinRoom::UnbindCaptureMedia(UOdinCaptureMedia* media)
 }
 
 UOdinSubmixListener* UOdinRoom::GetSubmixListener() const
-{
-    return submix_listener_;
-}
+{ return submix_listener_; }
 
 void UOdinRoom::HandleOdinEvent(OdinRoomHandle RoomHandle, const OdinEvent event)
 {

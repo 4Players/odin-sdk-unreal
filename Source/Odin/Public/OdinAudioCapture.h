@@ -237,24 +237,16 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture,
     virtual bool IsTickable() const override;
 
     virtual ETickableTickType GetTickableTickType() const override
-    {
-        return ETickableTickType::Conditional;
-    }
+    { return ETickableTickType::Conditional; }
 
     virtual TStatId GetStatId() const override
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(UOdinAudioCapture, STATGROUP_Tickables);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(UOdinAudioCapture, STATGROUP_Tickables); }
 
     virtual bool IsTickableWhenPaused() const override
-    {
-        return true;
-    }
+    { return true; }
 
     virtual bool IsTickableInEditor() const override
-    {
-        return false;
-    }
+    { return false; }
 #pragma endregion
 
   protected:

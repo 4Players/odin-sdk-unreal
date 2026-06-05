@@ -23,9 +23,7 @@ using namespace Audio;
 UOdinSubmixListener::UOdinSubmixListener(const class FObjectInitializer& PCIP)
     : Super(PCIP)
     , CurrentRoomHandle(0)
-{
-    UE_LOG(Odin, Verbose, TEXT("OdinSubmixListener: Constructor Called."))
-}
+{ UE_LOG(Odin, Verbose, TEXT("OdinSubmixListener: Constructor Called.")) }
 
 void UOdinSubmixListener::StartSubmixListener()
 {
@@ -131,9 +129,7 @@ void UOdinSubmixListener::StopSubmixListener()
 }
 
 void UOdinSubmixListener::SetRoom(OdinRoomHandle room)
-{
-    CurrentRoomHandle = room;
-}
+{ CurrentRoomHandle = room; }
 
 void UOdinSubmixListener::BeginDestroy()
 {
@@ -143,9 +139,7 @@ void UOdinSubmixListener::BeginDestroy()
 }
 
 bool UOdinSubmixListener::IsListening() const
-{
-    return SubmixBufferListener.IsValid() && SubmixBufferListener->IsInitialized();
-}
+{ return SubmixBufferListener.IsValid() && SubmixBufferListener->IsInitialized(); }
 
 void UOdinSubmixListener::SetRecordSubmixOutput(bool bNewActive)
 {
@@ -205,14 +199,10 @@ void FOdinSubmixBufferListenerImplementation::StopListener()
 }
 
 bool FOdinSubmixBufferListenerImplementation::IsInitialized() const
-{
-    return bInitialized;
-}
+{ return bInitialized; }
 
 void FOdinSubmixBufferListenerImplementation::SetRecordSubmixOutput(bool bShouldRecord)
-{
-    bRecordSubmixOutput = bShouldRecord;
-}
+{ bRecordSubmixOutput = bShouldRecord; }
 
 void FOdinSubmixBufferListenerImplementation::StopSubmixRecording()
 {

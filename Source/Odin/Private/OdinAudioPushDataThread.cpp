@@ -30,9 +30,7 @@ void FOdinAudioPushDataThread::PushAudio(OdinMediaStreamHandle MediaHandle, cons
 }
 
 void FOdinAudioPushDataThread::RequestShutdown()
-{
-    bShutdown = true;
-}
+{ bShutdown = true; }
 
 bool FOdinAudioPushDataThread::Init()
 {
@@ -52,9 +50,10 @@ uint32 FOdinAudioPushDataThread::Run()
                     Odin, VeryVerbose,
                     TEXT("FOdinAudioPushDataThread::Run Pushing %d Samples for Media Stream %llu"),
                     DequeuedData.AudioData.Num(), DequeuedData.MediaStreamHandle);
-                const OdinReturnCode PushResult = odin_audio_push_data(
-                    DequeuedData.MediaStreamHandle, DequeuedData.AudioData.GetData(),
-                    DequeuedData.AudioData.Num());
+                const float*         Data     = DequeuedData.AudioData.GetData();
+                const int32          DataSize = DequeuedData.AudioData.Num();
+                const OdinReturnCode PushResult =
+                    odin_audio_push_data(DequeuedData.MediaStreamHandle, Data, DataSize);
                 if (odin_is_error(PushResult)) {
                     FString FormatOdinError =
                         UOdinFunctionLibrary::FormatOdinError(PushResult, false);

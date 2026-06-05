@@ -12,14 +12,10 @@ static UOdinFunctionLibrary* g_odinFunctionLibrary = nullptr;
 
 UOdinFunctionLibrary::UOdinFunctionLibrary(const class FObjectInitializer& PCIP)
     : Super(PCIP)
-{
-    g_odinFunctionLibrary = this;
-}
+{ g_odinFunctionLibrary = this; }
 
 UOdinFunctionLibrary* UOdinFunctionLibrary::getOdinFunctionLibrary()
-{
-    return g_odinFunctionLibrary;
-}
+{ return g_odinFunctionLibrary; }
 
 UOdinCaptureMedia* UOdinFunctionLibrary::Odin_CreateMedia(UPARAM(ref)
                                                               UAudioGenerator*& audioGenerator)
@@ -43,9 +39,7 @@ FString UOdinFunctionLibrary::GenerateAccessKey()
 }
 
 FString UOdinFunctionLibrary::FormatOdinError(int64 code, bool ueTrace)
-{
-    return FormatError(code, ueTrace);
-}
+{ return FormatError(code, ueTrace); }
 
 FString UOdinFunctionLibrary::FormatError(int32 code, bool ueTrace)
 {

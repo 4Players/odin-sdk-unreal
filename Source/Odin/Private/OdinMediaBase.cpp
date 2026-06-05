@@ -28,19 +28,13 @@ void UOdinMediaBase::RemoveAudioBufferListener(IAudioBufferListener* AudioBuffer
 }
 
 int32 UOdinMediaBase::GetSampleRate() const
-{
-    return ODIN_DEFAULT_SAMPLE_RATE;
-}
+{ return ODIN_DEFAULT_SAMPLE_RATE; }
 
 int32 UOdinMediaBase::GetNumChannels() const
-{
-    return ODIN_DEFAULT_SAMPLE_RATE;
-}
+{ return ODIN_DEFAULT_SAMPLE_RATE; }
 
 void UOdinMediaBase::SetMediaHandle(OdinMediaStreamHandle handle)
-{
-    this->stream_handle_ = handle;
-}
+{ this->stream_handle_ = handle; }
 
 TArray<IAudioBufferListener*> UOdinMediaBase::GetAudioBufferListeners() const
 {

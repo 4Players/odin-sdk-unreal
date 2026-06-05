@@ -15,14 +15,10 @@ typedef TJsonWriter<TCHAR, TCondensedJsonPrintPolicy<TCHAR>> FCondensedJsonStrin
 
 UOdinJsonObject::UOdinJsonObject(const class FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    Reset();
-}
+{ Reset(); }
 
 UOdinJsonObject *UOdinJsonObject::ConstructJsonObject(UObject *WorldContextObject)
-{
-    return NewObject<UOdinJsonObject>();
-}
+{ return NewObject<UOdinJsonObject>(); }
 
 UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromString(UObject *WorldContextObject,
                                                                 FString  data)
@@ -52,14 +48,10 @@ void UOdinJsonObject::Reset()
 }
 
 TSharedPtr<FJsonObject> &UOdinJsonObject::GetRootObject()
-{
-    return JsonObj;
-}
+{ return JsonObj; }
 
 void UOdinJsonObject::SetRootObject(TSharedPtr<FJsonObject> &JsonObject)
-{
-    JsonObj = JsonObject;
-}
+{ JsonObj = JsonObject; }
 
 FString UOdinJsonObject::EncodeJson() const
 {

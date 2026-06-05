@@ -48,7 +48,7 @@ class ODIN_API UOdinJsonValue : public UObject
 
     UFUNCTION(BlueprintPure,
               meta     = (DisplayName = "Construct Json Bool Value", HidePin = "WorldContextObject",
-                      DefaultToSelf = "WorldContextObject"),
+                          DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Json Utilities")
     static UOdinJsonValue *ConstructJsonValueBool(UObject *WorldContextObject, bool InValue);
 

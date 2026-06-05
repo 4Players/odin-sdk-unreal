@@ -30,8 +30,8 @@ class ODIN_API UOdinTokenGenerator : public UObject
      */
     UFUNCTION(BlueprintPure,
               meta     = (DisplayName = "Construct Token Generator",
-                      ToolTip     = "Creates a new generator for signed authentication tokens",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+                          ToolTip     = "Creates a new generator for signed authentication tokens",
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Authentication")
     static UOdinTokenGenerator *ConstructTokenGenerator(UObject       *WorldContextObject,
                                                         const FString &AccessKey);

@@ -148,8 +148,9 @@ class ODIN_API UOdinCaptureMedia : public UOdinMediaBase, public IOdinAudioContr
     virtual int32 GetNumChannels() const override;
 
   private:
-    static void ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia);
-    float       GetVolumeMultiplierAdjusted() const;
+    static void    ReconnectCaptureMedia(TWeakObjectPtr<UOdinCaptureMedia> CaptureMedia);
+    float          GetVolumeMultiplierAdjusted() const;
+    OdinReturnCode DestroyOdinMediaStreamHandle();
 
     FCriticalSection capture_generator_delegate_;
 

@@ -3,15 +3,11 @@
 #include "OdinAudioControl.h"
 
 bool IOdinAudioControl::GetIsMuted() const
-{
-    return false;
-}
+{ return false; }
 
 void IOdinAudioControl::SetIsMuted(bool bNewIsMuted) {}
 
 float IOdinAudioControl::GetVolumeMultiplier() const
-{
-    return 1.0f;
-}
+{ return 1.0f; }
 
 void IOdinAudioControl::SetVolumeMultiplier(float NewMultiplierValue) {}

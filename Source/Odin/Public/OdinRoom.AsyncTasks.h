@@ -40,9 +40,7 @@ class ODIN_API JoinRoomTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(JoinRoomTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(JoinRoomTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API AddMediaTask : public FNonAbandonableTask
@@ -69,9 +67,7 @@ class ODIN_API AddMediaTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API RemoveMediaTask : public FNonAbandonableTask
@@ -99,9 +95,7 @@ class ODIN_API RemoveMediaTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(RemoveMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(RemoveMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API PauseMediaTask : public FNonAbandonableTask
@@ -126,9 +120,7 @@ class ODIN_API PauseMediaTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(PauseMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(PauseMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API ResumeMediaTask : public FNonAbandonableTask
@@ -153,9 +145,7 @@ class ODIN_API ResumeMediaTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(ResumeMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(ResumeMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API UpdatePositionTask : public FNonAbandonableTask
@@ -184,9 +174,7 @@ class ODIN_API UpdatePositionTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(UpdatePositionTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(UpdatePositionTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API UpdateScalingTask : public FNonAbandonableTask
@@ -206,9 +194,7 @@ class ODIN_API UpdateScalingTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(UpdateScalingTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(UpdateScalingTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API UpdatePeerUserDataTask : public FNonAbandonableTask
@@ -238,9 +224,7 @@ class ODIN_API UpdatePeerUserDataTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(UpdatePeerUserDataTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(UpdatePeerUserDataTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API SendMessageTask : public FNonAbandonableTask
@@ -271,9 +255,7 @@ class ODIN_API SendMessageTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(SendMessageTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(SendMessageTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API DestroyRoomTask : public FNonAbandonableTask
@@ -290,7 +272,5 @@ class ODIN_API DestroyRoomTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(DestroyRoomTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(DestroyRoomTask, STATGROUP_ThreadPoolAsyncTasks); }
 };

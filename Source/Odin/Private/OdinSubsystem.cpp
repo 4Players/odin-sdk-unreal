@@ -4,17 +4,25 @@
 #include "Odin.h"
 #include "odin_sdk.h"
 
+#ifndef ODIN_RUN_ON_SERVER
+#define ODIN_RUN_ON_SERVER 0
+#endif
+
 void UOdinSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
 
+#if UE_SERVER && !ODIN_RUN_ON_SERVER
+    IsInitialized = false;
+#else
     UE_LOG(Odin, Log, TEXT("Odin initializing with Channel Count %d, Sample Rate %d"), ChannelCount,
            SampleRate);
     IsInitialized = odin_startup_ex(
         ODIN_VERSION, OdinAudioStreamConfig{(uint32_t)SampleRate, (uint8_t)ChannelCount});
+#endif
 
     if (!IsOdinInitialized()) {
-        UE_LOG(Odin, Warning, TEXT("Odin startup failed."));
+        UE_LOG(Odin, Warning, TEXT("Odin has not been initialized."));
     }
     if (IsOdinInitialized()) {
         PushDataThread = MakeUnique<FOdinAudioPushDataThread>();
@@ -36,19 +44,13 @@ void UOdinSubsystem::Deinitialize()
 }
 
 int32 UOdinSubsystem::GetSampleRate() const
-{
-    return SampleRate;
-}
+{ return SampleRate; }
 
 int32 UOdinSubsystem::GetChannelCount() const
-{
-    return ChannelCount;
-}
+{ return ChannelCount; }
 
 bool UOdinSubsystem::IsOdinInitialized() const
-{
-    return IsInitialized;
-}
+{ return IsInitialized; }
 
 void UOdinSubsystem::PushAudio(OdinMediaStreamHandle MediaHandle, const float* AudioData,
                                int32 NumSamples)

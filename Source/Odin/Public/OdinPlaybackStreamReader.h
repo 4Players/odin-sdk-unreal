@@ -48,6 +48,8 @@ class ODIN_API FOdinPlaybackStreamReader
 
     int32 GetLatestReadIndex() const;
 
+    bool HasValidConnection() const;
+
   protected:
     TSharedPtr<FOdinAudioRingBuffer, ESPMode::ThreadSafe> MultipleAccessCache;
     OdinReturnCode                                        CachedReturnCode = 0;

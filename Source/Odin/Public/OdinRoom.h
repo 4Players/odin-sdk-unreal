@@ -655,9 +655,9 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
 
     UFUNCTION(BlueprintCallable, BlueprintPure,
               meta     = (DisplayName = "Construct Local Room Handle",
-                      ToolTip     = "Creates a new local room handle in an unconnected state",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                      AutoCreateRefTerm = "InitialAPMSettings"),
+                          ToolTip     = "Creates a new local room handle in an unconnected state",
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
+                          AutoCreateRefTerm = "InitialAPMSettings"),
               Category = "Odin|Room")
     static UOdinRoom *ConstructRoom(UObject                *WorldContextObject,
                                     const FOdinApmSettings &InitialAPMSettings);
@@ -709,16 +709,12 @@ class ODIN_API UOdinRoom : public /* USceneComponent */ UObject
     void UnbindCaptureMedia(UOdinCaptureMedia *media);
 
     OdinRoomHandle RoomHandle() const
-    {
-        return this->room_handle_;
-    }
+    { return this->room_handle_; }
 
     UFUNCTION(BlueprintCallable,
               meta = (DisplayName = "Get Current Room APM Config", Category = "Odin|Room"))
     FOdinApmSettings GetCurrentApmSettings() const
-    {
-        return this->current_apm_settings_;
-    }
+    { return this->current_apm_settings_; }
 
   protected:
     virtual void BeginDestroy() override;

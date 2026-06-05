@@ -311,26 +311,42 @@ void DestroyRoomTask::DoWork()
     if (roomHandle > 0) {
         UE_LOG(Odin, Verbose, TEXT("DestroyRoomTask::DoWork(): Closing Odin Room with Handle %lld"),
                roomHandle);
-        OdinReturnCode ReturnCode = odin_room_destroy(roomHandle);
+
+        OdinReturnCode ReturnCode = odin_room_set_event_callback(roomHandle, nullptr, nullptr);
         if (odin_is_error(ReturnCode)) {
             FOdinModule::LogReturnCode(
-                TEXT("Destroy Room Task: odin_room_destroy was not successful."), ReturnCode);
-        } else {
-            UE_LOG(Odin, Verbose,
-                   TEXT("DestroyRoomTask::DoWork(): Successfully closed room with Handle %lld"),
-                   roomHandle);
-        }
-        ReturnCode = odin_room_set_event_callback(roomHandle, nullptr, nullptr);
-        if (odin_is_error(ReturnCode)) {
-            FOdinModule::LogReturnCode(
-                TEXT("Destroy Room Task: odin_room_set_event_callback was not successful."),
+                TEXT("DestroyRoomTask: odin_room_set_event_callback was not successful."),
                 ReturnCode);
         } else {
             UE_LOG(Odin, Verbose,
-                   TEXT("DestroyRoomTask::DoWork(): Successfully unset event callbacks for room "
+                   TEXT("DestroyRoomTask::DoWork() - odin_room_set_event_callback: Successfully "
+                        "unset event callbacks for room "
                         "with Handle %lld"),
                    roomHandle);
         }
+
+        ReturnCode = odin_room_close(roomHandle);
+        if (odin_is_error(ReturnCode)) {
+            FOdinModule::LogReturnCode(TEXT("DestroyRoomTask: odin_room_close was not successful."),
+                                       ReturnCode);
+        } else {
+            UE_LOG(Odin, Verbose,
+                   TEXT("DestroyRoomTask::DoWork() - odin_room_close: Successfully closed room "
+                        "with Handle %lld"),
+                   roomHandle);
+        }
+
+        ReturnCode = odin_room_destroy(roomHandle);
+        if (odin_is_error(ReturnCode)) {
+            FOdinModule::LogReturnCode(
+                TEXT("DestroyRoomTask: odin_room_destroy was not successful."), ReturnCode);
+        } else {
+            UE_LOG(Odin, Verbose,
+                   TEXT("DestroyRoomTask::DoWork() - odin_room_destroy: Successfully destroyed "
+                        "room with Handle %lld"),
+                   roomHandle);
+        }
+
         if (UOdinRegistrationSubsystem* OdinSubsystem = UOdinRegistrationSubsystem::Get()) {
             OdinSubsystem->DeregisterRoom(roomHandle);
         }
