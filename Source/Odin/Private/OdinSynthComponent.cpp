@@ -26,10 +26,6 @@ bool UOdinSynthComponent::Init(int32& SampleRate)
             SampleRate  = OdinInitSubsystem->GetSampleRate();
         }
     }
-
-    // We reset the stream handle here, to avoid any kind of delays after re-enabling
-    if (playback_media_.IsValid())
-        ResetOdinStream(playback_media_->GetMediaHandle());
     return true;
 }
 
@@ -98,8 +94,6 @@ void UOdinSynthComponent::Odin_AssignSynthToMedia(UPARAM(ref) UOdinPlaybackMedia
         NativeOnPreChangePlaybackMedia(playback_media_.Get(), media);
         this->playback_media_ = media;
         SoundGenerator->SetStreamReader(playback_media_->GetPlaybackStreamReader());
-
-        SetOdinStream(media->GetMediaHandle());
     } else {
         UE_LOG(Odin, Error,
                TEXT("UOdinSynthComponent::Odin_AssignSynthToMedia: Tried to assign null media to "

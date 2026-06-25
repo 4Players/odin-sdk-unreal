@@ -65,7 +65,7 @@ uint32 FOdinAudioPushDataThread::Run()
             }
         }
 
-        FPlatformProcess::Sleep(0.01);
+        FPlatformProcess::Sleep(0.01f);
     }
     return 0;
 }

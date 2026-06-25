@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "OdinAudioGeneratorLoopbackComponent.h"
-
+#include "Runtime/Launch/Resources/Version.h"
 #include "Odin.h"
 #include "SampleBuffer.h"
 #include "Generators/AudioGenerator.h"

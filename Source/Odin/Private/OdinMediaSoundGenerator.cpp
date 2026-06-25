@@ -10,8 +10,8 @@
 int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(OdinMediaSoundGenerator::OnGenerateAudio)
+    NullInput(OutAudio, NumSamples);
     if (!PlaybackStreamReader.IsValid() || !PlaybackStreamReader->HasValidConnection()) {
-        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
 
@@ -37,7 +37,6 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
                    *FormattedError);
         }
 
-        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
 
@@ -48,10 +47,9 @@ int32 OdinMediaSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples
                     "UOdinSynthComponent::OnGenerateAudio, "
                     "number of read samples returned by Odin is larger than requested number of "
                     "samples."));
-        NullInput(OutAudio, NumSamples);
         return NumSamples;
     }
-    return ReturnCode;
+    return NumSamples;
 }
 
 void OdinMediaSoundGenerator::SetOdinStream(OdinMediaStreamHandle NewStreamHandle)
