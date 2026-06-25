@@ -161,14 +161,10 @@ class ODIN_API UOdinDecoder : public UObject
      * @return incomplete handle type or nullptr
      */
     inline OdinDecoder *GetNativeHandle() const
-    {
-        return IsValid(Handle) && Handle->IsValidLowLevel() ? reinterpret_cast<OdinDecoder *>(Handle->GetHandle()) : nullptr;
-    }
+    { return IsValid(Handle) && Handle->IsValidLowLevel() ? reinterpret_cast<OdinDecoder *>(Handle->GetHandle()) : nullptr; }
 
     TWeakObjectPtr<UOdinHandle> GetHandle() const
-    {
-        return Handle;
-    }
+    { return Handle; }
 
     /**
      * Replace internal handle object

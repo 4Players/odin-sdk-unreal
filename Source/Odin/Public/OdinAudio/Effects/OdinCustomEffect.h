@@ -57,14 +57,10 @@ class ODIN_API UOdinCustomEffect : public UObject
     virtual void CustomEffect(const TArrayView<float>& InSamples, bool*& bIsSilent, TOdinCustomEffectUserData<UOdinCustomEffect>* const InUserData) const;
 
     inline TWeakObjectPtr<UOdinPipeline> GetParent() const
-    {
-        return this->Pipeline;
-    }
+    { return this->Pipeline; }
 
     inline void SetParent(TWeakObjectPtr<UOdinPipeline> InPipeline)
-    {
-        this->Pipeline = InPipeline;
-    }
+    { this->Pipeline = InPipeline; }
 
     UFUNCTION(BlueprintCallable, meta = (DisplayName = "Detach Effect", ToolTip = "Try to remove this effect from parent pipeline"),
               Category = "Odin|Audio Pipeline")

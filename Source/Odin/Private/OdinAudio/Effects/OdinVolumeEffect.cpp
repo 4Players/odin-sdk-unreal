@@ -4,9 +4,7 @@
 
 UOdinVolumeEffect::UOdinVolumeEffect(const FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    UserData = TOdinCustomEffectUserData(this);
-}
+{ UserData = TOdinCustomEffectUserData(this); }
 
 void UOdinVolumeEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bIsSilent, TOdinCustomEffectUserData<UOdinCustomEffect> *const InUSerData) const
 {
@@ -41,6 +39,4 @@ UOdinVolumeEffect *UOdinVolumeEffect::ConstructVolumeEffect(UObject *WorldContex
 }
 
 void UOdinVolumeEffect::BeginDestroy()
-{
-    Super::BeginDestroy();
-}
+{ Super::BeginDestroy(); }

@@ -38,7 +38,7 @@ class ODIN_API UOdinCloneEffect : public UOdinCustomEffect
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Construct Clone Effect", ToolTip = "Creates a effect that dispatch a copy of samples to the game thread.",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Audio Pipeline|Effects")
     static UOdinCloneEffect* ConstructCloneEffect(UObject* WorldContextObject);
 

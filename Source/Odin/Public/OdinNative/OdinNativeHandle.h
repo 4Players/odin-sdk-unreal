@@ -19,19 +19,13 @@ class ODIN_API UOdinHandle : public UObject
 
   public:
     inline void *GetHandle() const
-    {
-        return handle_;
-    }
+    { return handle_; }
 
     inline void SetHandle(void *handle)
-    {
-        handle_ = handle;
-    }
+    { handle_ = handle; }
 
     inline void Invalidate()
-    {
-        this->handle_ = nullptr;
-    }
+    { this->handle_ = nullptr; }
 
     /**
      * UOdinHandle represents a decoder for media streams from remote voice chat clients, which encapsulates all
@@ -83,15 +77,11 @@ class ODIN_API UOdinHandle : public UObject
      * Uninitialized handle
      */
     UOdinHandle()
-    {
-        Invalidate();
-    }
+    { Invalidate(); }
 
   protected:
     UOdinHandle(void *handle)
-    {
-        handle_ = handle;
-    }
+    { handle_ = handle; }
 
   private:
     void *handle_ = nullptr;

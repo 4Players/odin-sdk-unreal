@@ -16,11 +16,7 @@
 /**
  * Represents the encryption status of a remote peer in an ODIN room.
  */
-enum OdinCryptoPeerStatus
-#ifdef __cplusplus
-  : int32_t
-#endif // __cplusplus
- {
+enum OdinCryptoPeerStatus {
     /**
      * Password does not match the local password, preventing decryption of their data.
      */
@@ -38,9 +34,6 @@ enum OdinCryptoPeerStatus
      */
     ODIN_CRYPTO_PEER_STATUS_ENCRYPTED = 2,
 };
-#ifndef __cplusplus
-typedef int32_t OdinCryptoPeerStatus;
-#endif // __cplusplus
 
 #ifdef __cplusplus
 extern "C" {
@@ -51,9 +44,10 @@ extern "C" {
  * cipher uses AES-256-GCM for authenticated encryption with PBKDF2-SHA256 for key derivation,
  * providing strong cryptographic protection for datagrams, messages and peer user data.
  *
- * The returned cipher can be attached to an ODIN room during creation via `odin_room_create_ex`
- * to enable transparent encryption and decryption of all room communications. The cipher will
- * automatically manage per-peer encryption keys and handle key rotation.
+ * The returned cipher can be attached to an ODIN room during creation via `odin_room_create`
+ * to enable transparent encryption and decryption of all room communications. Each cipher may
+ * only be used in one room. The cipher will automatically manage per-peer encryption keys and
+ * handle key rotation.
  *
  * Note: Use `ODIN_CRYPTO_VERSION` to supply the `version` argument.
  */
@@ -64,7 +58,7 @@ OdinCipher *odin_crypto_create(const char *version);
  * user data to determine whether they are using encryption and whether their password matches the
  * local cipher's password.
  */
-OdinCryptoPeerStatus odin_crypto_get_peer_status(OdinCipher *cipher, uint32_t peer_id);
+enum OdinCryptoPeerStatus odin_crypto_get_peer_status(OdinCipher *cipher, uint32_t peer_id);
 
 /**
  * Sets or clears the encryption password for the specified ODIN cipher. The password is used to

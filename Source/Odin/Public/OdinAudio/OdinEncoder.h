@@ -236,9 +236,7 @@ class ODIN_API UOdinEncoder : public UObject
      * @return sample size
      */
     int32 GetNumSampleSize(const int32 MS = 20) const
-    {
-        return SampleRate / 1000 * MS * (bStereo ? 2 : 1);
-    }
+    { return SampleRate / 1000 * MS * (bStereo ? 2 : 1); }
 
     /**
      * Get internal handle
@@ -246,9 +244,7 @@ class ODIN_API UOdinEncoder : public UObject
      * @return incomplete handle type or nullptr
      */
     inline OdinEncoder* GetHandle() const
-    {
-        return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinEncoder*>(Handle->GetHandle()) : nullptr;
-    }
+    { return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinEncoder*>(Handle->GetHandle()) : nullptr; }
 
     /**
      * Replace internal handle object

@@ -11,7 +11,7 @@ void UOdinAudioCapture::BeginDestroy()
     ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
 
     Super::BeginDestroy();
-    if (AudioCapture.IsStreamOpen()) {
+    if (AudioCapture.IsStreamOpen() && AudioCapture.IsCapturing()) {
         AudioCapture.AbortStream();
     }
 }
@@ -67,9 +67,7 @@ void UOdinAudioCapture::GetCaptureDevicesAvailable(TArray<FOdinCaptureDeviceInfo
 }
 
 void UOdinAudioCapture::GetCurrentAudioCaptureDevice(FOdinCaptureDeviceInfo& CurrentDevice) const
-{
-    CurrentDevice = CurrentSelectedDevice;
-}
+{ CurrentDevice = CurrentSelectedDevice; }
 
 void UOdinAudioCapture::ChangeToDefaultCaptureDevice()
 {
@@ -156,7 +154,8 @@ template <typename DeviceCheck> bool UOdinAudioCapture::ChangeCaptureDevice(cons
     TArray<FOdinCaptureDeviceInfo> AllDevices;
     GetCaptureDevicesAvailable(AllDevices);
 
-    bool bSuccess = false;
+    FOdinCaptureDeviceInfo PreviousDevice;
+    bool                   bSuccess = false;
     // look for the name of the selected device.
     for (int32 i = 0; i < AllDevices.Num(); ++i) {
         const FOdinCaptureDeviceInfo OdinCaptureDeviceInfo = AllDevices[i];
@@ -166,6 +165,7 @@ template <typename DeviceCheck> bool UOdinAudioCapture::ChangeCaptureDevice(cons
                 return true;
             } else {
                 CurrentSelectedDeviceIndex = i;
+                PreviousDevice             = CurrentSelectedDevice;
                 CurrentSelectedDevice      = OdinCaptureDeviceInfo;
                 bSuccess                   = true;
             }
@@ -179,11 +179,13 @@ template <typename DeviceCheck> bool UOdinAudioCapture::ChangeCaptureDevice(cons
 
         if (IsInGameThread()) {
             RestartCapturing();
+            OnCaptureDeviceChanged.Broadcast(PreviousDevice, CurrentSelectedDevice);
         } else {
             TWeakObjectPtr<UOdinAudioCapture> WeakThisPtr = this;
-            AsyncTask(ENamedThreads::GameThread, [WeakThisPtr]() {
+            AsyncTask(ENamedThreads::GameThread, [WeakThisPtr, PreviousDevice]() {
                 if (WeakThisPtr.IsValid()) {
                     WeakThisPtr->RestartCapturing();
+                    WeakThisPtr->OnCaptureDeviceChanged.Broadcast(PreviousDevice, WeakThisPtr->CurrentSelectedDevice);
                 }
             });
         }
@@ -249,9 +251,7 @@ void UOdinAudioCapture::Tick(float DeltaTime)
 }
 
 bool UOdinAudioCapture::IsTickable() const
-{
-    return GetTryRecognizingDeviceDisconnected();
-}
+{ return GetTryRecognizingDeviceDisconnected(); }
 
 void UOdinAudioCapture::InitializeGenerator()
 {
@@ -316,14 +316,10 @@ void UOdinAudioCapture::TryRetrieveDefaultDevice()
 }
 
 bool UOdinAudioCapture::GetTryRecognizingDeviceDisconnected() const
-{
-    return bTryRecognizingDeviceDisconnect;
-}
+{ return bTryRecognizingDeviceDisconnect; }
 
 void UOdinAudioCapture::SetTryRecognizingDeviceDisconnected(bool bTryRecognizing)
-{
-    bTryRecognizingDeviceDisconnect = bTryRecognizing;
-}
+{ bTryRecognizingDeviceDisconnect = bTryRecognizing; }
 
 bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
 {

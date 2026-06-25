@@ -10,10 +10,23 @@
 
 #include "OdinNativeRpc.generated.h"
 
+// event
+
+USTRUCT(BlueprintType)
+struct ODIN_API FOdinError {
+    GENERATED_BODY()
+
+  public:
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Odin|Events")
+    FString message;
+
+    static const FString Name;
+};
+
 // event responses
 
 USTRUCT(BlueprintType)
-struct FOdinRoomStatusChanged {
+struct ODIN_API FOdinRoomStatusChanged {
     GENERATED_BODY()
 
   public:
@@ -30,7 +43,7 @@ struct FOdinRoomStatusChanged {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinNewReconnectToken {
+struct ODIN_API FOdinNewReconnectToken {
     GENERATED_BODY()
 
   public:
@@ -41,7 +54,7 @@ struct FOdinNewReconnectToken {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinMessageReceived {
+struct ODIN_API FOdinMessageReceived {
     GENERATED_BODY()
 
   public:
@@ -54,7 +67,7 @@ struct FOdinMessageReceived {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinJoined {
+struct ODIN_API FOdinJoined {
     GENERATED_BODY()
 
   public:
@@ -69,7 +82,7 @@ struct FOdinJoined {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinPeerJoined {
+struct ODIN_API FOdinPeerJoined {
     GENERATED_BODY()
 
   public:
@@ -84,7 +97,7 @@ struct FOdinPeerJoined {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinPeerChanged {
+struct ODIN_API FOdinPeerChanged {
     GENERATED_BODY()
 
   public:
@@ -101,7 +114,7 @@ struct FOdinPeerChanged {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinPeerLeft {
+struct ODIN_API FOdinPeerLeft {
     GENERATED_BODY()
 
   public:
@@ -114,7 +127,7 @@ struct FOdinPeerLeft {
 // rpc requests
 
 USTRUCT(BlueprintType)
-struct FOdinChangeSelf {
+struct ODIN_API FOdinChangeSelf {
     GENERATED_BODY()
 
   public:
@@ -149,7 +162,7 @@ struct FOdinChangeSelf {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinSetChannelMasks {
+struct ODIN_API FOdinSetChannelMasks {
     GENERATED_BODY()
 
   public:
@@ -208,7 +221,7 @@ struct FOdinSetChannelMasks {
 };
 
 USTRUCT(BlueprintType)
-struct FOdinSendMessage {
+struct ODIN_API FOdinSendMessage {
     GENERATED_BODY()
 
   public:

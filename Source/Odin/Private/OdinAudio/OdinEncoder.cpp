@@ -185,9 +185,7 @@ UOdinPipeline* UOdinEncoder::GetOrCreatePipeline()
 }
 
 bool UOdinEncoder::GetIsSilent() const
-{
-    return odin_encoder_is_silent(this->GetHandle());
-}
+{ return odin_encoder_is_silent(this->GetHandle()); }
 
 bool UOdinEncoder::SetAudioEventHandler(int EFilter)
 {
@@ -355,9 +353,7 @@ void UOdinEncoder::SetHandle(OdinEncoder* handle)
 }
 
 int32 UOdinEncoder::Push(TArray<float> Samples)
-{
-    return Push(Samples.GetData(), Samples.Num());
-}
+{ return Push(Samples.GetData(), Samples.Num()); }
 
 void UOdinEncoder::SetEchoCancellationProcessingDelay(int32 DelayInMs)
 {
@@ -521,9 +517,7 @@ void FOdinSubmixListener::RemoveEffectId(const uint32 EffectId)
 }
 
 void FOdinSubmixListener::SetDelay(int32 NewDelayInMs)
-{
-    DelayMs = NewDelayInMs;
-}
+{ DelayMs = NewDelayInMs; }
 
 int32 FOdinSubmixListener::GetNumEffectsRegistered() const
 {

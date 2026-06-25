@@ -89,12 +89,17 @@ class ODIN_API UOdinRoom : public UObject
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerLeftDelegate OnRoomPeerLeftBP;
 
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinErrorDelegate, UOdinRoom*, room, FOdinError, data);
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinErrorDelegate OnRoomErrorBP;
+
     /**
      * Creates a new ODIN room handle and starts the asynchronous connection process.
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Construct Room", ToolTip = "Creates a new room", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
-                      Keywords = "Create,Create Room"),
+                          Keywords = "Create,Create Room"),
               Category = "Odin")
     static UOdinRoom* ConstructRoom(UObject* WorldContextObject);
 
@@ -118,7 +123,7 @@ class ODIN_API UOdinRoom : public UObject
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Free Room", ToolTip = "Frees a room and handle immediately.", DefaultToSelf = "Room",
-                      Keywords = "Destroy Immediate,Destroy Room"),
+                          Keywords = "Destroy Immediate,Destroy Room"),
               Category = "Odin")
     bool FreeRoom();
     /**
@@ -129,7 +134,8 @@ class ODIN_API UOdinRoom : public UObject
     static bool FreeRoomByHandle(OdinRoom* room);
 
     UFUNCTION(BlueprintCallable,
-              meta     = (DisplayName = "Connect Room", ToolTip = "Creates the room in a connection pool", Keywords = "Start Connection,Start Room"),
+              meta     = (DisplayName = "Connect Room", ToolTip = "Creates the room in a connection pool",
+                          Keywords = "Start Connection,Start Room,Join,JoinRoom,Join Room"),
               Category = "Odin")
     UOdinRoom* ConnectRoom(FString gateway, FString authentication, bool& bSuccess, UOdinCrypto* crypto = nullptr);
     /**
@@ -223,9 +229,7 @@ class ODIN_API UOdinRoom : public UObject
     OdinCipher*     GetRoomCipher();
 
     inline OdinRoom* GetHandle() const
-    {
-        return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinRoom*>(Handle->GetHandle()) : nullptr;
-    }
+    { return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinRoom*>(Handle->GetHandle()) : nullptr; }
 
     inline void SetHandle(OdinRoom* handle)
     {
@@ -251,7 +255,7 @@ class ODIN_API UOdinRoom : public UObject
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Set Crypto Password",
-                      ToolTip     = "Set string password as bytes if Crypto is set and valid (result may not align outside of UnrealEngine)"),
+                          ToolTip     = "Set string password as bytes if Crypto is set and valid (result may not align outside of UnrealEngine)"),
               Category = "Odin|Room|Extensions")
     void SetPassword(const FString Password) const;
 

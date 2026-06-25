@@ -4,7 +4,7 @@
 #include "OdinChannelMask.generated.h"
 
 USTRUCT(BlueprintType)
-struct FOdinChannelMask {
+struct ODIN_API FOdinChannelMask {
     GENERATED_BODY()
 
     FOdinChannelMask();
@@ -22,9 +22,7 @@ struct FOdinChannelMask {
     }
 
     operator uint64() const
-    {
-        return ChannelMask;
-    }
+    { return ChannelMask; }
 
     bool   IsSet(uint64 mask) const;
     uint64 Set(int32 index, bool set);

@@ -35,9 +35,7 @@ class ODIN_API SendRpcTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(SendRpcTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(SendRpcTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API ChangeSelfRpcTask : public FNonAbandonableTask
@@ -65,9 +63,7 @@ class ODIN_API ChangeSelfRpcTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API SetChannelMasksRpcTask : public FNonAbandonableTask
@@ -95,9 +91,7 @@ class ODIN_API SetChannelMasksRpcTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API SendMessageRpcTask : public FNonAbandonableTask
@@ -125,9 +119,7 @@ class ODIN_API SendMessageRpcTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API DecoderPopTask : public FNonAbandonableTask
@@ -152,9 +144,7 @@ class ODIN_API DecoderPopTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };
 
 class ODIN_API EncoderPopTask : public FNonAbandonableTask
@@ -179,7 +169,5 @@ class ODIN_API EncoderPopTask : public FNonAbandonableTask
     void DoWork();
 
     FORCEINLINE TStatId GetStatId() const
-    {
-        RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks);
-    }
+    { RETURN_QUICK_DECLARE_CYCLE_STAT(AddMediaTask, STATGROUP_ThreadPoolAsyncTasks); }
 };

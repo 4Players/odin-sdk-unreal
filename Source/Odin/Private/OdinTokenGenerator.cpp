@@ -58,22 +58,22 @@ FString UOdinTokenGenerator::GenerateRoomTokenEx(const FString &RoomId, const FS
         auto now = time(nullptr);
 
         TSharedPtr<FJsonObject> bodyObject = MakeShareable(new FJsonObject());
-        bodyObject->SetStringField("rid", RoomId);
-        bodyObject->SetStringField("uid", UserId);
+        bodyObject->SetStringField(TEXT("rid"), RoomId);
+        bodyObject->SetStringField(TEXT("uid"), UserId);
 
         if (!CustomerId.IsEmpty())
-            bodyObject->SetStringField("cid", CustomerId);
+            bodyObject->SetStringField(TEXT("cid"), CustomerId);
         if (!Audience.IsEmpty())
-            bodyObject->SetStringField("aud", Audience);
+            bodyObject->SetStringField(TEXT("aud"), Audience);
         if (!Subject.IsEmpty())
-            bodyObject->SetStringField("sub", Subject);
+            bodyObject->SetStringField(TEXT("sub"), Subject);
         if (!Address.IsEmpty())
-            bodyObject->SetStringField("adr", Address);
+            bodyObject->SetStringField(TEXT("adr"), Address);
         if (!Upstream.IsEmpty())
-            bodyObject->SetStringField("ups", Upstream);
+            bodyObject->SetStringField(TEXT("ups"), Upstream);
 
-        bodyObject->SetNumberField("nbf", now);
-        bodyObject->SetNumberField("exp", now + Leeway);
+        bodyObject->SetNumberField(TEXT("nbf"), now);
+        bodyObject->SetNumberField(TEXT("exp"), now + Leeway);
 
         FString                                             jsonBody;
         TSharedRef<OdinUtility::FCondensedJsonStringWriter> Writer = OdinUtility::FCondensedJsonStringWriterFactory::Create(&jsonBody);

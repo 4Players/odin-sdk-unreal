@@ -47,7 +47,11 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     static UOdinEncoder* CreateOdinEncoderFromGenerator(UObject* WorldContextObject, UPARAM(ref) UOdinRoom*& OdinRoom,
                                                         UPARAM(ref) UAudioGenerator*& AudioGenerator);
 
+    UFUNCTION(BlueprintCallable, Category = "Odin|Encoder", meta = (ToolTip = "Links an encoder to a room. Audio from the encoder will be sent to the room."))
     static void LinkEncoderToRoom(UOdinEncoder* Encoder, UOdinRoom* Room);
+
+    UFUNCTION(BlueprintCallable, Category = "Odin|Encoder",
+              meta = (ToolTip = "Unlinks an encoder from a room. Audio from the encoder will no longer be sent to the room."))
     static void UnlinkEncoderFromRoom(UOdinEncoder* Encoder);
 
     UFUNCTION(BlueprintCallable,
@@ -57,7 +61,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
 
     UFUNCTION(BlueprintPure,
               meta     = (DisplayName = "Get Decoders for Peer",
-                      ToolTip     = "Retrieves all decoders that have been registered for this room with the given peer id."),
+                          ToolTip     = "Retrieves all decoders that have been registered for this room with the given peer id."),
               Category = "Odin|Audio Pipeline")
     static TArray<UOdinDecoder*> GetDecodersForPeer(UOdinRoom* Room, int64 PeerId);
 
@@ -69,7 +73,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Deregister Decoder From All", ToolTip = "Deregisters a Decoder from all connections it receives audio from.",
-                      Keywords = "Unlink"),
+                          Keywords = "Unlink"),
               Category = "Odin|Audio Pipeline")
     static void DeregisterDecoderFromAllConnections(UOdinDecoder* Decoder);
 

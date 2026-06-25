@@ -23,9 +23,7 @@ UOdinPipeline *UOdinPipeline::ConstructPipeline(UObject *WorldContextObject, con
 
 // effects
 int32 UOdinPipeline::GetEffectCount() const
-{
-    return odin_pipeline_get_effect_count(this->GetHandle());
-}
+{ return odin_pipeline_get_effect_count(this->GetHandle()); }
 
 int32 UOdinPipeline::GetEffectId(int32 Index) const
 {
@@ -210,9 +208,7 @@ bool UOdinPipeline::UpdateApmPlayback(int32 EffectId, const float *Samples, int3
 }
 
 bool UOdinPipeline::UpdateApmPlayback(int32 EffectId, TArray<float> &Samples, int32 Delay)
-{
-    return UpdateApmPlayback(EffectId, Samples.GetData(), Samples.Num(), Delay);
-}
+{ return UpdateApmPlayback(EffectId, Samples.GetData(), Samples.Num(), Delay); }
 
 // convenience effects
 UOdinActivityEffect *UOdinPipeline::CreateActivityEffect(int32 Index)
@@ -225,9 +221,7 @@ UOdinActivityEffect *UOdinPipeline::CreateActivityEffect(int32 Index)
 }
 
 UOdinActivityEffect *UOdinPipeline::AppendActivityEffect()
-{
-    return CreateActivityEffect(GetEffectCount());
-}
+{ return CreateActivityEffect(GetEffectCount()); }
 
 UOdinCloneEffect *UOdinPipeline::CreateCloneEffect(int32 Index)
 {
@@ -239,9 +233,7 @@ UOdinCloneEffect *UOdinPipeline::CreateCloneEffect(int32 Index)
 }
 
 UOdinCloneEffect *UOdinPipeline::AppendCloneEffect()
-{
-    return CreateCloneEffect(GetEffectCount());
-}
+{ return CreateCloneEffect(GetEffectCount()); }
 
 UOdinMuteEffect *UOdinPipeline::CreateMuteEffect(int32 Index)
 {
@@ -253,9 +245,7 @@ UOdinMuteEffect *UOdinPipeline::CreateMuteEffect(int32 Index)
 }
 
 UOdinMuteEffect *UOdinPipeline::AppendMuteEffect()
-{
-    return CreateMuteEffect(GetEffectCount());
-}
+{ return CreateMuteEffect(GetEffectCount()); }
 
 UOdinVolumeEffect *UOdinPipeline::CreateVolumeEffect(int32 Index)
 {
@@ -267,9 +257,7 @@ UOdinVolumeEffect *UOdinPipeline::CreateVolumeEffect(int32 Index)
 }
 
 UOdinVolumeEffect *UOdinPipeline::AppendVolumeEffect()
-{
-    return CreateVolumeEffect(GetEffectCount());
-}
+{ return CreateVolumeEffect(GetEffectCount()); }
 
 void UOdinPipeline::SetHandle(const OdinPipeline *NewHandle)
 {

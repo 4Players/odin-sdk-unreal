@@ -25,6 +25,10 @@
 #define UE_ODIN_DEBUG 0
 #endif // !UE_ODIN_DEBUG
 
+#ifndef ODIN_RUN_ON_SERVER
+#define ODIN_RUN_ON_SERVER 0
+#endif // !ODIN_RUN_ON_SERVER
+
 DEFINE_LOG_CATEGORY(Odin)
 
 void FOdinModule::StartupModule()
@@ -85,7 +89,11 @@ void FOdinModule::StartupModule()
     FPlatformProcess::PopDllDirectory(*LibraryPath);
 #endif
 
-    odin_initialize(ODIN_VERSION);
+#if UE_SERVER && !ODIN_RUN_ON_SERVER
+    return;
+#endif
+    enum OdinError InitializationResult = odin_initialize(ODIN_VERSION);
+    bIsInitialized                      = ODIN_ERROR_SUCCESS == InitializationResult;
 }
 
 void FOdinModule::Debug(FString platform, FString path, FString name)
@@ -102,7 +110,9 @@ void FOdinModule::Debug(FString platform, FString path, FString name)
 
 void FOdinModule::ShutdownModule()
 {
-    odin_shutdown();
+    if (bIsInitialized) {
+        odin_shutdown();
+    }
 
 #if PLATFORM_WINDOWS || PLATFORM_LINUX
 #if ODIN_USE_EXTENSIONS

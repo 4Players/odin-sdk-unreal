@@ -11,9 +11,7 @@
 
 UOdinDecoder::UOdinDecoder(const class FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
-}
+{ ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 void UOdinDecoder::SetHandle(OdinDecoder *NewHandle)
 {
@@ -140,9 +138,7 @@ UOdinPipeline *UOdinDecoder::GetOrCreatePipeline()
 }
 
 bool UOdinDecoder::GetIsSilent() const
-{
-    return odin_decoder_is_silent(this->GetNativeHandle());
-}
+{ return odin_decoder_is_silent(this->GetNativeHandle()); }
 
 bool UOdinDecoder::SetAudioEventHandler(int EFilter)
 {

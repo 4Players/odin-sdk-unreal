@@ -5,9 +5,7 @@
 
 UOdinActivityEffect::UOdinActivityEffect(const FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    UserData = TOdinCustomEffectUserData(this);
-}
+{ UserData = TOdinCustomEffectUserData(this); }
 
 void UOdinActivityEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bIsSilent,
                                        TOdinCustomEffectUserData<UOdinCustomEffect> *const InUserData) const

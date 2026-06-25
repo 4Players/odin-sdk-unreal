@@ -7,9 +7,7 @@
 
 UOdinCustomEffect::UOdinCustomEffect(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-{
-    UserData = TOdinCustomEffectUserData(this);
-}
+{ UserData = TOdinCustomEffectUserData(this); }
 
 void UOdinCustomEffect::CustomEffect(const TArrayView<float>& InSamples, bool*& bIsSilent, TOdinCustomEffectUserData<UOdinCustomEffect>* const InUserData) const
 {

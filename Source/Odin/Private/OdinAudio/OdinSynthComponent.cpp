@@ -50,14 +50,10 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(const FSoundGenerat
 }
 
 UOdinDecoder* UOdinSynthComponent::GetDecoder() const
-{
-    return Decoder;
-}
+{ return Decoder; }
 
 UAudioComponent* UOdinSynthComponent::GetConnectedAudioComponent()
-{
-    return GetAudioComponent();
-}
+{ return GetAudioComponent(); }
 
 void UOdinSynthComponent::SetDecoder(UOdinDecoder* InDecoder)
 {

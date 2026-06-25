@@ -7,24 +7,16 @@ FOdinChannelMask::FOdinChannelMask()
 }
 
 FOdinChannelMask::FOdinChannelMask(const uint64 InitialMask)
-{
-    SetChannelMask(InitialMask);
-}
+{ SetChannelMask(InitialMask); }
 
 FOdinChannelMask FOdinChannelMask::CreateFull()
-{
-    return FOdinChannelMask(~static_cast<uint64>(0));
-}
+{ return FOdinChannelMask(~static_cast<uint64>(0)); }
 
 FOdinChannelMask FOdinChannelMask::CreateEmpty()
-{
-    return FOdinChannelMask();
-}
+{ return FOdinChannelMask(); }
 
 bool FOdinChannelMask::IsSet(uint64 mask) const
-{
-    return ChannelMask & mask;
-}
+{ return ChannelMask & mask; }
 
 uint64 FOdinChannelMask::Set(int32 index, bool bSet)
 {
@@ -45,14 +37,10 @@ uint64 FOdinChannelMask::Flip(int32 index)
 }
 
 uint64 FOdinChannelMask::GetChannelMask() const
-{
-    return ChannelMask;
-}
+{ return ChannelMask; }
 
 uint64 FOdinChannelMask::SetChannelMask(uint64 mask)
-{
-    return ChannelMask = mask;
-}
+{ return ChannelMask = mask; }
 
 uint64 FOdinChannelMask::SetChannelMask(uint32 lower, uint32 higher = 0)
 {

@@ -26,7 +26,7 @@ class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Construct Volume Effect", ToolTip = "Creates a new Volume effect to change the buffer audio level",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Audio Pipeline|Effects")
     static UOdinVolumeEffect* ConstructVolumeEffect(UObject* WorldContextObject, float scale = 1.0f);
 

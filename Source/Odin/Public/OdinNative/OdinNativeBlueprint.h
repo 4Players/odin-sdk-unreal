@@ -176,9 +176,7 @@ enum class EOdinAudioEvents : uint8 {
     AUDIO_EVENTS_ALL = static_cast<uint8>(-1) UMETA(DisplayName = "ALL"),
 };
 inline bool operator==(int a, EOdinAudioEvents b)
-{
-    return a == static_cast<uint8>(b);
-}
+{ return a == static_cast<uint8>(b); }
 ENUM_CLASS_FLAGS(EOdinAudioEvents);
 
 UENUM(BlueprintType)
@@ -406,19 +404,13 @@ struct ODIN_API FOdinPosition {
     FOdinPosition(const FVector &In);
 
     operator OdinPosition() const
-    {
-        return OdinPosition{x, y, z};
-    }
+    { return OdinPosition{x, y, z}; }
 
     operator FVector() const
-    {
-        return FVector(x, y, z);
-    }
+    { return FVector(x, y, z); }
 
     FString ToString() const
-    {
-        return FString::Printf(TEXT("X: %f, Y: %f, Z: %f"), x, y, z);
-    }
+    { return FString::Printf(TEXT("X: %f, Y: %f, Z: %f"), x, y, z); }
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "X"), Category = "Odin|Position")
     float x = 0;

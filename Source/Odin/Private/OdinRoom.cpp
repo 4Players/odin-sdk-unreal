@@ -40,9 +40,7 @@ void UOdinRoom::FinishDestroy()
 }
 
 UOdinRoom *UOdinRoom::ConstructRoom(UObject *WorldContextObject)
-{
-    return NewObject<UOdinRoom>(WorldContextObject);
-}
+{ return NewObject<UOdinRoom>(WorldContextObject); }
 
 UOdinRoom *UOdinRoom::ConstructRoom(UObject *WorldContextObject, OdinRoom *handle, OdinCipher *crypto)
 {
@@ -81,9 +79,7 @@ UOdinRoom *UOdinRoom::ConnectRoom(FString gateway, FString authentication, bool 
 }
 
 bool UOdinRoom::CloseRoom()
-{
-    return CloseOdinRoomByHandle(GetHandle());
-}
+{ return CloseOdinRoomByHandle(GetHandle()); }
 
 bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 {
@@ -97,9 +93,7 @@ bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 }
 
 bool UOdinRoom::FreeRoom()
-{
-    return FreeRoomByHandle(GetHandle());
-}
+{ return FreeRoomByHandle(GetHandle()); }
 
 bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 {
@@ -113,19 +107,13 @@ bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 }
 
 int64 UOdinRoom::GetOwnPeerId()
-{
-    return this->State.own_peer_id;
-}
+{ return this->State.own_peer_id; }
 
 FString UOdinRoom::GetReconnectToken()
-{
-    return FString(this->ReconnectToken.token);
-}
+{ return FString(this->ReconnectToken.token); }
 
 FName UOdinRoom::GetRoomName()
-{
-    return FName(this->State.room_id);
-}
+{ return FName(this->State.room_id); }
 
 FOdinConnectionStats UOdinRoom::GetConnectionStats()
 {
@@ -138,24 +126,16 @@ FOdinConnectionStats UOdinRoom::GetConnectionStats()
 }
 
 void UOdinRoom::SetRoomEvents(const OdinRoomEvents &roomcb)
-{
-    this->Roomcb = roomcb;
-}
+{ this->Roomcb = roomcb; }
 
 OdinRoomEvents *UOdinRoom::GetRoomEvents()
-{
-    return &this->Roomcb;
-}
+{ return &this->Roomcb; }
 
 void UOdinRoom::RemoveRoomEvents()
-{
-    this->Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .user_data = this};
-}
+{ this->Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .user_data = this}; }
 
 OdinCipher *UOdinRoom::GetRoomCipher()
-{
-    return IsValid(Crypto) ? Crypto->GetHandle() : nullptr;
-}
+{ return IsValid(Crypto) ? Crypto->GetHandle() : nullptr; }
 
 bool UOdinRoom::SendRpc(FString json)
 {
@@ -170,14 +150,10 @@ bool UOdinRoom::SendRpc(FString json)
 }
 
 bool UOdinRoom::ChangeSelf(FOdinChangeSelf request)
-{
-    return this->SendRpc(request.AsJson());
-}
+{ return this->SendRpc(request.AsJson()); }
 
 bool UOdinRoom::SetChannelMasks(const FOdinSetChannelMasks &request)
-{
-    return this->SendRpc(request.AsJson());
-}
+{ return this->SendRpc(request.AsJson()); }
 
 bool UOdinRoom::SetChannelMasks(TMap<int64, uint64> masks, bool reset)
 {
@@ -186,9 +162,7 @@ bool UOdinRoom::SetChannelMasks(TMap<int64, uint64> masks, bool reset)
 }
 
 bool UOdinRoom::SendMessage(const FOdinSendMessage &request)
-{
-    return this->SendRpc(request.AsJson());
-}
+{ return this->SendRpc(request.AsJson()); }
 
 void UOdinRoom::HandleOdinEventDatagram(OdinRoom *RoomHandle, uint32 PeerId, uint64 ChannelMask, uint32 SsrcId, TArray<uint8> &Datagram)
 {
@@ -242,7 +216,6 @@ bool UOdinRoom::SendAudio(UOdinEncoder *encoder)
                     return false;
             }
         }
-        return false;
     }
 }
 
@@ -262,9 +235,7 @@ FString UOdinRoom::GetOdinRoomName() const
 }
 
 bool UOdinRoom::IsConnected() const
-{
-    return Status.status == FOdinRoomStatusChanged::JoinedStatus;
-}
+{ return Status.status == FOdinRoomStatusChanged::JoinedStatus; }
 
 void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonString)
 {
@@ -453,6 +424,24 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerLeft::Name);
+            }
+            return;
+        }
+
+        // Error
+        if (ParsedRpc->TryGetObjectField(FOdinError::Name, EventObject)) {
+            if (EventObject && !DeserializeAndBroadcast<FOdinError>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinError data) {
+                    ODIN_LOG(VeryVerbose, "Error event: %s", *data.message);
+                    if (!room.IsValid()) {
+                        return;
+                    }
+                    FOdinErrorDelegate Delegate = room->OnRoomErrorBP;
+                    if (Delegate.IsBound()) {
+                        Delegate.Broadcast(room.Get(), data);
+                    }
+                    ODIN_LOG(Verbose, "Successfully parsed event %s: %s", *FOdinError::Name, *data.message);
+                })) {
+                ODIN_LOG(Error, "parsing event %s failed!", *FOdinError::Name);
             }
             return;
         }

@@ -11,9 +11,7 @@
 
 UOdinRestGSTTEffect::UOdinRestGSTTEffect(const class FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    UserData = TOdinCustomEffectUserData(this);
-}
+{ UserData = TOdinCustomEffectUserData(this); }
 
 void UOdinRestGSTTEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bIsSilent,
                                        TOdinCustomEffectUserData<UOdinCustomEffect> *const InUserData) const

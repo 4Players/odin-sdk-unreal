@@ -59,9 +59,7 @@ class ODIN_API UOdinCrypto : public UObject
     TArray<uint8> Secret;
 
     inline OdinCipher* GetHandle() const
-    {
-        return IsValid(Handle) && Handle->IsValidLowLevel() ? reinterpret_cast<OdinCipher*>(Handle->GetHandle()) : nullptr;
-    }
+    { return IsValid(Handle) && Handle->IsValidLowLevel() ? reinterpret_cast<OdinCipher*>(Handle->GetHandle()) : nullptr; }
 
     inline void SetHandle(OdinCipher* NewHandle)
     {

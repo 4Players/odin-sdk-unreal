@@ -8,9 +8,7 @@
 #include "Engine/Engine.h"
 
 UOdinSubsystem* UOdinSubsystem::Get()
-{
-    return GEngine ? GEngine->GetEngineSubsystem<UOdinSubsystem>() : nullptr;
-}
+{ return GEngine ? GEngine->GetEngineSubsystem<UOdinSubsystem>() : nullptr; }
 
 bool UOdinSubsystem::GlobalIsRoomValid(const OdinRoom* Handle)
 {

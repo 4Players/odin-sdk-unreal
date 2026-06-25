@@ -2,6 +2,9 @@
 
 #include "OdinNative/OdinNativeRpc.h"
 
+// event
+const FString FOdinError::Name = FString("Error");
+
 // event response
 const FString FOdinRoomStatusChanged::Name = FString("RoomStatusChanged");
 const FString FOdinNewReconnectToken::Name = FString("NewReconnectToken");
@@ -11,7 +14,7 @@ const FString FOdinPeerJoined::Name        = FString("PeerJoined");
 const FString FOdinPeerChanged::Name       = FString("PeerChanged");
 const FString FOdinPeerLeft::Name          = FString("PeerLeft");
 
-//
+// status
 const FString FOdinRoomStatusChanged::JoinedStatus  = FString("joined");
 const FString FOdinRoomStatusChanged::ClosedStatus  = FString("closed");
 const FString FOdinRoomStatusChanged::JoiningStatus = FString("joining");

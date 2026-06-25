@@ -9,19 +9,16 @@
 #include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonReader.h"
 #include "Serialization/JsonSerializer.h"
+#include "Runtime/Launch/Resources/Version.h"
 
 using namespace OdinUtility;
 
 UOdinJsonObject::UOdinJsonObject(const class FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    Reset();
-}
+{ Reset(); }
 
 UOdinJsonObject *UOdinJsonObject::ConstructJsonObject(UObject *WorldContextObject)
-{
-    return NewObject<UOdinJsonObject>();
-}
+{ return NewObject<UOdinJsonObject>(); }
 
 UOdinJsonObject *UOdinJsonObject::ConstructJsonObjectFromString(UObject *WorldContextObject, const FString &Data)
 {
@@ -48,14 +45,10 @@ void UOdinJsonObject::Reset()
 }
 
 TSharedPtr<FJsonObject> &UOdinJsonObject::GetRootObject()
-{
-    return JsonObj;
-}
+{ return JsonObj; }
 
 void UOdinJsonObject::SetRootObject(const TSharedPtr<FJsonObject> &JsonObject)
-{
-    JsonObj = JsonObject;
-}
+{ JsonObj = JsonObject; }
 
 FString UOdinJsonObject::EncodeJson() const
 {
@@ -102,8 +95,15 @@ TArray<FString> UOdinJsonObject::GetFieldNames() const
     if (!JsonObj.IsValid()) {
         return Result;
     }
-
+#if ENGINE_MAJOR_VERSION >= 5 && ENGINE_MINOR_VERSION >= 8
+    TArray<UE::FSharedString> Keys;
+    JsonObj->Values.GetKeys(Keys);
+    for (UE::FSharedString Key : Keys) {
+        Result.Add(*Key);
+    }
+#else
     JsonObj->Values.GetKeys(Result);
+#endif
 
     return Result;
 }

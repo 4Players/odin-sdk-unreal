@@ -36,7 +36,7 @@ class ODIN_API UOdinTokenGenerator : public UObject
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Construct Token Generator", ToolTip = "Creates a new generator for signed authentication tokens",
-                      HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Authentication")
     static UOdinTokenGenerator* ConstructTokenGenerator(UObject* WorldContextObject, const FString& AccessKey);
 
@@ -77,9 +77,7 @@ class ODIN_API UOdinTokenGenerator : public UObject
                                 const FString& Subject = "", const FString& Address = "", const FString& Upstream = "", const int32 Leeway = 300) const;
 
     inline OdinTokenGenerator* GetHandle() const
-    {
-        return IsValid(handle_) ? reinterpret_cast<OdinTokenGenerator*>(handle_->GetHandle()) : nullptr;
-    }
+    { return IsValid(handle_) ? reinterpret_cast<OdinTokenGenerator*>(handle_->GetHandle()) : nullptr; }
 
     inline void SetHandle(OdinTokenGenerator* handle)
     {

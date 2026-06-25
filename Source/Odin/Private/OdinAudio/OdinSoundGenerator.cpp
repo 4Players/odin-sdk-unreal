@@ -11,14 +11,10 @@
 FOdinSoundGenerator::FOdinSoundGenerator()
     : NativeDecoderHandle(nullptr)
     , bIsFinished(false)
-{
-    ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
-}
+{ ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 FOdinSoundGenerator::~FOdinSoundGenerator()
-{
-    ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
-}
+{ ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 void FOdinSoundGenerator::ResetConnectedDecoder()
 {
@@ -108,19 +104,13 @@ int32 FOdinSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 }
 
 void FOdinSoundGenerator::OnBeginGenerate()
-{
-    ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
-}
+{ ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 void FOdinSoundGenerator::OnEndGenerate()
-{
-    ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
-}
+{ ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 bool FOdinSoundGenerator::IsFinished() const
-{
-    return bIsFinished;
-}
+{ return bIsFinished; }
 
 void FOdinSoundGenerator::AddAudioBufferListener(const TWeakPtr<IAudioBufferListener>& InAudioBufferListener)
 {

@@ -40,7 +40,7 @@ class ODIN_API UOdinMuteEffect : public UOdinCustomEffect
                                                 EOdinMuteEffectOptions Toggle = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED);
 
     UPROPERTY(BlueprintReadWrite, Category = "Odin|Audio Pipeline|State")
-    EOdinMuteEffectOptions                     MuteFlag;
+    EOdinMuteEffectOptions                     MuteFlag = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED;
     TOdinCustomEffectUserData<UOdinMuteEffect> UserData;
 
   private:

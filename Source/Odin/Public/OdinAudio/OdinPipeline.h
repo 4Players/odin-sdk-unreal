@@ -251,9 +251,7 @@ class ODIN_API UOdinPipeline : public UObject
     UOdinVolumeEffect* AppendVolumeEffect();
 
     inline const OdinPipeline* GetHandle() const
-    {
-        return reinterpret_cast<const OdinPipeline*>(Handle->GetHandle());
-    }
+    { return reinterpret_cast<const OdinPipeline*>(Handle->GetHandle()); }
 
     void SetHandle(const OdinPipeline* NewHandle);
 

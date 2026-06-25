@@ -183,14 +183,10 @@ void UOdinFunctionLibrary::DeregisterDecoderFromAllConnections(UOdinDecoder* Dec
 }
 
 FVector UOdinFunctionLibrary::Conv_OdinPositionToVector(const FOdinPosition InPosition)
-{
-    return InPosition;
-}
+{ return InPosition; }
 
 FOdinPosition UOdinFunctionLibrary::Conv_VectorToOdinPosition(const FVector& InPosition)
-{
-    return InPosition;
-}
+{ return InPosition; }
 
 FOdinChannelMask UOdinFunctionLibrary::CreateChannelMask(const TMap<int32, bool>& Channels, bool bDefaultValue)
 {
@@ -239,26 +235,16 @@ FOdinChannelMask UOdinFunctionLibrary::CreateChannelMaskFromDisabled(const TArra
 }
 
 void UOdinFunctionLibrary::SetChannelInMask(FOdinChannelMask& Mask, const int32 ChannelIndex, const bool bEnabled)
-{
-    Mask.Set(ChannelIndex, bEnabled);
-}
+{ Mask.Set(ChannelIndex, bEnabled); }
 
 bool UOdinFunctionLibrary::IsChannelEnabledInMask(const FOdinChannelMask& Mask, const int32 ChannelIndex)
-{
-    return Mask.IsSet(ChannelIndex);
-}
+{ return Mask.IsSet(ChannelIndex); }
 
 FOdinChannelMask UOdinFunctionLibrary::CreateFullMask()
-{
-    return FOdinChannelMask::CreateFull();
-}
+{ return FOdinChannelMask::CreateFull(); }
 
 FOdinChannelMask UOdinFunctionLibrary::CreateEmptyMask()
-{
-    return FOdinChannelMask::CreateEmpty();
-}
+{ return FOdinChannelMask::CreateEmpty(); }
 
 bool UOdinFunctionLibrary::DoesAudioEventMatchFilter(EOdinAudioEvents Event, const int32 Filter)
-{
-    return (static_cast<int32>(Event) & Filter) != 0;
-}
+{ return (static_cast<int32>(Event) & Filter) != 0; }

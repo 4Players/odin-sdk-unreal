@@ -75,14 +75,10 @@ UOdinJsonValue *ConstructJsonValue(UObject *WorldContextObject, const TSharedPtr
 }
 
 TSharedPtr<FJsonValue> &UOdinJsonValue::GetRootValue()
-{
-    return JsonVal;
-}
+{ return JsonVal; }
 
 void UOdinJsonValue::SetRootValue(TSharedPtr<FJsonValue> &JsonValue)
-{
-    JsonVal = JsonValue;
-}
+{ JsonVal = JsonValue; }
 
 EOJson::Type UOdinJsonValue::GetType() const
 {

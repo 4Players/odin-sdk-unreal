@@ -47,9 +47,7 @@ UOdinCrypto* UOdinCrypto::ConstructCrypto(UObject* WorldContextObject, const TAr
 }
 
 TArray<uint8> UOdinCrypto::GetSecret() const
-{
-    return this->Secret;
-}
+{ return this->Secret; }
 
 void UOdinCrypto::SetSecret(const TArray<uint8>& NewSecret)
 {

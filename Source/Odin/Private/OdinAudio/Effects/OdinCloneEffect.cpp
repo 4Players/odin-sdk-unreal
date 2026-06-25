@@ -5,14 +5,10 @@
 
 UOdinCloneEffect::UOdinCloneEffect(const FObjectInitializer &PCIP)
     : Super(PCIP)
-{
-    UserData = TOdinCustomEffectUserData(this);
-}
+{ UserData = TOdinCustomEffectUserData(this); }
 
 void UOdinCloneEffect::BeginDestroy()
-{
-    Super::BeginDestroy();
-}
+{ Super::BeginDestroy(); }
 
 UOdinCloneEffect *UOdinCloneEffect::ConstructCloneEffect(UObject *WorldContextObject)
 {

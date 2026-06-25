@@ -23,6 +23,7 @@ class ODIN_API FOdinModule : public IModuleInterface
 
   private:
     bool                 DBG               = false;
+    bool                 bIsInitialized    = false;
     void*                OdinLibraryHandle = nullptr;
     TMap<FString, void*> OdinLibraryExtensionHandles;
 };
