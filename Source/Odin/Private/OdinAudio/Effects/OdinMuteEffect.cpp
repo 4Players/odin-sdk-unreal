@@ -23,6 +23,9 @@ void UOdinMuteEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bI
         return;
 
     *bIsSilent = *bIsSilent || MuteFlag == EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON;
+    if (*bIsSilent) {
+        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
+    }
 }
 
 UOdinMuteEffect *UOdinMuteEffect::ConstructMuteEffect(UObject *WorldContextObject, EOdinMuteEffectOptions Toggle)
