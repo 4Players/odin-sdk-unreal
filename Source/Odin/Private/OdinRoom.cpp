@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinRoom.h"
 #include "Async/TaskGraphInterfaces.h"
@@ -16,20 +16,11 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
 {
 }
 
-void UOdinRoom::SetPassword(const FString Password) const
-{
-    if (IsValid(this->Crypto)) {
-
-        TArray<uint8> Buffer;
-        UOdinFunctionLibrary::OdinStringToBytes(Password, Buffer);
-        this->Crypto->SetSecret(Buffer);
-    }
-}
-
 void UOdinRoom::BeginDestroy()
 {
     ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
     CloseRoom();
+    ReleaseHandle();
     Super::BeginDestroy();
 }
 
@@ -47,8 +38,10 @@ UOdinRoom *UOdinRoom::ConstructRoom(UObject *WorldContextObject, OdinRoom *handl
     UOdinRoom *result = NewObject<UOdinRoom>(WorldContextObject);
 
     result->SetHandle(handle);
-    if (nullptr != crypto)
+    if (nullptr != crypto) {
         result->Crypto = UOdinCrypto::ConstructCrypto(WorldContextObject, crypto);
+        result->Crypto->MarkAttachedToRoom();
+    }
 
     if (UOdinSubsystem *const &OdinSubsystem = UOdinSubsystem::Get()) {
         OdinSubsystem->RegisterRoom(handle, result);
@@ -58,24 +51,57 @@ UOdinRoom *UOdinRoom::ConstructRoom(UObject *WorldContextObject, OdinRoom *handl
 
 UOdinRoom *UOdinRoom::ConnectRoom(FString gateway, FString authentication, bool &bSuccess, UOdinCrypto *crypto)
 {
+    const OdinError Ret = ConnectRoomNative(gateway, authentication, crypto);
+    bSuccess            = Ret == OdinError::ODIN_ERROR_SUCCESS;
+    if (!bSuccess) {
+        FOdinModule::LogErrorCode("Aborting ConnectRoom due to invalid odin_room_create call: %s", Ret);
+    }
+    return this;
+}
+
+OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Authentication, UOdinCrypto *InCrypto)
+{
     FScopeLock ConnectionRoomLock(&Room_CS);
-    OdinRoom  *room;
-    auto       ret =
-        odin_room_create(TCHAR_TO_UTF8(*gateway), TCHAR_TO_UTF8(*authentication), &this->Roomcb, (IsValid(crypto) ? crypto->GetHandle() : nullptr), &room);
+    OdinRoom  *room = nullptr;
+    ODIN_LOG(VeryVerbose, "Send ConnectRoom for Gateway %s, Auth: %s", *Gateway, *Authentication);
+
+    OdinCipher *CipherHandle = nullptr;
+    if (IsValid(InCrypto)) {
+        if (InCrypto->IsAttachedToRoom()) {
+            ODIN_LOG(Error, "Aborting ConnectRoom: the provided crypto is already owned by another room.");
+            return OdinError::ODIN_ERROR_ARGUMENT_INVALID_CIPHER;
+        }
+        CipherHandle = InCrypto->GetHandle();
+        if (CipherHandle == nullptr) {
+#if ODIN_USE_CRYPTO
+            ODIN_LOG(Error, "Aborting ConnectRoom: the provided crypto has no valid cipher handle.");
+            return OdinError::ODIN_ERROR_ARGUMENT_INVALID_CIPHER;
+#else
+            ODIN_LOG(Warning, "Crypto extension not compiled in, connecting without encryption.");
+#endif
+        }
+    }
+
+    if (OdinRoom *ExistingHandle = GetHandle()) {
+        ODIN_LOG(Warning, "ConnectRoom called on a room with an existing handle, closing and freeing the previous room.");
+        CloseOdinRoomByHandle(ExistingHandle);
+        ReleaseHandle();
+    }
+
+    auto ret = odin_room_create(TCHAR_TO_UTF8(*Gateway), TCHAR_TO_UTF8(*Authentication), &this->Roomcb, CipherHandle, &room);
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
         this->SetHandle(room);
-        this->Crypto = crypto;
+        ++ConnectionGeneration;
+        this->Crypto = CipherHandle != nullptr ? InCrypto : nullptr;
+        if (CipherHandle != nullptr) {
+            InCrypto->MarkAttachedToRoom();
+        }
 
         if (auto esub = UOdinSubsystem::Get()) {
             esub->RegisterRoom(room, this);
         }
-        bSuccess = true;
-    } else {
-        FOdinModule::LogErrorCode("Aborting ConstructRoom due to invalid odin_room_create call: %s", ret);
-        bSuccess = false;
     }
-
-    return this;
+    return ret;
 }
 
 bool UOdinRoom::CloseRoom()
@@ -93,7 +119,14 @@ bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 }
 
 bool UOdinRoom::FreeRoom()
-{ return FreeRoomByHandle(GetHandle()); }
+{
+    if (GetHandle() == nullptr) {
+        ODIN_LOG(Verbose, "Aborted FreeRoom due to invalid Odin Room handle.");
+        return false;
+    }
+    ReleaseHandle();
+    return true;
+}
 
 bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 {
@@ -101,9 +134,37 @@ bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
         ODIN_LOG(Verbose, "Aborted FreeRoom due to invalid Odin Room handle.");
         return false;
     }
+
+    if (UOdinSubsystem *const OdinSubsystem = UOdinSubsystem::Get()) {
+        if (TWeakObjectPtr<UOdinRoom> Owner = OdinSubsystem->GetRoomByHandle(handle); Owner.IsValid()) {
+            Owner->ReleaseHandle();
+            return true;
+        }
+    }
+
     DeregisterRoom(handle);
     odin_room_free(handle);
     return true;
+}
+
+void UOdinRoom::ReleaseHandle()
+{
+    InvalidateAllSockets();
+
+    bool bFreedRoom = false;
+    if (OdinRoom *RoomHandle = GetHandle()) {
+        DeregisterRoom(RoomHandle);
+        odin_room_free(RoomHandle);
+        SetHandle(nullptr);
+        bFreedRoom = true;
+    }
+
+    if (bFreedRoom && IsValid(Crypto) && Crypto->IsAttachedToRoom()) {
+        Crypto->InvalidateHandle();
+    }
+    Crypto = nullptr;
+
+    ++ConnectionGeneration;
 }
 
 int64 UOdinRoom::GetOwnPeerId()
@@ -117,8 +178,8 @@ FName UOdinRoom::GetRoomName()
 
 FOdinConnectionStats UOdinRoom::GetConnectionStats()
 {
-    OdinConnectionStats stats;
-    auto                ret = odin_room_get_connection_stats(GetHandle(), &stats);
+    OdinConnectionStats stats = {};
+    auto                ret   = odin_room_get_connection_stats(GetHandle(), &stats);
     if (ret != OdinError::ODIN_ERROR_SUCCESS)
         FOdinModule::LogErrorCode("Aborting GetConnectionStats due to invalid odin_room_get_connection_stats call: %s", ret);
 
@@ -132,7 +193,7 @@ OdinRoomEvents *UOdinRoom::GetRoomEvents()
 { return &this->Roomcb; }
 
 void UOdinRoom::RemoveRoomEvents()
-{ this->Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .user_data = this}; }
+{ this->Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .on_socket = OnSocketFunc, .user_data = this}; }
 
 OdinCipher *UOdinRoom::GetRoomCipher()
 { return IsValid(Crypto) ? Crypto->GetHandle() : nullptr; }
@@ -159,6 +220,50 @@ bool UOdinRoom::SetChannelMasks(TMap<int64, uint64> masks, bool reset)
 {
     FOdinSetChannelMasks SetChannelMaskRequest(masks, reset);
     return SetChannelMasks(SetChannelMaskRequest);
+}
+
+bool UOdinRoom::SetListenChannelMask(FOdinChannelMask Mask)
+{
+    FScopeLock Lock(&ListenChannelMasksCS);
+    DefaultListenChannelMask     = Mask;
+    bListenChannelMaskCustomized = true;
+    return ApplyListenChannelMasks();
+}
+
+bool UOdinRoom::SetListenChannelMaskForPeer(int64 PeerId, FOdinChannelMask Mask)
+{
+    FScopeLock Lock(&ListenChannelMasksCS);
+    ListenChannelMaskOverrides.Add(PeerId, Mask);
+    bListenChannelMaskCustomized = true;
+    return ApplyListenChannelMasks();
+}
+
+bool UOdinRoom::ClearListenChannelMaskForPeer(int64 PeerId)
+{
+    FScopeLock Lock(&ListenChannelMasksCS);
+    if (ListenChannelMaskOverrides.Remove(PeerId) == 0) {
+        return true;
+    }
+    return ApplyListenChannelMasks();
+}
+
+bool UOdinRoom::ApplyListenChannelMasks()
+{
+    if (!bListenChannelMaskCustomized || KnownPeerIds.IsEmpty()) {
+        return true;
+    }
+
+    TMap<int64, uint64> Masks;
+    Masks.Reserve(KnownPeerIds.Num());
+    for (const int64 PeerId : KnownPeerIds) {
+        if (const FOdinChannelMask *Override = ListenChannelMaskOverrides.Find(PeerId)) {
+            Masks.Add(PeerId, *Override);
+        } else {
+            Masks.Add(PeerId, DefaultListenChannelMask);
+        }
+    }
+
+    return SetChannelMasks(Masks, /*reset=*/true);
 }
 
 bool UOdinRoom::SendMessage(const FOdinSendMessage &request)
@@ -366,13 +471,19 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
 
         // PeerJoined
         if (ParsedRpc->TryGetObjectField(FOdinPeerJoined::Name, EventObject)) {
-            // Stringify (replace) "user_data" to maintain full custom user data
-            // StringifyRpcField(EventObject, "user_data");
+            // Normalize "user_data" as raw bytes, regardless of raw byte array, plain/escaped string, or nested JSON object
+            NormalizeRpcField(EventObject, "user_data");
 
             auto BroadcastDelegate = [](TWeakObjectPtr<UOdinRoom> room, FOdinPeerJoined data) {
                 if (!room.IsValid()) {
                     return;
                 }
+
+                {
+                    FScopeLock Lock(&room->ListenChannelMasksCS);
+                    room->KnownPeerIds.Add(data.peer_id);
+                }
+                room->ApplyListenChannelMasks();
 
                 FOdinPeerJoinedDelegate Delegate = room->OnRoomPeerJoinedBP;
                 if (Delegate.IsBound()) {
@@ -390,8 +501,8 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
 
         // PeerChanged
         if (ParsedRpc->TryGetObjectField(FOdinPeerChanged::Name, EventObject)) {
-            // Stringify (replace) "user_data" and "parameters"
-            // StringifyRpcField(EventObject, "user_data");
+            // Normalize "user_data" to raw bytes like PeerJoined
+            NormalizeRpcField(EventObject, "user_data");
             StringifyRpcField(EventObject, "parameters");
 
             if (EventObject
@@ -416,6 +527,11 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
             if (EventObject && !DeserializeAndBroadcast<FOdinPeerLeft>(*EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> room, FOdinPeerLeft data) {
                     if (!room.IsValid()) {
                         return;
+                    }
+                    {
+                        FScopeLock Lock(&room->ListenChannelMasksCS);
+                        room->KnownPeerIds.Remove(data.peer_id);
+                        room->ListenChannelMaskOverrides.Remove(data.peer_id);
                     }
                     FOdinPeerLeftDelegate Delegate = room->OnRoomPeerLeftBP;
                     if (Delegate.IsBound()) {
@@ -448,6 +564,138 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
     }
 }
 
+void UOdinRoom::SetPassword(const FString Password) const
+{
+    if (IsValid(this->Crypto)) {
+
+        TArray<uint8> Buffer;
+        UOdinFunctionLibrary::OdinStringToBytes(Password, Buffer);
+        this->Crypto->SetSecret(Buffer);
+    }
+}
+
+TArray<UOdinDecoder *> UOdinRoom::GetDecodersByPeer(const int64 PeerId) const
+{
+    if (const UOdinSubsystem *OdinSubsystem = UOdinSubsystem::Get()) {
+        return OdinSubsystem->GetDecodersFor(GetHandle(), PeerId);
+    }
+    return {};
+}
+
+TWeakObjectPtr<UOdinSocket> UOdinRoom::CreateLocalSocket(EOdinSocketKind SocketKind, int64 TargetPeerId, int32 Label, int32 Priority)
+{
+    FScopeLock   OpenSocketLock(&Socket_CS);
+    UOdinSocket *socket = UOdinSocket::ConstructSocket(this);
+    socket->Create(this, SocketKind, TargetPeerId, Label, Priority);
+    ODIN_LOG(Log, "Create normal Socket %p in Room %p", socket->GetNativeHandle(), Handle);
+
+    Sockets.Emplace(socket->GetNativeHandle(), MoveTemp(socket));
+    return socket;
+}
+
+TWeakObjectPtr<UOdinSocket> UOdinRoom::CreateRemoteSocket(OdinSocket *SocketHandle)
+{
+    FScopeLock OpenSocketLock(&Socket_CS);
+    ODIN_LOG(Log, "Create remote Socket %p in Room %p", SocketHandle, Handle);
+    UOdinSocket *socket = UOdinSocket::ConstructSocket(this, SocketHandle);
+    socket->GetSocketInfo();
+
+    Sockets.Emplace(socket->GetNativeHandle(), MoveTemp(socket));
+    return socket;
+}
+
+UOdinSocket *UOdinRoom::OpenSocket(int64 TargetPeerId, EOdinSocketKind SocketKind)
+{
+    const int32                 label  = (int32)(intptr_t)this->GetHandle();
+    TWeakObjectPtr<UOdinSocket> Socket = CreateLocalSocket(SocketKind, TargetPeerId, label, 0);
+    return Socket.Get();
+}
+UOdinSocket *UOdinRoom::RemoveSocket(const OdinSocket *SocketHandle)
+{
+    FScopeLock CloseSocketLock(&Socket_CS);
+    if (UOdinSocket *Socket = Sockets.FindAndRemoveChecked(SocketHandle).Get()) {
+        return Socket;
+    }
+    return nullptr;
+}
+void UOdinRoom::RemoveAllSockets()
+{
+    FScopeLock ResetSocketLock(&Socket_CS);
+    for (auto &kvp : Sockets) {
+        if (auto socket = kvp.Value.Get())
+            socket->ResetSocket();
+    }
+    Sockets.Empty();
+}
+
+void UOdinRoom::InvalidateAllSockets()
+{
+    FScopeLock ResetSocketLock(&Socket_CS);
+    for (auto &kvp : Sockets) {
+        if (auto socket = kvp.Value.Get())
+            socket->InvalidateHandle();
+    }
+    Sockets.Empty();
+}
+
+TWeakObjectPtr<UOdinSocket> UOdinRoom::GetSocketByHandle(const OdinSocket *SocketHandle) const
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinRoom::GetSocketByHandle);
+    FScopeLock GetSocketLock(&Socket_CS);
+
+    if (const TWeakObjectPtr<UOdinSocket> *SocketObject = Sockets.Find(SocketHandle)) {
+        ODIN_LOG(Verbose, "Retrieved Odin Socket with handle %p", Handle);
+        return *SocketObject;
+    }
+    ODIN_LOG(Verbose, "Did not find Odin Socket with handle %p", Handle);
+    return nullptr;
+}
+
+TWeakObjectPtr<UOdinSocket> UOdinRoom::GetOrCreateRoomSocket(OdinSocket *SocketHandle)
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinRoom::GetOrCreateRoomSocket);
+    TWeakObjectPtr<UOdinSocket> Socket = GetSocketByHandle(SocketHandle);
+    if (Socket.IsValid())
+        return Socket;
+
+    return CreateRemoteSocket(SocketHandle);
+}
+
+void UOdinRoom::HandleOdinEventSocket(OdinSocket *SocketHandle, const TArray<uint8> &Message)
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinRoom::HandleOdinEventSocket)
+    ODIN_LOG(VeryVerbose, "Received HandleOdinEventSocket for Socket %p, size: %d", SocketHandle, Message.Num());
+
+    OdinSocketInfo info;
+    auto           ret = odin_socket_info(SocketHandle, &info);
+    if (ret != OdinError::ODIN_ERROR_SUCCESS) {
+        FOdinModule::LogErrorCode("Aborting HandleOdinEventSocket due to invalid odin_socket_info call: %s", ret);
+        return;
+    }
+    FOdinSocketInfo SocketInfo = FOdinSocketInfo(info);
+    if (!SocketInfo.Room.IsValid()) {
+        return;
+    }
+    const uint64 Generation = SocketInfo.Room->GetConnectionGeneration();
+
+    FFunctionGraphTask::CreateAndDispatchWhenReady(
+        [SocketInfo, SocketHandle, Generation, Message]() {
+            // the room may have been freed or reconnected between queueing and execution
+            if (!SocketInfo.Room.IsValid() || SocketInfo.Room->GetConnectionGeneration() != Generation) {
+                return;
+            }
+            TWeakObjectPtr<UOdinSocket> socket = SocketInfo.Room->GetOrCreateRoomSocket(SocketHandle);
+
+            // dispatch raw to room and to socket object
+            if (SocketInfo.Room->OnSocketBP.IsBound())
+                SocketInfo.Room->OnSocketBP.Broadcast(socket.Get(), Message);
+
+            if (socket.IsValid() && socket->OnSocketMessageReceivedBP.IsBound())
+                socket->OnSocketMessageReceivedBP.Broadcast(SocketInfo.Room.Get(), socket.Get(), Message);
+        },
+        TStatId(), nullptr, ENamedThreads::GameThread);
+}
+
 bool UOdinRoom::StringifyRpcField(const TSharedPtr<FJsonObject> *EventObj, const FString &Field)
 {
     if (!EventObj) {
@@ -477,6 +725,53 @@ bool UOdinRoom::StringifyRpcField(const TSharedPtr<FJsonObject> *EventObj, const
     return false;
 }
 
+bool UOdinRoom::NormalizeRpcField(const TSharedPtr<FJsonObject> *EventObj, const FString &Field)
+{
+    if (!EventObj) {
+        return false;
+    }
+
+    FJsonObject *EventObjRef = EventObj->Get();
+    if (!EventObjRef) {
+        return false;
+    }
+
+    const TSharedPtr<FJsonValue> FieldValue = EventObjRef->TryGetField(*Field);
+    if (!FieldValue.IsValid()) {
+        return false;
+    }
+
+    // already arbitrary data; JsonObjectToUStruct converts directly into a TArray<uint8>
+    if (FieldValue->Type == EJson::Array) {
+        return true;
+    }
+
+    FString TextValue;
+    if (FieldValue->Type == EJson::String) {
+        // plain text or a JSON-escaped string payload
+        TextValue = FieldValue->AsString();
+    } else {
+        // re-serialize other types/objects back to JSON.
+        TSharedRef<OdinUtility::FCondensedJsonStringWriter> TemporaryWriter = OdinUtility::FCondensedJsonStringWriterFactory::Create(&TextValue);
+        if (!FJsonSerializer::Serialize(FieldValue, FString(), TemporaryWriter)) {
+            ODIN_LOG(Warning, "NormalizeRpcField failed to serialize field %s from a JsonObject.", *Field);
+            return false;
+        }
+    }
+
+    UE_LOG(Odin, VeryVerbose, TEXT("Convert event object field \"%s\" to bytes from: \"%s\""), *Field, *TextValue);
+
+    FTCHARToUTF8                   Utf8Text(*TextValue);
+    TArray<TSharedPtr<FJsonValue>> ByteValues;
+    ByteValues.Reserve(Utf8Text.Length());
+    for (int32 Index = 0; Index < Utf8Text.Length(); ++Index) {
+        ByteValues.Add(MakeShared<FJsonValueNumber>(static_cast<uint8>(Utf8Text.Get()[Index])));
+    }
+
+    EventObjRef->SetField(*Field, MakeShared<FJsonValueArray>(ByteValues));
+    return true;
+}
+
 void UOdinRoom::DeregisterRoom(OdinRoom *NativeRoomHandle)
 {
     if (UOdinSubsystem *const &OdinSubsystem = UOdinSubsystem::Get()) {
@@ -489,6 +784,7 @@ void UOdinRoom::CleanupRoomInternal()
     DeregisterRoom(GetHandle());
     OnDatagramFunc = nullptr;
     OnRpcFunc      = nullptr;
+    OnSocketFunc   = nullptr;
 }
 
 template <typename EventType>

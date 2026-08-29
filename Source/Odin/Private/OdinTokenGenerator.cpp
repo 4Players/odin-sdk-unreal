@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinTokenGenerator.h"
 
@@ -14,6 +14,23 @@ UOdinTokenGenerator::UOdinTokenGenerator(const class FObjectInitializer &PCIP)
 {
 }
 
+void UOdinTokenGenerator::BeginDestroy()
+{
+    ReleaseHandle();
+    Super::BeginDestroy();
+}
+
+void UOdinTokenGenerator::ReleaseHandle()
+{
+    if (OdinTokenGenerator *GeneratorHandle = this->GetHandle()) {
+        odin_token_generator_free(GeneratorHandle);
+    }
+
+    if (IsValid(handle_)) {
+        handle_->Invalidate();
+    }
+}
+
 UOdinTokenGenerator *UOdinTokenGenerator::ConstructTokenGenerator(UObject *WorldContextObject, const FString &AccessKey)
 {
     UOdinTokenGenerator *TokenGenerator = NewObject<UOdinTokenGenerator>();
@@ -24,14 +41,10 @@ UOdinTokenGenerator *UOdinTokenGenerator::ConstructTokenGenerator(UObject *World
 
 void UOdinTokenGenerator::SetAccessKey(const FString &AccessKey)
 {
-    OdinTokenGenerator *GeneratorHandle = this->GetHandle();
-    if (GeneratorHandle) {
-        odin_token_generator_free(GeneratorHandle);
-        this->SetHandle(nullptr);
-    }
+    ReleaseHandle();
 
     OdinTokenGenerator *generator;
-    OdinError           OdinResult = odin_token_generator_create(TCHAR_TO_ANSI(*AccessKey), &generator);
+    OdinError           OdinResult = odin_token_generator_create(TCHAR_TO_UTF8(*AccessKey), &generator);
     if (ODIN_ERROR_SUCCESS == OdinResult) {
         this->SetHandle(generator);
     } else {
@@ -80,11 +93,11 @@ FString UOdinTokenGenerator::GenerateRoomTokenEx(const FString &RoomId, const FS
         if (FJsonSerializer::Serialize(bodyObject.ToSharedRef(), Writer)) {
             uint32_t  tokenBuffer_size = 1024;
             ANSICHAR *tokenBuffer      = new ANSICHAR[tokenBuffer_size]{0};
-            OdinError error            = odin_token_generator_sign(this->GetHandle(), TCHAR_TO_ANSI(*jsonBody), &tokenBuffer[0], &tokenBuffer_size);
+            OdinError error            = odin_token_generator_sign(this->GetHandle(), TCHAR_TO_UTF8(*jsonBody), &tokenBuffer[0], &tokenBuffer_size);
             if (error != OdinError::ODIN_ERROR_SUCCESS) {
                 FOdinModule::LogErrorCode("Token Generator: Signing the provided Json Body failed with message: %s", error);
             }
-            result = FString(tokenBuffer);
+            result = FString(UTF8_TO_TCHAR(tokenBuffer));
             delete[] tokenBuffer;
         }
     } else {

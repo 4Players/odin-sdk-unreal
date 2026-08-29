@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 #pragma once
 
 #include "OdinCore/include/odin.h"
@@ -58,6 +58,16 @@ class ODIN_API UOdinCrypto : public UObject
     UPROPERTY(BlueprintGetter = GetSecret, BlueprintSetter = SetSecret, Category = "Odin|Room")
     TArray<uint8> Secret;
 
+    /**
+     * Marks the native cipher as owned by a room. The room frees the cipher together with
+     * odin_room_free, so this wrapper must not free or re-attach it afterwards.
+     */
+    void MarkAttachedToRoom();
+    /** Whether a room has taken ownership of the native cipher. */
+    bool IsAttachedToRoom() const;
+    /** Drops the reference to the native cipher without freeing it (e.g. after the owning room was freed). */
+    void InvalidateHandle();
+
     inline OdinCipher* GetHandle() const
     { return IsValid(Handle) && Handle->IsValidLowLevel() ? reinterpret_cast<OdinCipher*>(Handle->GetHandle()) : nullptr; }
 
@@ -78,4 +88,5 @@ class ODIN_API UOdinCrypto : public UObject
   private:
     UPROPERTY()
     UOdinHandle* Handle;
+    bool         bAttachedToRoom = false;
 };

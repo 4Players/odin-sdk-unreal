@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 #include "CoreMinimal.h"
@@ -23,6 +23,15 @@ class ODIN_API UOdinTokenGenerator : public UObject
 
   public:
     UOdinTokenGenerator(const class FObjectInitializer& PCIP);
+
+    virtual void BeginDestroy() override;
+
+    /**
+     * Frees the native token generator (if any) and invalidates the handle wrapper in place.
+     * Safe to call during destruction; every path that frees the native handle must go through
+     * this, so the handle cannot be freed twice.
+     */
+    void ReleaseHandle();
 
     /**
      * Constructs a new instance of the UOdinTokenGenerator class. This method is used

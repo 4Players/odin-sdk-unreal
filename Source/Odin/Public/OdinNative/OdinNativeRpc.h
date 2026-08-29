@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 #include "CoreMinimal.h"
@@ -192,7 +192,7 @@ struct ODIN_API FOdinSetChannelMasks {
                 bool bIsSet = (static_cast<uint64>(1) << i) & Element.Value.GetChannelMask();
                 AsBinary.Append(bIsSet ? TEXT("1") : TEXT("0"));
             }
-            ODIN_LOG(Verbose, TEXT("Mask in Binary: %s"), *AsBinary);
+            ODIN_LOG(Verbose, "Mask in Binary: %s", *AsBinary);
         }
 
         TSharedPtr<FJsonObject> JsonObject = MakeShared<FJsonObject>();

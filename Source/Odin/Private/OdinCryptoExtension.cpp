@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinCryptoExtension.h"
 #include "OdinVoice.h"
@@ -13,7 +13,27 @@ void UOdinCrypto::BeginDestroy()
 {
     ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
 
+    if (!bAttachedToRoom) {
+        if (OdinCipher* Cipher = GetHandle(); Cipher != nullptr && Cipher->free != nullptr) {
+            Cipher->free(Cipher);
+        }
+    }
+    InvalidateHandle();
+
     Super::BeginDestroy();
+}
+
+void UOdinCrypto::MarkAttachedToRoom()
+{ bAttachedToRoom = true; }
+
+bool UOdinCrypto::IsAttachedToRoom() const
+{ return bAttachedToRoom; }
+
+void UOdinCrypto::InvalidateHandle()
+{
+    if (IsValid(Handle)) {
+        Handle->Invalidate();
+    }
 }
 
 UOdinCrypto* UOdinCrypto::ConstructCrypto(UObject* WorldContextObject, OdinCipher* handle)
@@ -54,6 +74,10 @@ void UOdinCrypto::SetSecret(const TArray<uint8>& NewSecret)
     this->Secret = NewSecret;
 
 #if ODIN_USE_CRYPTO
+    if (this->GetHandle() == nullptr) {
+        ODIN_LOG(Warning, "Aborting SetSecret, no valid cipher handle (the owning room may already be freed).");
+        return;
+    }
     int32 ret = odin_crypto_set_password(this->GetHandle(), this->Secret.GetData(), this->Secret.Num());
     if (ret != 0) {
         ODIN_LOG(Error, "Aborting SetSecret due to invalid odin_crypto_set_password call: %d", ret);
@@ -65,6 +89,9 @@ void UOdinCrypto::SetSecret(const TArray<uint8>& NewSecret)
 EOdinCryptoPeerStatus UOdinCrypto::GetPeerStatus(int64 PeerId)
 {
 #if ODIN_USE_CRYPTO
+    if (this->GetHandle() == nullptr) {
+        return EOdinCryptoPeerStatus::ODIN_CRYPTO_PEER_STATUS_UNKNOWN;
+    }
     OdinCryptoPeerStatus ret = odin_crypto_get_peer_status(this->GetHandle(), PeerId);
     return (EOdinCryptoPeerStatus)ret;
 #else

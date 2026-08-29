@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinJsonValue.h"
 #include "CoreMinimal.h"
@@ -43,6 +43,9 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObj
 {
     TArray<TSharedPtr<FJsonValue>> ValueArray;
     for (auto InVal : InArray) {
+        if (!IsValid(InVal)) {
+            continue;
+        }
         ValueArray.Add(InVal->GetRootValue());
     }
 
@@ -56,6 +59,10 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueArray(UObject *WorldContextObj
 
 UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject *WorldContextObject, UOdinJsonObject *JsonObject)
 {
+    if (!IsValid(JsonObject)) {
+        return nullptr;
+    }
+
     TSharedPtr<FJsonValue> NewVal = MakeShareable(new FJsonValueObject(JsonObject->GetRootObject()));
 
     UOdinJsonValue *NewValue = NewObject<UOdinJsonValue>();
@@ -64,7 +71,7 @@ UOdinJsonValue *UOdinJsonValue::ConstructJsonValueObject(UObject *WorldContextOb
     return NewValue;
 }
 
-UOdinJsonValue *ConstructJsonValue(UObject *WorldContextObject, const TSharedPtr<FJsonValue> &InValue)
+UOdinJsonValue *UOdinJsonValue::ConstructJsonValue(UObject *WorldContextObject, const TSharedPtr<FJsonValue> &InValue)
 {
     TSharedPtr<FJsonValue> NewVal = InValue;
 

@@ -1,17 +1,21 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
 #include "OdinCore/include/odin.h"
 
+#include <atomic>
+
 #include "CoreMinimal.h"
 #include "OdinCryptoExtension.h"
 #include "OdinNative/OdinNativeHandle.h"
 #include "OdinNative/OdinNativeRpc.h"
+#include "OdinSocket.h"
 
 #include "OdinRoom.generated.h"
 
 class UOdinEncoder;
+class UOdinSocket;
 struct FOdinConnectionStats;
 
 /**
@@ -51,7 +55,27 @@ class ODIN_API UOdinRoom : public UObject
      * @remarks This should only be changed if the underlying callback has to call a custom implementation of handling callbacks
      */
     void (*OnRpcFunc)(struct OdinRoom* room, const char* json, void* user_data) = [](struct OdinRoom* room, const char* json, void* user_data) {
-        HandleOdinEventRpc(room, FString(json));
+        HandleOdinEventRpc(room, FString(UTF8_TO_TCHAR(json)));
+    };
+
+    UDELEGATE(BlueprintAuthorityOnly)
+    DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinSocketDelegate, UOdinSocket*, socket, TArray<uint8>, message);
+
+    /**
+     * On Socket message from the server
+     */
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
+    FOdinSocketDelegate OnSocketBP;
+    /**
+     * Internal OnSocket hook to redirect incoming callback for socket messages
+     * @remarks This should only be changed if the underlying callback has to call a custom implementation of handling callbacks
+     */
+    void (*OnSocketFunc)(OdinSocket* socket, const uint8_t* message, uint32_t message_length, void* user_data) = [](OdinSocket* socket, const uint8_t* message,
+                                                                                                                    uint32_t message_length, void* user_data) {
+        TArray<uint8> data = TArray<uint8>(message, message_length);
+        ODIN_LOG(VeryVerbose, "Handle Odin Socket: %p", socket);
+
+        HandleOdinEventSocket(socket, data);
     };
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinRoomStatusChangedDelegate, UOdinRoom*, room, FOdinRoomStatusChanged, data);
@@ -132,12 +156,36 @@ class ODIN_API UOdinRoom : public UObject
      * room is still connecting.
      */
     static bool FreeRoomByHandle(OdinRoom* room);
+    /**
+     * Frees the native room (if any), drops the subsystem registration and invalidates the crypto
+     * and all socket wrappers. Safe to call during destruction; every path that frees the native
+     * room must go through this, so the handle cannot be freed twice.
+     */
+    void ReleaseHandle();
+    /**
+     * Invalidates all socket wrappers of this room without touching the native sockets. Used when
+     * the native room is freed, since its sockets die with it.
+     */
+    void InvalidateAllSockets();
+    /**
+     * Monotonic counter that is bumped whenever the native room handle changes (connect, free).
+     * Deferred event tasks compare it to detect that their captured native handles belong to a
+     * previous connection, even if a new native room reuses the same pointer value.
+     */
+    uint64 GetConnectionGeneration() const
+    { return ConnectionGeneration.load(); }
 
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Connect Room", ToolTip = "Creates the room in a connection pool",
                           Keywords = "Start Connection,Start Room,Join,JoinRoom,Join Room"),
               Category = "Odin")
     UOdinRoom* ConnectRoom(FString gateway, FString authentication, bool& bSuccess, UOdinCrypto* crypto = nullptr);
+    /**
+     * Connects this room via the native API using this object's registered event callbacks. Shares
+     * the full lifecycle handling (reconnect cleanup, cipher ownership, subsystem registration)
+     * with ConnectRoom, but returns the raw error code.
+     */
+    OdinError ConnectRoomNative(const FString& Gateway, const FString& Authentication, UOdinCrypto* InCrypto);
     /**
      * Get last retrieved peer id that represents "self".
      */
@@ -165,7 +213,7 @@ class ODIN_API UOdinRoom : public UObject
 
     /**
      * Sends a JSON-encoded RPC message to the server.
-     * @param json   json rpc string
+     * @param json   JSON rpc string
      * @return true on ODIN_ERROR_SUCCESS or false
      */
     UFUNCTION(BlueprintCallable, meta = (DisplayName = "Send Rpc", ToolTip = "Send raw rpc data"), Category = "Odin|Room|Rpc")
@@ -193,6 +241,39 @@ class ODIN_API UOdinRoom : public UObject
      * @return true on ODIN_ERROR_SUCCESS or false
      */
     bool SetChannelMasks(TMap<int64, uint64> masks, bool reset);
+
+    /**
+     * Sets the channel mask used when listening to peers that do not have a per-peer override set
+     * via SetListenChannelMaskForPeer. Applies immediately to every currently known peer and is
+     * automatically applied to peers that join afterward.
+     * @remarks Convenience wrapper around SetChannelMasks; for one room instead of multiple rooms
+     * @param Mask channel mask to listen to for all peers without an override
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Listen ChannelMask", ToolTip = "Set the default channel mask used when listening to peers"),
+              Category = "Odin|Room|Rpc")
+    bool SetListenChannelMask(FOdinChannelMask Mask);
+    /**
+     * Overrides the channel mask used when listening to a specific peer, taking precedence over
+     * the default set via SetListenChannelMask. Useful for finer per-sender control, e.g. always
+     * hearing party members on the non-spatialized group channel even when standing next to them.
+     * @param PeerId peer to override the listen channel mask for
+     * @param Mask channel mask to listen to for this peer
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Set Listen ChannelMask For Peer", ToolTip = "Override the channel mask used when listening to a specific peer"),
+              Category = "Odin|Room|Rpc")
+    bool SetListenChannelMaskForPeer(int64 PeerId, FOdinChannelMask Mask);
+    /**
+     * Removes a previously set per-peer listen channel mask override, falling back to the default
+     * set via SetListenChannelMask for that peer.
+     * @param PeerId peer to remove the override for
+     * @return true on ODIN_ERROR_SUCCESS or false
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear Listen ChannelMask For Peer", ToolTip = "Remove a per-peer listen channel mask override"),
+              Category = "Odin|Room|Rpc")
+    bool ClearListenChannelMaskForPeer(int64 PeerId);
 
     /**
      *
@@ -223,10 +304,17 @@ class ODIN_API UOdinRoom : public UObject
     UFUNCTION(BlueprintPure, Category = "Odin|Room")
     bool IsConnected() const;
 
-    void            SetRoomEvents(const OdinRoomEvents& roomcb);
+    /**
+     * Replaces the event callback struct used for future room creations.
+     * @attention The native room clones the event struct on odin_room_create, so changes made here
+     * have no effect on an already-created room; they only apply to the next connect.
+     */
+    void SetRoomEvents(const OdinRoomEvents& roomcb);
+    /** @see SetRoomEvents for the remark on already-created rooms */
     OdinRoomEvents* GetRoomEvents();
-    void            RemoveRoomEvents();
-    OdinCipher*     GetRoomCipher();
+    /** @see SetRoomEvents for the remark on already-created rooms */
+    void        RemoveRoomEvents();
+    OdinCipher* GetRoomCipher();
 
     inline OdinRoom* GetHandle() const
     { return IsValid(Handle) && Handle->IsValidLowLevel() ? static_cast<OdinRoom*>(Handle->GetHandle()) : nullptr; }
@@ -259,11 +347,63 @@ class ODIN_API UOdinRoom : public UObject
               Category = "Odin|Room|Extensions")
     void SetPassword(const FString Password) const;
 
+    /**
+     * Get Decoders by PeerId
+     * @param PeerId  Registered Decoder PeerId
+     * @remarks Used for registered/linked decoders in subsystem (GetDecodersFor)
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, Category = "Odin|Room")
+    TArray<UOdinDecoder*> GetDecodersByPeer(const int64 PeerId) const;
+
+    /**
+     * Create an uobject socket, sets the native handle and refreshes socket info
+     * @param SocketKind  Kind of Socket i.e. reliable or unreliable
+     * @param TargetPeerId  Remote PeerId
+     * @param Label  Arbitrary Id
+     * @param Priority  Packet transport priority
+     * @remarks Used for sockets with ownership
+     */
+    TWeakObjectPtr<UOdinSocket> CreateLocalSocket(EOdinSocketKind SocketKind, int64 TargetPeerId, int32 Label, int32 Priority);
+    /**
+     * Create an uobject socket, sets the native handle and refreshes socket info
+     * @param SocketHandle  Native Socket
+     * @remarks Used for remote peer event sockets where this client does not have ownership
+     */
+    TWeakObjectPtr<UOdinSocket> CreateRemoteSocket(OdinSocket* SocketHandle);
+    /**
+     * Gets socket from this room
+     * @param SocketHandle  Native Socket
+     */
+    TWeakObjectPtr<UOdinSocket> GetSocketByHandle(const OdinSocket* SocketHandle) const;
+    /**
+     * Gets socket from this room or creates a remote socket with the provided handle
+     * @param SocketHandle  Native Socket
+     */
+    TWeakObjectPtr<UOdinSocket> GetOrCreateRoomSocket(OdinSocket* SocketHandle);
+    /**
+     * Close native socket and return uobject socket
+     * @param SocketHandle  Native Socket
+     */
+    UOdinSocket* RemoveSocket(const OdinSocket* SocketHandle);
+    /**
+     * Open socket to a peer in the current room.
+     * @param TargetPeerId  Remote PeerId
+     * @param SocketKind    Kind of socket
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Open Socket", ToolTip = "Open socket to a peer in the current room."), Category = "Odin|Room|Socket")
+    UOdinSocket* OpenSocket(int64 TargetPeerId, EOdinSocketKind SocketKind);
+    /**
+     * Close all sockets in the current room.
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Remove All Sockets", ToolTip = "Remove and close all sockets in the current room."),
+              Category = "Odin|Room|Socket")
+    void RemoveAllSockets();
+
   protected:
     virtual void BeginDestroy() override;
     virtual void FinishDestroy() override;
 
-    OdinRoomEvents Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .user_data = this};
+    OdinRoomEvents Roomcb = OdinRoomEvents{.on_datagram = OnDatagramFunc, .on_rpc = OnRpcFunc, .on_socket = OnSocketFunc, .user_data = this};
 
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Room")
     FOdinRoomStatusChanged Status;
@@ -278,13 +418,30 @@ class ODIN_API UOdinRoom : public UObject
 
   private:
     UPROPERTY()
-    UOdinHandle*     Handle;
-    FCriticalSection Room_CS;
-    FCriticalSection Encoder_CS;
-    static void      HandleOdinEventDatagram(OdinRoom* RoomHandle, uint32 PeerId, uint64 ChannelMask, uint32 SsrcId, TArray<uint8>& Datagram);
-    static void      HandleOdinEventRpc(OdinRoom* RoomHandle, const FString& JsonString);
-    static bool      StringifyRpcField(const TSharedPtr<FJsonObject>* EventObj, const FString& Field);
-    static void      DeregisterRoom(OdinRoom* NativeRoomHandle);
+    UOdinHandle*             Handle;
+    std::atomic<uint64>      ConnectionGeneration{0};
+    FCriticalSection         Room_CS;
+    FCriticalSection         Encoder_CS;
+    static void              HandleOdinEventDatagram(OdinRoom* RoomHandle, uint32 PeerId, uint64 ChannelMask, uint32 SsrcId, TArray<uint8>& Datagram);
+    static void              HandleOdinEventRpc(OdinRoom* RoomHandle, const FString& JsonString);
+    static void              HandleOdinEventSocket(OdinSocket* SocketHandle, const TArray<uint8>& Message);
+    static bool              StringifyRpcField(const TSharedPtr<FJsonObject>* EventObj, const FString& Field);
+    static bool              NormalizeRpcField(const TSharedPtr<FJsonObject>* EventObj, const FString& Field);
+    static void              DeregisterRoom(OdinRoom* NativeRoomHandle);
+    mutable FCriticalSection Socket_CS;
+    TMap<OdinSocket*, TWeakObjectPtr<UOdinSocket>> Sockets;
+
+    /**
+     * Rebuilds and (re-)sends the listen channel mask for every known peer, using per-peer
+     * overrides where set and the default listen channel mask otherwise.
+     */
+    bool ApplyListenChannelMasks();
+
+    FCriticalSection              ListenChannelMasksCS;
+    TSet<int64>                   KnownPeerIds;
+    TMap<int64, FOdinChannelMask> ListenChannelMaskOverrides;
+    FOdinChannelMask              DefaultListenChannelMask     = FOdinChannelMask::CreateFull();
+    bool                          bListenChannelMaskCustomized = false;
 
     void CleanupRoomInternal();
 };
