@@ -1,4 +1,5 @@
-/* Copyright (c) 4Players GmbH. All rights reserved. */
+/* Copyright (c) 4Players GmbH */
+/* SPDX-License-Identifier: MIT */
 
 #pragma once
 
@@ -10,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "2.1.4"
+#define ODIN_VERSION "2.2.2"
 
 /**
  * Defines standard error codes returned by ODIN functions. Non-negative values indicate success
@@ -74,6 +75,10 @@ typedef enum OdinError {
      */
     ODIN_ERROR_ARGUMENT_INVALID_CIPHER = -18,
     /**
+     * A provided argument is too large.
+     */
+    ODIN_ERROR_ARGUMENT_TOO_LARGE = -19,
+    /**
      * The provided version is invalid.
      */
     ODIN_ERROR_INVALID_VERSION = -21,
@@ -129,6 +134,10 @@ typedef enum OdinError {
      * Position limit reached.
      */
     ODIN_ERROR_AUDIO_POSITION_LIMIT_REACHED = -45,
+    /**
+     * The voice isolation effect reported an error.
+     */
+    ODIN_ERROR_AUDIO_VOICE_ISOLATION_FAILED = -46,
 } OdinError;
 
 /**
@@ -209,10 +218,30 @@ typedef enum OdinEffectType {
      */
     ODIN_EFFECT_TYPE_APM = 1,
     /**
+     * Voice Isolation (VI) for separating speech from background sound.
+     */
+    ODIN_EFFECT_TYPE_VI = 2,
+    /**
      * Custom user-defined audio processing effect that can be injected into the audio pipeline.
      */
-    ODIN_EFFECT_TYPE_CUSTOM = 2,
+    ODIN_EFFECT_TYPE_CUSTOM = 3,
 } OdinEffectType;
+
+/**
+ * Defines the delivery guarantees of an ODIN socket.
+ */
+typedef enum OdinSocketKind {
+    /**
+     * Messages are guaranteed to arrive and are delivered in the order they were sent, at the
+     * cost of possible retransmission delays.
+     */
+    ODIN_SOCKET_KIND_RELIABLE,
+    /**
+     * Messages are delivered with minimal latency, but they may be lost or arrive in a different
+     * order than they were sent.
+     */
+    ODIN_SOCKET_KIND_UNRELIABLE,
+} OdinSocketKind;
 
 /**
  * Represents a decoder for media streams from remote voice chat clients, which encapsulates all
@@ -254,6 +283,14 @@ typedef struct OdinPipeline OdinPipeline;
 typedef struct OdinRoom OdinRoom;
 
 /**
+ * An opaque type representing an ODIN socket handle, which is a bidirectional communication
+ * channel to a remote peer in a room. Depending on its kind, a socket transfers messages either
+ * reliably or unreliably, allowing applications to exchange arbitrary data alongside the built-in
+ * datagram and message facilities.
+ */
+typedef struct OdinSocket OdinSocket;
+
+/**
  * A handle for generating ODIN tokens, employed for generating signed room tokens predicated on
  * an access key. Be aware that access keys serve as your unique authentication keys, requisite for
  * generating room tokens to access the ODIN server network. To ensure your security, it's strongly
@@ -269,9 +306,21 @@ typedef struct OdinTokenGenerator OdinTokenGenerator;
  * routing and filtering.
  */
 typedef struct OdinDatagramProperties {
+    /**
+     * The ID of the peer the datagram originated from.
+     */
     uint32_t peer_id;
+    /**
+     * Bitmask of the logical channels the datagram was transmitted on.
+     */
     uint64_t channel_mask;
+    /**
+     * Internal identifier of the media source, distinguishing successive streams of the peer.
+     */
     uint32_t ssrc_id;
+    /**
+     * Reserved for future use.
+     */
     uint32_t reserved[4];
 } OdinDatagramProperties;
 
@@ -285,6 +334,10 @@ typedef struct OdinRoomEvents {
                         uint32_t bytes_length,
                         void *user_data);
     void (*on_rpc)(struct OdinRoom *room, const char *json, void *user_data);
+    void (*on_socket)(struct OdinSocket *socket,
+                      const uint8_t *message,
+                      uint32_t message_length,
+                      void *user_data);
     void *user_data;
 } OdinRoomEvents;
 
@@ -459,6 +512,23 @@ typedef struct OdinApmConfig {
 } OdinApmConfig;
 
 /**
+ * Pipeline configuration of the Voice Isolation (VI) effect, which uses a deep-learning noise
+ * suppression model to separate speech from background sound in the capture signal.
+ */
+typedef struct OdinViConfig {
+    /**
+     * When enabled, the effect will attenuate non-speech portions of the input audio signal.
+     * Re-enabling a disabled effect also resets its internal state.
+     */
+    bool enabled;
+    /**
+     * Maximum attenuation applied to non-speech in dB; values of `100` and above remove
+     * background sound entirely, while values close to `0` disable noise reduction.
+     */
+    float attenuation_limit_db;
+} OdinViConfig;
+
+/**
  * Defines the signature for custom effect callbacks in an ODIN audio pipeline. The callback
  * receives a pointer to a buffer of audio samples, the number of samples in the buffer, a
  * pointer to a flag indicating whether the audio is silent. This allows for custom, in-place
@@ -468,6 +538,41 @@ typedef void (*OdinCustomEffectCallback)(float *samples,
                                          uint32_t samples_count,
                                          bool *is_silent,
                                          const void *user_data);
+
+/**
+ * A set of properties describing the current state of an ODIN socket, which can be retrieved
+ * using `odin_socket_info`.
+ */
+typedef struct OdinSocketInfo {
+    /**
+     * The handle of the room the socket belongs to.
+     */
+    struct OdinRoom *room;
+    /**
+     * The delivery guarantees of the socket.
+     */
+    enum OdinSocketKind kind;
+    /**
+     * Whether the socket was opened by the remote peer.
+     */
+    bool is_inbound;
+    /**
+     * The ID of the remote peer the socket is connected to.
+     */
+    uint32_t remote_peer_id;
+    /**
+     * The user-defined label specified when the socket was created.
+     */
+    int32_t label;
+    /**
+     * The user-defined priority specified when the socket was created.
+     */
+    int32_t priority;
+    /**
+     * The number of bytes queued on the socket but not yet transmitted.
+     */
+    uint32_t unsent_bytes;
+} OdinSocketInfo;
 
 #ifdef __cplusplus
 extern "C" {
@@ -798,6 +903,33 @@ enum OdinError odin_pipeline_update_apm_playback(const struct OdinPipeline *pipe
                                                  uint64_t delay_ms);
 
 /**
+ * Inserts a Voice Isolation (VI) effect into the audio pipeline at the specified index, shifting
+ * subsequent effects. An index of `0` inserts at the beginning of the pipeline. On success, a
+ * unique effect identifier is returned. The effect starts out disabled and needs an explicit
+ * configuration to start filtering. Note that the first instance loads the underlying inference
+ * model; additional instances share the already loaded model.
+ */
+enum OdinError odin_pipeline_insert_vi_effect(const struct OdinPipeline *pipeline,
+                                              uint32_t index,
+                                              uint32_t *out_effect_id);
+
+/**
+ * Retrieves the configuration for a VI effect identified by `effect_id` from the specified
+ * audio pipeline.
+ */
+enum OdinError odin_pipeline_get_vi_config(const struct OdinPipeline *pipeline,
+                                           uint32_t effect_id,
+                                           struct OdinViConfig *out_config);
+
+/**
+ * Updates the configuration settings of the VI effect identified by `effect_id` in the
+ * specified audio pipeline. Re-enabling a disabled effect also resets its internal state.
+ */
+enum OdinError odin_pipeline_set_vi_config(const struct OdinPipeline *pipeline,
+                                           uint32_t effect_id,
+                                           const struct OdinViConfig *config);
+
+/**
  * Inserts a user-defined custom effect at the specified index in the audio pipeline. The effect
  * is implemented via a callback function and associated user data. A unique effect identifier
  * is returned.
@@ -849,6 +981,46 @@ enum OdinError odin_pipeline_move_effect(const struct OdinPipeline *pipeline,
 enum OdinError odin_pipeline_remove_effect(const struct OdinPipeline *pipeline, uint32_t effect_id);
 
 /**
+ * Creates a new outbound socket to the specified remote peer in a room, which can be used to
+ * exchange arbitrary messages with the delivery guarantees of the given kind. The user-defined
+ * `label` and `priority` values are transmitted to the remote peer and can be used to identify
+ * the socket and prioritize its traffic. On the remote side, the socket shows up as inbound and
+ * its messages are delivered through the `on_socket` callback of the room events.
+ *
+ * Note: Sockets are bound to the current room session and do not survive reconnects; once the
+ * room was rejoined, sending fails and a new socket needs to be created.
+ *
+ * On success, a handle for the newly created socket is written to `out_socket`.
+ */
+enum OdinError odin_socket_create(struct OdinRoom *room,
+                                  enum OdinSocketKind kind,
+                                  uint32_t remote_peer_id,
+                                  int32_t label,
+                                  int32_t priority,
+                                  struct OdinSocket **out_socket);
+
+/**
+ * Retrieves a set of properties describing the current state of the specified socket and writes
+ * them to `out_socket_info`.
+ */
+enum OdinError odin_socket_info(struct OdinSocket *socket, struct OdinSocketInfo *out_socket_info);
+
+/**
+ * Sends a message with the specified contents to the remote peer of the socket. The message is
+ * queued for transmission and delivered according to the delivery guarantees of the socket kind.
+ */
+enum OdinError odin_socket_send(struct OdinSocket *socket,
+                                const uint8_t *message,
+                                uint32_t message_length);
+
+/**
+ * Shuts down the sending side of the specified socket. Messages already queued on the socket
+ * are still transmitted and the socket continues to receive messages from the remote peer, but
+ * no new messages can be sent afterwards.
+ */
+enum OdinError odin_socket_reset(struct OdinSocket *socket);
+
+/**
  * Creates a new token generator using the specified ODIN access key. If no access key is provided,
  * a new one will be generated.
  */
@@ -895,6 +1067,19 @@ enum OdinError odin_token_generator_sign(struct OdinTokenGenerator *token_genera
                                          const char *body,
                                          char *out_token,
                                          uint32_t *out_token_length);
+
+/**
+ * Writes a snapshot of the internal state of the ODIN client runtime (e.g. connections, rooms,
+ * peers and sockets) into the specified buffer as a null-terminated, pretty-printed JSON string,
+ * which is intended for debugging and diagnostic purposes.
+ */
+enum OdinError odin_debug_dump_state(char *out_json, uint32_t *out_json_length);
+
+/**
+ * Installs a hook to receive log events emitted by the internal ODIN client runtime, replacing
+ * any previously installed hook.
+ */
+enum OdinError odin_debug_set_logging_hook(uint32_t verbosity, void (*callback)(const char *json));
 
 #ifdef __cplusplus
 }  // extern "C"

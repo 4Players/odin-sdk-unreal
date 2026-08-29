@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 using System.IO;
 using UnrealBuildTool;
@@ -93,7 +93,7 @@ public class OdinLibrary : ModuleRules
             AdditionalPropertiesForReceipt.Add("AndroidPlugin", Path.Combine(PluginPath, "OdinLibrarySDK_UPL.xml"));
         }
 
-        else if (UnrealTargetPlatform.IsValidName("PS5") && UnrealTargetPlatform.TryParse("PS5", out UnrealTargetPlatform support) && Target.Platform == support)
+        else if (UnrealTargetPlatform.IsValidName("PS5") && UnrealTargetPlatform.TryParse("PS5", out UnrealTargetPlatform psSupport) && Target.Platform == psSupport)
         {
             PublicDefinitions.Remove(extensionFlag);
 
@@ -108,6 +108,24 @@ public class OdinLibrary : ModuleRules
                 if (Path.GetExtension(fullpath) == ".prx")
                 {
                     PublicDelayLoadDLLs.Add(fullpath);
+                    RuntimeDependencies.Add(fullpath);
+                }
+            });
+        }
+        else if (UnrealTargetPlatform.IsValidName("XSX") && UnrealTargetPlatform.TryParse("XSX", out UnrealTargetPlatform xsxSupport) && Target.Platform == xsxSupport)
+        {
+            string[] xsxFiles = new string[] { "odin.dll", "odin.lib" }.Union(winExtensionFiles).ToArray();
+
+            addExtern(new string[] { ModuleDirectory, "x64", "XSX" }, xsxFiles, (fullpath, file) => {
+                if (File.Exists(fullpath) == false) return;
+
+                if (Path.GetExtension(fullpath) == ".lib")
+                    PublicAdditionalLibraries.Add(fullpath);
+
+                if (Path.GetExtension(fullpath) == ".dll")
+                {
+                    PublicDelayLoadDLLs.Add(fullpath);
+                    PublicDelayLoadDLLs.Add(file); // delay import short name
                     RuntimeDependencies.Add(fullpath);
                 }
             });

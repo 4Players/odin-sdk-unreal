@@ -1,4 +1,5 @@
-/* Copyright (c) 4Players GmbH. All rights reserved. */
+/* Copyright (c) 4Players GmbH */
+/* SPDX-License-Identifier: MIT */
 
 #pragma once
 
@@ -11,7 +12,7 @@
 #include <stdlib.h>
 #include "odin.h"
 
-#define ODIN_CRYPTO_VERSION "2.0.2"
+#define ODIN_CRYPTO_VERSION "2.1.0"
 
 /**
  * Represents the encryption status of a remote peer in an ODIN room.
