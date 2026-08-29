@@ -1,0 +1,17 @@
+{
+	"FileVersion": 2,
+	"PlatformAllowList": [ "PS5" ],
+	"Modules": [
+		{
+			"Name": "Odin",
+			"PlatformAllowList": [ "PS5" ]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "AudioCapture",
+			"Enabled": true,
+			"PlatformAllowList": [ "PS5" ]
+		}
+	]
+}

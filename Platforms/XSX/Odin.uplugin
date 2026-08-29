@@ -1,0 +1,17 @@
+{
+	"FileVersion": 2,
+	"PlatformAllowList": [ "XSX" ],
+	"Modules": [
+		{
+			"Name": "Odin",
+			"PlatformAllowList": [ "XSX" ]
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "AudioCapture",
+			"Enabled": true,
+			"PlatformAllowList": [ "XSX" ]
+		}
+	]
+}
