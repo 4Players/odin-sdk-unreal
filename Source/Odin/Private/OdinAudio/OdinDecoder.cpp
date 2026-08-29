@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/OdinDecoder.h"
 #include "OdinCore/include/odin.h"
@@ -83,7 +83,7 @@ bool UOdinDecoder::FreeDecoder(UOdinDecoder *Decoder)
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinDecoder::FreeDecoder);
 
     if (!IsValid(Decoder)) {
-        ODIN_LOG(Verbose, TEXT("Aborted FreeDecoder due to invalid UOdinDecoder Pointer."));
+        ODIN_LOG(Verbose, "Aborted FreeDecoder due to invalid UOdinDecoder Pointer.");
         return false;
     }
 
@@ -100,7 +100,7 @@ bool UOdinDecoder::FreeDecoderInternal(OdinDecoder *DecoderHandle)
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinDecoder::FreeDecoderInternal);
 
     if (DecoderHandle == nullptr) {
-        ODIN_LOG(Verbose, TEXT("Aborted FreeDecoderInternal due to invalid OdinDecoder Pointer."));
+        ODIN_LOG(Verbose, "Aborted FreeDecoderInternal due to invalid OdinDecoder Pointer.");
         return false;
     }
 
@@ -161,7 +161,10 @@ void UOdinDecoder::HandleOdinAudioEventCallback(OdinDecoder *DecoderHandle, cons
 
     FFunctionGraphTask::CreateAndDispatchWhenReady(
         [DecoderHandle, filter, Events]() {
-            const UOdinSubsystem        *OdinSubsystem    = UOdinSubsystem::Get();
+            const UOdinSubsystem *OdinSubsystem = UOdinSubsystem::Get();
+            if (OdinSubsystem == nullptr) {
+                return;
+            }
             TWeakObjectPtr<UOdinDecoder> DecoderObjectPtr = OdinSubsystem->GetDecoderByHandle(DecoderHandle);
             if (!DecoderObjectPtr.IsValid() || DecoderObjectPtr.IsStale(true, true)) {
                 ODIN_LOG(VeryVerbose,
@@ -194,8 +197,10 @@ TArray<FOdinPosition> UOdinDecoder::GetPositions(FOdinChannelMask channelMask) c
     auto          Result       = odin_decoder_get_positions(this->GetNativeHandle(), channelMask, Buffer, &NumPositions);
     if (Result != OdinError::ODIN_ERROR_SUCCESS) {
         FOdinModule::LogErrorCode("Aborting GetPositions due to invalid odin_decoder_get_positions call: %s", Result);
+        Positions.Empty();
     } else {
         ODIN_LOG(Verbose, "Received %d positions.", NumPositions);
+        Positions.SetNum(NumPositions);
     }
 
     return Positions;

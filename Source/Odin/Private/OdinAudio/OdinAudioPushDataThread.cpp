@@ -1,4 +1,6 @@
-﻿#include "OdinAudio/OdinAudioPushDataThread.h"
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
+
+#include "OdinAudio/OdinAudioPushDataThread.h"
 
 #include "GenericPlatform/GenericPlatformAffinity.h"
 #include "GenericPlatform/GenericPlatformProcess.h"
@@ -30,10 +32,8 @@ void FOdinAudioPushDataThread::LinkEncoder(OdinEncoder* Encoder, OdinRoom* Targe
     }
 
     if (Encoder && TargetRoom && UOdinSubsystem::GlobalIsRoomValid(TargetRoom)) {
-        UnlinkEncoder(Encoder);
-
         FScopeLock Lock(&EncoderRoomLinkCS);
-        EncoderRoomLinks.Add(Encoder, TargetRoom);
+        EncoderRoomLinks.FindOrAdd(Encoder).Add(TargetRoom);
         ODIN_LOG(Verbose, "Linking Encoder %p to Odin Room %p", Encoder, TargetRoom);
     }
 }
@@ -42,11 +42,11 @@ bool FOdinAudioPushDataThread::UnlinkEncoder(OdinEncoder* EncoderHandle)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::UnlinkEncoder)
 
-    OdinRoom*  RemovedRoomHandle;
-    FScopeLock Lock(&EncoderRoomLinkCS);
-    const bool bFoundEntry = EncoderRoomLinks.RemoveAndCopyValue(EncoderHandle, RemovedRoomHandle);
-    if (bFoundEntry && RemovedRoomHandle) {
-        ODIN_LOG(Verbose, "Unlinked Encoder %p from Room %p", EncoderHandle, RemovedRoomHandle);
+    TSet<OdinRoom*> RemovedRooms;
+    FScopeLock      Lock(&EncoderRoomLinkCS);
+    const bool      bFoundEntry = EncoderRoomLinks.RemoveAndCopyValue(EncoderHandle, RemovedRooms);
+    if (bFoundEntry) {
+        ODIN_LOG(Verbose, "Unlinked Encoder %p from %d Room(s)", EncoderHandle, RemovedRooms.Num());
     }
     return bFoundEntry;
 }
@@ -62,6 +62,17 @@ void FOdinAudioPushDataThread::PushAudioToEncoder(OdinEncoder* TargetEncoder, TA
         FOdinEncoderAudioFrame NewFrame{.EncoderHandle = TargetEncoder, .Audio = MoveTemp(Audio)};
         AudioPushQueue.Enqueue(MoveTemp(NewFrame));
     }
+}
+
+TArray<OdinRoom*> FOdinAudioPushDataThread::GetRoomsFor(OdinEncoder* Encoder) const
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::GetRoomsFor);
+
+    FScopeLock Lock(&EncoderRoomLinkCS);
+    if (const TSet<OdinRoom*>* LinkedRooms = EncoderRoomLinks.Find(Encoder)) {
+        return LinkedRooms->Array();
+    }
+    return TArray<OdinRoom*>();
 }
 
 uint32 FOdinAudioPushDataThread::Run()
@@ -88,16 +99,21 @@ void FOdinAudioPushDataThread::CleanupLinks()
 
     FScopeLock Lock(&EncoderRoomLinkCS);
     for (auto EncoderIterator = EncoderRoomLinks.CreateIterator(); EncoderIterator; ++EncoderIterator) {
-        OdinRoom* NativeOdinRoomHandle = EncoderIterator.Value();
-        if (nullptr == EncoderIterator.Key() || nullptr == NativeOdinRoomHandle) {
+        if (nullptr == EncoderIterator.Key()) {
             EncoderIterator.RemoveCurrent();
             ODIN_LOG(Verbose, "%s: Removed Encoder Linking due to invalid Encoder.", ANSI_TO_TCHAR(__FUNCTION__))
             continue;
         }
 
-        const bool bIsRoomValid = UOdinSubsystem::GlobalIsRoomValid(NativeOdinRoomHandle);
-        if (!bIsRoomValid) {
-            ODIN_LOG(Verbose, "%s: Removed Encoder Linking due to invalid Room.", ANSI_TO_TCHAR(__FUNCTION__))
+        TSet<OdinRoom*>& LinkedRooms = EncoderIterator.Value();
+        for (auto RoomIterator = LinkedRooms.CreateIterator(); RoomIterator; ++RoomIterator) {
+            if (nullptr == *RoomIterator || !UOdinSubsystem::GlobalIsRoomValid(*RoomIterator)) {
+                ODIN_LOG(Verbose, "%s: Removed Encoder Linking due to invalid Room.", ANSI_TO_TCHAR(__FUNCTION__))
+                RoomIterator.RemoveCurrent();
+            }
+        }
+
+        if (LinkedRooms.IsEmpty()) {
             EncoderIterator.RemoveCurrent();
         }
     }
@@ -106,8 +122,8 @@ void FOdinAudioPushDataThread::CleanupLinks()
 void FOdinAudioPushDataThread::PushQueuedAudio()
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::PushQueuedAudio);
-    FOdinEncoderAudioFrame        Frame;
-    TMap<OdinEncoder*, OdinRoom*> LocalLinksCopy;
+    FOdinEncoderAudioFrame              Frame;
+    TMap<OdinEncoder*, TSet<OdinRoom*>> LocalLinksCopy;
     {
         FScopeLock Lock(&EncoderRoomLinkCS);
         LocalLinksCopy = EncoderRoomLinks;
@@ -129,16 +145,16 @@ void FOdinAudioPushDataThread::PopAllEncoders(TArray<uint8>& DatagramBuffer)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::PopAllEncoders);
 
-    TMap<OdinEncoder*, OdinRoom*> LocalLinksCopy;
+    TMap<OdinEncoder*, TSet<OdinRoom*>> LocalLinksCopy;
     {
         FScopeLock Lock(&EncoderRoomLinkCS);
         LocalLinksCopy = EncoderRoomLinks;
     }
-    for (const TPair<OdinEncoder*, OdinRoom*>& Pair : LocalLinksCopy) {
-        OdinEncoder* EncoderHandle = Pair.Key;
-        OdinRoom*    TargetRoom    = Pair.Value;
+    for (const TPair<OdinEncoder*, TSet<OdinRoom*>>& Pair : LocalLinksCopy) {
+        OdinEncoder*           EncoderHandle = Pair.Key;
+        const TSet<OdinRoom*>& TargetRooms   = Pair.Value;
 
-        if (!EncoderHandle) {
+        if (!EncoderHandle || TargetRooms.IsEmpty()) {
             continue;
         }
 
@@ -157,7 +173,9 @@ void FOdinAudioPushDataThread::PopAllEncoders(TArray<uint8>& DatagramBuffer)
             switch (EncoderPopResult) {
                 case ODIN_ERROR_SUCCESS: {
                     TRACE_CPUPROFILER_EVENT_SCOPE(Combined odin_room_send_datagram calls);
-                    SendDatagramToRoom(TargetRoom, DatagramBuffer, NumSamples);
+                    for (OdinRoom* TargetRoom : TargetRooms) {
+                        SendDatagramToRoom(TargetRoom, DatagramBuffer, NumSamples);
+                    }
                 } break;
                 case ODIN_ERROR_NO_DATA: {
                     ODIN_LOG(VeryVerbose, "%s: No data on odin_encoder_pop", ANSI_TO_TCHAR(__FUNCTION__));

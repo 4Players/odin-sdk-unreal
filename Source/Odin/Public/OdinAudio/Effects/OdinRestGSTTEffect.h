@@ -1,5 +1,7 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 #pragma once
+
+#include <atomic>
 
 #include "OdinCustomEffect.h"
 #include "SampleBuffer.h"
@@ -58,7 +60,10 @@ class ODIN_API UOdinRestGSTTEffect : public UOdinCustomEffect
     void         TimerCallback();
 
   private:
+    // written from the pipeline thread in CustomEffect and drained on the game thread
     Audio::TSampleBuffer<float> AudioBuffer;
+    FCriticalSection            AudioBufferCS;
+    std::atomic<bool>           bTimerArmed{false};
     Audio::FSoundWavePCMWriter  Writer;
     virtual void                BeginDestroy() override;
 };

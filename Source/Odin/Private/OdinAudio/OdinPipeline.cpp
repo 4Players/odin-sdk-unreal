@@ -1,12 +1,14 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/OdinPipeline.h"
 
+#include "AudioDevice.h"
 #include "OdinVoice.h"
 #include "OdinAudio/Effects/OdinActivityEffect.h"
 #include "OdinAudio/Effects/OdinCloneEffect.h"
 #include "OdinAudio/Effects/OdinMuteEffect.h"
 #include "OdinAudio/Effects/OdinVolumeEffect.h"
+#include "OdinAudio/Effects/OdinRmsEffect.h"
 
 UOdinPipeline::UOdinPipeline(const class FObjectInitializer &PCIP)
     : Super(PCIP)
@@ -77,7 +79,7 @@ bool UOdinPipeline::MoveEffect(int32 EffectId, int32 Index)
 
 bool UOdinPipeline::RemoveEffect(int32 EffectId)
 {
-    const OdinError Result = odin_pipeline_remove_effect(this->GetHandle(), EffectId);
+    const OdinError Result = RemoveEffectWithCleanup(EffectId);
     if (Result == OdinError::ODIN_ERROR_SUCCESS) {
         return true;
     }
@@ -86,27 +88,48 @@ bool UOdinPipeline::RemoveEffect(int32 EffectId)
     return false;
 }
 
+OdinError UOdinPipeline::RemoveEffectWithCleanup(int32 EffectId)
+{
+    const bool bWasApmEffect = GetEffectType(EffectId) == EOdinEffectType::ODIN_EFFECT_TYPE_APM;
+
+    const OdinError Result = odin_pipeline_remove_effect(this->GetHandle(), EffectId);
+    if (Result == OdinError::ODIN_ERROR_SUCCESS) {
+        ApmPlaybackFormats.Remove(EffectId);
+        if (bWasApmEffect && OnApmConfigChanged.IsBound()) {
+            OnApmConfigChanged.Broadcast(this, EffectId, FOdinApmConfig{});
+        }
+    }
+    return Result;
+}
+
 // custom effects
 int32 UOdinPipeline::InsertCustomEffect(int32 Index, UOdinCustomEffect *Effect)
 {
+    uint32     ID     = 0;
+    const auto Result = InsertCustomEffectNative(Index, Effect, ID);
+    if (Result == OdinError::ODIN_ERROR_SUCCESS) {
+        return ID;
+    }
+    FOdinModule::LogErrorCode("Aborting InsertCustomEffect due to invalid "
+                              "odin_pipeline_insert_custom_effect call: %s",
+                              Result);
+    return 0;
+}
+
+OdinError UOdinPipeline::InsertCustomEffectNative(int32 Index, UOdinCustomEffect *Effect, uint32 &OutEffectId)
+{
     if (!IsValid(Effect)) {
         UE_LOG(Odin, Error, TEXT("Aborting InsertCustomEffect due to invalid UOdinCustomEffect pin."));
-        return 0;
+        return OdinError::ODIN_ERROR_ARGUMENT_NULL;
     }
 
-    uint32_t   ID;
-    const auto Result = odin_pipeline_insert_custom_effect(this->GetHandle(), Index, Effect->FFICallback, &Effect->UserData, &ID);
+    const auto Result = odin_pipeline_insert_custom_effect(this->GetHandle(), Index, Effect->FFICallback, &Effect->UserData, &OutEffectId);
     if (Result == OdinError::ODIN_ERROR_SUCCESS) {
         Effect->SetParent(this->Self);
         Effect->Index    = Index;
-        Effect->EffectId = ID;
-        return ID;
-    } else {
-        FOdinModule::LogErrorCode("Aborting InsertCustomEffect due to invalid "
-                                  "odin_pipeline_insert_custom_effect call: %s",
-                                  Result);
+        Effect->EffectId = OutEffectId;
     }
-    return 0;
+    return Result;
 }
 
 // vad
@@ -152,12 +175,62 @@ bool UOdinPipeline::SetVadConfig(int32 EffectId, FOdinVadConfig Config)
     return false;
 }
 
+// vi
+int32 UOdinPipeline::InsertViEffect(int32 Index)
+{
+    uint32_t   ID;
+    const auto Result = odin_pipeline_insert_vi_effect(this->GetHandle(), Index, &ID);
+    if (Result == OdinError::ODIN_ERROR_SUCCESS) {
+        return ID;
+    } else {
+        FOdinModule::LogErrorCode("Aborting InsertViEffect due to invalid odin_pipeline_insert_vi_effect call: %s", Result);
+    }
+    return 0;
+}
+
+FOdinViConfig UOdinPipeline::GetViConfig(int32 EffectId) const
+{
+    OdinViConfig config;
+    auto         ret = odin_pipeline_get_vi_config(this->GetHandle(), EffectId, &config);
+    if (ret == OdinError::ODIN_ERROR_SUCCESS) {
+        return FOdinViConfig{.Enabled = config.enabled, .AttenuationLimitDb = config.attenuation_limit_db};
+    } else {
+        FOdinModule::LogErrorCode("Aborting GetViConfig due to invalid odin_pipeline_get_vi_config call: %s", ret);
+    }
+    return FOdinViConfig{};
+}
+
+bool UOdinPipeline::SetViConfig(int32 EffectId, FOdinViConfig Config)
+{
+    OdinViConfig cfg = Config;
+    auto         ret = odin_pipeline_set_vi_config(this->GetHandle(), EffectId, &cfg);
+    if (ret == OdinError::ODIN_ERROR_SUCCESS) {
+        ODIN_LOG(Log, "Successfully changed VI Configuration.");
+        return true;
+    }
+
+    FOdinModule::LogErrorCode("Aborting SetViConfig due to invalid odin_pipeline_set_vi_config call: %s", ret);
+    return false;
+}
+
 // apm
 int32 UOdinPipeline::InsertApmEffect(int32 Index, int32 SampleRate, bool bStereo)
 {
+    if (SampleRate <= 0) {
+        // default to current audio mixer sample rate, since the reverse stream is fed from the UE main submix
+        SampleRate = 48000;
+        if (FAudioDeviceManager *DeviceManager = FAudioDevice::GetAudioDeviceManager()) {
+            if (FAudioDeviceHandle AudioDevice = DeviceManager->GetActiveAudioDevice(); AudioDevice.IsValid()) {
+                SampleRate = static_cast<int32>(AudioDevice->GetSampleRate());
+            }
+        }
+        ODIN_LOG(Log, "InsertApmEffect using audio mixer sample rate %d hz for the playback stream", SampleRate);
+    }
+
     uint32_t id;
     auto     ret = odin_pipeline_insert_apm_effect(this->GetHandle(), Index, SampleRate, bStereo, &id);
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
+        RegisterApmPlaybackFormat(id, SampleRate, bStereo);
         return id;
     } else {
         FOdinModule::LogErrorCode("Aborting InsertApmEffect due to invalid odin_pipeline_insert_apm_effect call: %s", ret);
@@ -165,19 +238,38 @@ int32 UOdinPipeline::InsertApmEffect(int32 Index, int32 SampleRate, bool bStereo
     return 0;
 }
 
+void UOdinPipeline::RegisterApmPlaybackFormat(int32 EffectId, int32 SampleRate, bool bStereo)
+{ ApmPlaybackFormats.Add(EffectId, TPair<int32, bool>(SampleRate, bStereo)); }
+
+bool UOdinPipeline::GetApmPlaybackFormat(int32 EffectId, int32 &OutSampleRate, bool &bOutStereo) const
+{
+    if (const TPair<int32, bool> *Format = ApmPlaybackFormats.Find(EffectId)) {
+        OutSampleRate = Format->Key;
+        bOutStereo    = Format->Value;
+        return true;
+    }
+    return false;
+}
+
 bool UOdinPipeline::SetApmConfig(int32 EffectId, FOdinApmConfig Config)
 {
-    OdinApmConfig NativeConfig = Config;
-    auto          Result       = odin_pipeline_set_apm_config(this->GetHandle(), EffectId, &NativeConfig);
+    const auto Result = SetApmConfigNative(EffectId, Config);
     if (Result == OdinError::ODIN_ERROR_SUCCESS) {
-        if (OnApmConfigChanged.IsBound()) {
-            OnApmConfigChanged.Broadcast(this, EffectId, Config);
-        }
         return true;
     }
 
     FOdinModule::LogErrorCode("Aborting SetApmConfig due to invalid odin_pipeline_set_apm_config call: %s", Result);
     return false;
+}
+
+OdinError UOdinPipeline::SetApmConfigNative(int32 EffectId, FOdinApmConfig Config)
+{
+    OdinApmConfig NativeConfig = Config;
+    const auto    Result       = odin_pipeline_set_apm_config(this->GetHandle(), EffectId, &NativeConfig);
+    if (Result == OdinError::ODIN_ERROR_SUCCESS && OnApmConfigChanged.IsBound()) {
+        OnApmConfigChanged.Broadcast(this, EffectId, Config);
+    }
+    return Result;
 }
 
 FOdinApmConfig UOdinPipeline::GetApmConfig(int32 EffectId) const
@@ -258,6 +350,18 @@ UOdinVolumeEffect *UOdinPipeline::CreateVolumeEffect(int32 Index)
 
 UOdinVolumeEffect *UOdinPipeline::AppendVolumeEffect()
 { return CreateVolumeEffect(GetEffectCount()); }
+
+UOdinRmsEffect *UOdinPipeline::CreateRmsEffect(int32 Index)
+{
+    UOdinRmsEffect *RmsEffect = UOdinRmsEffect::ConstructRmsEffect(this);
+    if (InsertCustomEffect(Index, RmsEffect))
+        return RmsEffect;
+
+    return nullptr;
+}
+
+UOdinRmsEffect *UOdinPipeline::AppendRmsEffect()
+{ return CreateRmsEffect(GetEffectCount()); }
 
 void UOdinPipeline::SetHandle(const OdinPipeline *NewHandle)
 {

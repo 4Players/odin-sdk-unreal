@@ -1,6 +1,8 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
+
+#include <atomic>
 
 #include "CoreMinimal.h"
 #include "ISubmixBufferListener.h"
@@ -16,7 +18,23 @@
 struct FOdinPosition;
 class UAudioGenerator;
 class UOdinPipeline;
+class UOdinRoom;
 class FOdinSubmixListener;
+
+/**
+ * A channel mask paired with the position it should be set to
+ * used to batch multiple SetPosition calls
+ */
+USTRUCT(BlueprintType)
+struct ODIN_API FOdinChannelPosition {
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin")
+    FOdinChannelMask ChannelMask;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin")
+    FOdinPosition Position;
+};
 
 /**
  * Represents an encoder for local media streams, which encapsulates the components required to
@@ -51,13 +69,15 @@ class ODIN_API UOdinEncoder : public UObject
     /**
      * Creates a new ODIN encoder instance with default settings used to encode audio captured from
      * local sources, such as a microphone using the given sample rate and channel layout.
-     * @remarks default bitrate 32000 (with stereo 128000), voip true (with stereo false), disabled interval, and expected packet loss of 15%
+     * @remarks Peer id 0 will rewrite header on datagram send for connected room peer id; default bitrate 32000 (with stereo 128000), voip true (with stereo
+     * false), disabled interval, and expected packet loss of 15%
      * @param InPeerId   binding id
      * @param InSampleRate   samplerate for f32bit
      * @param bUseStereo   channels interleaved
      * @return Encoder or null
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Encoder", ToolTip = "Creates a new encoder handle"), Category = "Odin|Audio Pipeline")
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Encoder", ToolTip = "Creates a new encoder handle (Peer id 0 uses auto-detect)"),
+              Category = "Odin|Audio Pipeline")
     UOdinEncoder* CreateEncoder(int64 InPeerId, int32 InSampleRate, bool bUseStereo);
     /**
      * Create uobject encoder with create encoder ex
@@ -157,8 +177,7 @@ class ODIN_API UOdinEncoder : public UObject
      */
     void (*OdinEncoderEventCallbackFunc)(struct OdinEncoder* encoder, enum OdinAudioEvents events,
                                          void* user_data) = [](struct OdinEncoder* encoder, const OdinAudioEvents events, void* user_data) {
-        TWeakObjectPtr<UOdinEncoder> data = static_cast<UObject*>(user_data)->IsA<UOdinEncoder>() ? static_cast<UOdinEncoder*>(user_data) : nullptr;
-        HandleOdinAudioEventCallback(encoder, events, data);
+        HandleOdinAudioEventCallback(encoder, events, static_cast<uint64>(reinterpret_cast<UPTRINT>(user_data)));
     };
 
     /**
@@ -172,19 +191,45 @@ class ODIN_API UOdinEncoder : public UObject
 
     /**
      * Updates the 3D position of the specified channel mask. To assign different positions to multiple masks, call this function once per mask.
+     * @remarks An encoder holds at most 12 channel positions; each masked channel occupies one slot until removed with ClearPosition. Passing a
+     * full channel mask (FOdinChannelMask::CreateFull) therefore fails with ODIN_ERROR_AUDIO_POSITION_LIMIT_REACHED. Mask only the channels that
+     * are actually transmitted on - for plain voice transmission that is just channel 0.
+     * @remarks The server only forwards audio to peers whose positions are within a distance of 1.0 of each other, so coordinates must be scaled
+     * such that 1.0 equals the intended hearing range (e.g. divide unreal world units by the distance where the client side attenuation reaches
+     * silence). Unscaled world coordinates put peers out of range of each other and the server forwards no audio at all.
      * @param ChannelMask   audio layer
      * @param Position   position for each layer
      * @return true if successful
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Encoder Position", ToolTip = "Set the position of the encoder"), Category = "Odin|Audio Pipeline")
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Set Encoder Position",
+                          ToolTip     = "Set the encoder position. Scale so 1.0 = hearing range (server culls beyond 1.0); mask only transmitted channels"),
+              Category = "Odin|Audio Pipeline")
     bool SetPosition(FOdinChannelMask ChannelMask, FOdinPosition Position);
 
     /**
-     * Reset all positions to 0
+     * Convenience wrapper to assign a position to several channel masks at once
+     * to update position for a spatialized proximity channel alongside fixed/unused position one
+     * @remarks Positions follow the same scaling convention as SetPosition: coordinates scaled such that a distance of 1.0 equals the hearing
+     * range, beyond which the server stops forwarding audio.
+     * @param Positions channel mask + position pairs to apply; equivalent to calling SetPosition once per entry
+     * @return true if every SetPosition call succeeded
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Set Encoder Positions", ToolTip = "Set multiple channel positions of the encoder in one call"),
+              Category = "Odin|Audio Pipeline")
+    bool SetPositions(const TArray<FOdinChannelPosition>& Positions);
+
+    /**
+     * Removes the position entry associated with the given channel mask, which also stops the
+     * encoder from transmitting on that channel entirely
+     * @remarks this does not reset the position to the origin while leaving the channel active.
+     * Use SetPosition instead if the channel should keep transmitting with a unused position.
      * @param ChannelMask   audio layer
      * @return true if successful
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Clear Encoder Position", ToolTip = "Clears the position of the encoder"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Clear Encoder Position",
+                          ToolTip     = "Removes the position of the encoder for the given channel(s), stopping transmission on them"),
               Category = "Odin|Audio Pipeline")
     bool ClearPosition(FOdinChannelMask ChannelMask);
 
@@ -239,6 +284,14 @@ class ODIN_API UOdinEncoder : public UObject
     { return SampleRate / 1000 * MS * (bStereo ? 2 : 1); }
 
     /**
+     * Get all rooms this encoder currently broadcasts to
+     * @return the rooms currently linked to this encoder
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Linked Rooms", ToolTip = "Get all rooms this encoder currently broadcasts to"),
+              Category = "Odin|Audio Pipeline")
+    TArray<UOdinRoom*> GetLinkedRooms() const;
+
+    /**
      * Get internal handle
      * @remarks OdinEncoder operations are thread-safe and the same encoder handle may be accessed concurrently from multiple threads.
      * @return incomplete handle type or nullptr
@@ -275,9 +328,27 @@ class ODIN_API UOdinEncoder : public UObject
     UPROPERTY()
     UOdinHandle*          Handle;
     FAudioGeneratorHandle Audio_Generator_Handle;
-    static void           HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UOdinEncoder> WeakEncoderPtr);
+    static void           HandleOdinAudioEventCallback(OdinEncoder* EncoderHandle, const OdinAudioEvents Events, uint64 RegistrationId);
 
     TSharedPtr<FOdinSubmixListener> SubmixListener;
+};
+
+/**
+ * Stateful linear resampler for interleaved audio streams. Keeps the fractional read position and
+ * the last input frame across blocks, so the produced sample count matches the rate ratio on
+ * average and no drift accumulates. Not thread-safe; each instance belongs to a single stream.
+ */
+struct ODIN_API FOdinStreamResampler {
+    void Configure(int32 InRate, int32 OutRate, int32 InChannels);
+    void Process(const float* InSamples, uint32 NumSamples, TArray<float>& OutSamples);
+
+  private:
+    int32         InputRate   = 0;
+    int32         OutputRate  = 0;
+    int32         NumChannels = 0;
+    double        Step        = 1.0;
+    double        Phase       = 0.0;
+    TArray<float> LastFrame;
 };
 
 class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
@@ -290,7 +361,7 @@ class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
                                    double AudioClock) override;
     void         SetPipelineHandle(UOdinPipeline* NewHandle);
     void         AttachToSubmix();
-    void         AddEffectId(uint32 EffectId);
+    void         AddEffectId(uint32 EffectId, int32 PlaybackSampleRate, bool bPlaybackStereo);
     void         DetachFromSubmix();
     void         RemoveEffectId(uint32 EffectId);
     void         SetDelay(int32 NewDelayInMs);
@@ -301,11 +372,24 @@ class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
     void OnAudioDeviceDestroyed(Audio::FDeviceId Id);
 
   private:
-    TWeakObjectPtr<UOdinPipeline> PipelineHandle;
-    TArray<uint32>                ApmEffectIds;
-    mutable FCriticalSection      EffectIdAccessSection;
-    std::atomic<int32>            DelayMs      = 15;
-    std::atomic<bool>             bIsListening = false;
+    struct FApmEffectInfo {
+        uint32 EffectId           = 0;
+        int32  PlaybackSampleRate = 48000;
+        int32  PlaybackChannels   = 1;
+
+        bool operator==(const FApmEffectInfo& Other) const
+        { return EffectId == Other.EffectId; }
+    };
+
+    std::atomic<const OdinPipeline*>   NativePipelineHandle{nullptr};
+    TArray<FApmEffectInfo>             ApmEffectIds;
+    TMap<uint32, FOdinStreamResampler> PlaybackResamplers;
+    TArray<FApmEffectInfo>             EffectInfoScratch;
+    TArray<float>                      ChannelScratch;
+    TArray<float>                      ResampleScratch;
+    mutable FCriticalSection           EffectIdAccessSection;
+    std::atomic<int32>                 DelayMs      = 15;
+    std::atomic<bool>                  bIsListening = false;
 
     TSharedPtr<Audio::FDeviceId, ESPMode::ThreadSafe> ListenTargetId;
     FDelegateHandle                                   AudioDeviceCreatedCallbackHandle;

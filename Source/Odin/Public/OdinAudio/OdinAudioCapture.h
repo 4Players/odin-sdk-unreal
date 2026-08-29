@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -32,8 +32,6 @@ struct ODIN_API FOdinCaptureDeviceInfo {
 };
 
 DECLARE_DYNAMIC_DELEGATE_TwoParams(FGetCaptureDeviceDelegate, const TArray<FOdinCaptureDeviceInfo>&, OutDevices, const FOdinCaptureDeviceInfo&, CurrentDevice);
-
-DECLARE_DYNAMIC_DELEGATE_OneParam(FChangeCaptureDeviceDelegate, bool, bSuccess);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FCaptureDeviceChange);
 
@@ -204,9 +202,6 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
 
     void InitializeGenerator();
 
-    void TryRunAsyncChangeDeviceRequest(FChangeCaptureDeviceDelegate OnChangeCompleted, TFunction<void()> ChangeDeviceFunction);
-    void FinalizeCaptureDeviceChange(FChangeCaptureDeviceDelegate OnChangeCompleted, bool& bSuccess);
-
     void TryRetrieveDefaultDevice();
 
     /**
@@ -262,7 +257,6 @@ class ODIN_API UOdinAudioCapture : public UAudioCapture, public FTickableGameObj
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Capture")
     FOdinCaptureDeviceInfo CurrentSelectedDevice;
 
-    double          LastStreamTime            = -1.0f;
-    double          TimeWithoutStreamUpdate   = 0.0f;
-    FThreadSafeBool IsCurrentlyChangingDevice = false;
+    double LastStreamTime          = -1.0f;
+    double TimeWithoutStreamUpdate = 0.0f;
 };

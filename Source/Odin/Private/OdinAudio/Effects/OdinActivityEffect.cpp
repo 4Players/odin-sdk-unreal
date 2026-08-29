@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/Effects/OdinActivityEffect.h"
 #include "Async/TaskGraphInterfaces.h"

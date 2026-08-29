@@ -1,7 +1,9 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/Effects/OdinRestGSTTEffect.h"
+#include "Async/Async.h"
 #include "Engine/World.h"
+#include "OdinVoice.h"
 #include "TimerManager.h"
 #include "HttpFwd.h"
 #include "HttpModule.h"
@@ -23,10 +25,34 @@ void UOdinRestGSTTEffect::CustomEffect(const TArrayView<float> &InSamples, bool 
     if (auto effect = InUserData->Root.Get()) {
         auto self = static_cast<UOdinRestGSTTEffect *>(effect);
 
-        if (self->TimerHandle.IsValid())
+        bool bShouldArmTimer = false;
+        {
+            FScopeLock Lock(&self->AudioBufferCS);
             self->AudioBuffer.Append(InSamples.GetData(), InSamples.Num(), bStereo ? 2 : 1, SampleRate);
-        else {
-            GetWorld()->GetTimerManager().SetTimer(self->TimerHandle, self, &UOdinRestGSTTEffect::TimerCallback, self->Timer, false);
+            bShouldArmTimer = !self->bTimerArmed.exchange(true);
+        }
+
+        if (bShouldArmTimer) {
+            TWeakObjectPtr<UOdinRestGSTTEffect> WeakSelf = self;
+            AsyncTask(ENamedThreads::GameThread, [WeakSelf]() {
+                UOdinRestGSTTEffect *Effect = WeakSelf.Get();
+                if (Effect == nullptr) {
+                    return;
+                }
+                UWorld     *World         = Effect->GetWorld();
+                const float TimerInterval = Effect->Timer;
+                if (World == nullptr || TimerInterval <= 0.0f) {
+                    if (TimerInterval <= 0.0f) {
+                        ODIN_LOG(Warning, "Invalid GSTT timer interval %f, expected a value > 0.", TimerInterval);
+                    }
+                    // without a timer the buffer can never be drained, discard it so it cannot grow
+                    FScopeLock Lock(&Effect->AudioBufferCS);
+                    Effect->AudioBuffer.Reset();
+                    Effect->bTimerArmed = false;
+                    return;
+                }
+                World->GetTimerManager().SetTimer(Effect->TimerHandle, Effect, &UOdinRestGSTTEffect::TimerCallback, TimerInterval, false);
+            });
         }
     }
 }
@@ -39,9 +65,16 @@ UOdinRestGSTTEffect *UOdinRestGSTTEffect::ConstructRestGSTTEffect(UObject *World
 
 void UOdinRestGSTTEffect::TimerCallback()
 {
+    Audio::TSampleBuffer<float> BufferCopy;
+    {
+        FScopeLock Lock(&AudioBufferCS);
+        BufferCopy = AudioBuffer;
+        AudioBuffer.Reset();
+        bTimerArmed = false;
+    }
 
     Audio::FAlignedFloatBuffer buffer;
-    if (Remix(AudioBuffer.GetData(), AudioBuffer.GetNumSamples(), AudioBuffer.GetNumChannels(), AudioBuffer.GetSampleRate(), ResampleRate, buffer)) {
+    if (Remix(BufferCopy.GetData(), BufferCopy.GetNumSamples(), BufferCopy.GetNumChannels(), BufferCopy.GetSampleRate(), ResampleRate, buffer)) {
         FString name = "buffer", path = "GSTT";
         if (WriteWav) {
             const Audio::FSampleBuffer wav = Audio::TSampleBuffer<int16>(buffer, 1, ResampleRate);
@@ -54,8 +87,9 @@ void UOdinRestGSTTEffect::TimerCallback()
         Callback(buffer, name, path);
     }
 
-    AudioBuffer.Reset();
-    GetWorld()->GetTimerManager().ClearTimer(TimerHandle);
+    if (UWorld *World = GetWorld()) {
+        World->GetTimerManager().ClearTimer(TimerHandle);
+    }
 }
 
 void UOdinRestGSTTEffect::BeginDestroy()
@@ -107,18 +141,19 @@ void UOdinRestGSTTEffect::PostRequest(const FString &Endpoint, const FString &Pa
 bool UOdinRestGSTTEffect::Remix(const float *InAudio, int32 NumSamples, int32 NumChannels, int32 SourceSampleRate, int32 TargetSampleRate,
                                 Audio::FAlignedFloatBuffer &OutAudio)
 {
-    if (!NumSamples) {
+    if (NumSamples <= 0 || NumChannels <= 0 || NumSamples < NumChannels) {
         UE_LOG(LogTemp, Error, TEXT("UOdinRestGSTTEffect: No samples to downmix/resample."));
         return false;
     }
 
     // downmix
+    const int32                NumFrames   = NumSamples / NumChannels;
     Audio::FAlignedFloatBuffer monoSamples = Audio::FAlignedFloatBuffer();
-    monoSamples.SetNum((NumSamples / NumChannels));
-    for (int32 sampleCnt = 0; sampleCnt < NumSamples; sampleCnt += NumChannels) {
+    monoSamples.Reserve(NumFrames);
+    for (int32 frame = 0; frame < NumFrames; ++frame) {
         float sum = 0.f;
         for (int32 channelCnt = 0; channelCnt < NumChannels; ++channelCnt)
-            sum += InAudio[sampleCnt + channelCnt];
+            sum += InAudio[frame * NumChannels + channelCnt];
         monoSamples.Add(sum / NumChannels);
     }
 

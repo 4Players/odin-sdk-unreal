@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -148,7 +148,7 @@ class ODIN_API UOdinDecoder : public UObject
     UOdinPipeline *Pipeline = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Odin|Channels")
-    FOdinChannelMask ChannelMask;
+    FOdinChannelMask ChannelMask = FOdinChannelMask::CreateFull();
 
     UPROPERTY(BlueprintReadOnly, Category = "Odin")
     int32 SampleRate = 48000;

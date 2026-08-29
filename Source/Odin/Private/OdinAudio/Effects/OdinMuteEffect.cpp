@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/Effects/OdinMuteEffect.h"
 
@@ -23,9 +23,6 @@ void UOdinMuteEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bI
         return;
 
     *bIsSilent = *bIsSilent || MuteFlag == EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON;
-    if (*bIsSilent) {
-        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
-    }
 }
 
 UOdinMuteEffect *UOdinMuteEffect::ConstructMuteEffect(UObject *WorldContextObject, EOdinMuteEffectOptions Toggle)

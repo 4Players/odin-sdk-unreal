@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 #include "OdinAudio/OdinChannelMask.h"
 
 FOdinChannelMask::FOdinChannelMask()
@@ -10,7 +10,7 @@ FOdinChannelMask::FOdinChannelMask(const uint64 InitialMask)
 { SetChannelMask(InitialMask); }
 
 FOdinChannelMask FOdinChannelMask::CreateFull()
-{ return FOdinChannelMask(~static_cast<uint64>(0)); }
+{ return FOdinChannelMask(~static_cast<uint64>(0)); } // 0xFFFFFFFFFFFFFFFF
 
 FOdinChannelMask FOdinChannelMask::CreateEmpty()
 { return FOdinChannelMask(); }
