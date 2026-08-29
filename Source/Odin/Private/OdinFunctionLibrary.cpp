@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinFunctionLibrary.h"
 #include "OdinAudio/OdinDecoder.h"
@@ -35,7 +35,7 @@ FString UOdinFunctionLibrary::FormatOdinError(EOdinError Code, bool bUETrace)
 
     Tag.Append(": ");
     const auto OdinNativeError = odin_error_get_last_error();
-    FString    ErrorString     = FString(OdinNativeError);
+    FString    ErrorString     = OdinNativeError ? FString(UTF8_TO_TCHAR(OdinNativeError)) : FString();
     return Tag.Append(ErrorString);
 }
 
@@ -55,7 +55,7 @@ void UOdinFunctionLibrary::OdinHexStringToBytes(const FString& Input, TArray<uin
         return;
     }
     const uint32 size = Input.Len(); // exclude '\0'
-    Buffer.AddUninitialized(size / 2);
+    Buffer.SetNumUninitialized(size / 2);
     ::HexToBytes(Input, Buffer.GetData());
 }
 
@@ -109,7 +109,8 @@ UOdinEncoder* UOdinFunctionLibrary::CreateOdinEncoderFromGenerator(UObject* Worl
     bool  bStereo             = AudioGenerator->GetNumChannels() >= 2;
     int32 GeneratorSampleRate = AudioGenerator->GetSampleRate();
 
-    UOdinEncoder* OdinEncoder = UOdinEncoder::ConstructEncoder(WorldContextObject, OdinRoom->GetOwnPeerId(), GeneratorSampleRate, bStereo);
+    // use native detect id with peer id 0
+    UOdinEncoder* OdinEncoder = UOdinEncoder::ConstructEncoder(WorldContextObject, 0, GeneratorSampleRate, bStereo);
     OdinEncoder->SetAudioGenerator(AudioGenerator);
     LinkEncoderToRoom(OdinEncoder, OdinRoom);
     return OdinEncoder;
@@ -132,12 +133,12 @@ void UOdinFunctionLibrary::UnlinkEncoderFromRoom(UOdinEncoder* Encoder)
 void UOdinFunctionLibrary::RegisterDecoder(UOdinDecoder* Decoder, UOdinRoom* Room, int64 PeerId)
 {
     if (!Decoder) {
-        ODIN_LOG(Warning, TEXT("Tried registering an invalid Odin Decoder, aborting."))
+        ODIN_LOG(Warning, "Tried registering an invalid Odin Decoder, aborting.");
         return;
     }
 
     if (!Room) {
-        ODIN_LOG(Warning, TEXT("Tried registering a valid Odin Decoder to an invalid Odin Room, aborting."))
+        ODIN_LOG(Warning, "Tried registering a valid Odin Decoder to an invalid Odin Room, aborting.");
         return;
     }
 
@@ -248,3 +249,6 @@ FOdinChannelMask UOdinFunctionLibrary::CreateEmptyMask()
 
 bool UOdinFunctionLibrary::DoesAudioEventMatchFilter(EOdinAudioEvents Event, const int32 Filter)
 { return (static_cast<int32>(Event) & Filter) != 0; }
+
+FString UOdinFunctionLibrary::OdinDebugDumpState()
+{ return FOdinModule::Dump(); }

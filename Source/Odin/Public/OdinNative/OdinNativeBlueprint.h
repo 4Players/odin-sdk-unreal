@@ -1,12 +1,12 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 #include "OdinCore/include/odin.h"
 #include "OdinNative/OdinUtils.h"
 #include "CoreMinimal.h"
+#include "OdinSubsystem.h"
 #include "Kismet/BlueprintAsyncActionBase.h"
 #include "OdinAudio/Effects/OdinCustomEffect.h"
-#include "Templates/SharedPointer.h"
 
 #include "OdinNativeBlueprint.generated.h"
 
@@ -15,6 +15,7 @@ class UOdinEncoder;
 class UOdinDecoder;
 class UOdinPipeline;
 class UOdinTokenGenerator;
+class UOdinSocket;
 //** Wrapping workaround for enum blueprints that only supports uint8 values */
 UENUM(BlueprintType)
 enum class EOdinError : uint8 {
@@ -29,18 +30,18 @@ enum class EOdinError : uint8 {
     /**
      * The runtime initialization failed
      */
-    ODIN_ERROR_INITIALIZATION_FAILED =
-        -1 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INITIALIZATION_FAILED", ToolTip = "The runtime initialization failed"),
+    ODIN_ERROR_INITIALIZATION_FAILED = -1
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INITIALIZATION_FAILED", ToolTip = "The runtime initialization failed"),
     /**
      * The specified API version is not supported
      */
-    ODIN_ERROR_UNSUPPORTED_VERSION =
-        -2 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_UNSUPPORTED_VERSION", ToolTip = "The specified API version is not supported"),
+    ODIN_ERROR_UNSUPPORTED_VERSION = -2
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_UNSUPPORTED_VERSION", ToolTip = "The specified API version is not supported"),
     /**
      * The object is in an unexpected state
      */
-    ODIN_ERROR_UNEXPECTED_STATE =
-        -3 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_UNEXPECTED_STATE", ToolTip = "The object is in an unexpected state"),
+    ODIN_ERROR_UNEXPECTED_STATE = -3
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_UNEXPECTED_STATE", ToolTip = "The object is in an unexpected state"),
     /**
      * The object is closed
      */
@@ -52,49 +53,48 @@ enum class EOdinError : uint8 {
     /**
      * A provided argument is too small
      */
-    ODIN_ERROR_ARGUMENT_TOO_SMALL =
-        -12 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_TOO_SMALL", ToolTip = "A provided argument is too small"),
+    ODIN_ERROR_ARGUMENT_TOO_SMALL = -12
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_TOO_SMALL", ToolTip = "A provided argument is too small"),
     /**
      * A provided argument is out of the expected bounds
      */
-    ODIN_ERROR_ARGUMENT_OUT_OF_BOUNDS =
-        -13
+    ODIN_ERROR_ARGUMENT_OUT_OF_BOUNDS = -13
         + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_OUT_OF_BOUNDS", ToolTip = "A provided argument is out of the expected bounds"),
     /**
      * A provided string argument is not valid UTF-8
      */
-    ODIN_ERROR_ARGUMENT_INVALID_STRING =
-        -14 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_STRING", ToolTip = "A provided string argument is not valid UTF-8"),
+    ODIN_ERROR_ARGUMENT_INVALID_STRING = -14
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_STRING", ToolTip = "A provided string argument is not valid UTF-8"),
     /**
      * A provided handle argument is invalid
      */
-    ODIN_ERROR_ARGUMENT_INVALID_HANDLE =
-        -15 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_HANDLE", ToolTip = "A provided handle argument is invalid"),
+    ODIN_ERROR_ARGUMENT_INVALID_HANDLE = -15
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_HANDLE", ToolTip = "A provided handle argument is invalid"),
     /**
      * A provided identifier argument is invalid
      */
-    ODIN_ERROR_ARGUMENT_INVALID_ID =
-        -16 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_ID", ToolTip = "A provided identifier argument is invalid"),
+    ODIN_ERROR_ARGUMENT_INVALID_ID = -16
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_ID", ToolTip = "A provided identifier argument is invalid"),
     /**
      * A provided JSON argument is invalid
      */
-    ODIN_ERROR_ARGUMENT_INVALID_JSON =
-        -17 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_JSON", ToolTip = "A provided JSON argument is invalid"),
+    ODIN_ERROR_ARGUMENT_INVALID_JSON = -17
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_JSON", ToolTip = "A provided JSON argument is invalid"),
     /**
      * The provided version is invalid
      */
-    ODIN_ERROR_INVALID_VERSION =
-        -21 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_VERSION", ToolTip = "The provided version is invalid"),
+    ODIN_ERROR_INVALID_VERSION = -21
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_VERSION", ToolTip = "The provided version is invalid"),
     /**
      * The provided access key is invalid
      */
-    ODIN_ERROR_INVALID_ACCESS_KEY =
-        -22 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_ACCESS_KEY", ToolTip = "The provided access key is invalid"),
+    ODIN_ERROR_INVALID_ACCESS_KEY = -22
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_ACCESS_KEY", ToolTip = "The provided access key is invalid"),
     /**
      * The provided gateway/server address is invalid
      */
-    ODIN_ERROR_INVALID_URI =
-        -23 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_URI", ToolTip = "The provided gateway/server address is invalid"),
+    ODIN_ERROR_INVALID_URI = -23
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_URI", ToolTip = "The provided gateway/server address is invalid"),
     /**
      * The provided token is invalid
      */
@@ -103,13 +103,13 @@ enum class EOdinError : uint8 {
      * The provided effect is not compatible with the expected effect type
      */
     ODIN_ERROR_INVALID_EFFECT = -25
-                                + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_EFFECT",
-                                                                        ToolTip     = "The provided effect is not compatible with the expected effect type"),
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_EFFECT",
+                                                ToolTip     = "The provided effect is not compatible with the expected effect type"),
     /**
      * The provided MessagePack encoded bytes are invalid
      */
-    ODIN_ERROR_INVALID_MSG_PACK =
-        -26 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_MSG_PACK", ToolTip = "The provided MessagePack encoded bytes are invalid"),
+    ODIN_ERROR_INVALID_MSG_PACK = -26
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_INVALID_MSG_PACK", ToolTip = "The provided MessagePack encoded bytes are invalid"),
     /**
      * The provided JSON string is invalid
      */
@@ -118,39 +118,44 @@ enum class EOdinError : uint8 {
      * The provided token does not grant access to the requested room
      */
     ODIN_ERROR_TOKEN_ROOM_REJECTED = -31
-                                     + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_TOKEN_ROOM_REJECTED",
-                                                                             ToolTip     = "The provided token does not grant access to the requested room"),
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_TOKEN_ROOM_REJECTED",
+                                                ToolTip     = "The provided token does not grant access to the requested room"),
     /**
      * The token is missing a customer identifier
      */
-    ODIN_ERROR_TOKEN_MISSING_CUSTOMER =
-        -32 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_TOKEN_MISSING_CUSTOMER", ToolTip = "The token is missing a customer identifier"),
+    ODIN_ERROR_TOKEN_MISSING_CUSTOMER = -32
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_TOKEN_MISSING_CUSTOMER", ToolTip = "The token is missing a customer identifier"),
     /**
      * The audio processing module reported an error
      */
-    ODIN_ERROR_AUDIO_PROCESSING_FAILED =
-        -41 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_PROCESSING_FAILED", ToolTip = "The audio processing module reported an error"),
+    ODIN_ERROR_AUDIO_PROCESSING_FAILED = -41
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_PROCESSING_FAILED", ToolTip = "The audio processing module reported an error"),
     /**
      * The setup process of the Opus audio codec reported an error
      */
     ODIN_ERROR_AUDIO_CODEC_CREATION_FAILED = -42
-                                             + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_CODEC_CREATION_FAILED",
-                                                                                     ToolTip = "The setup process of the Opus audio codec reported an error"),
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_CODEC_CREATION_FAILED",
+                                                ToolTip     = "The setup process of the Opus audio codec reported an error"),
     /**
      * Encoding of an audio packet failed
      */
-    ODIN_ERROR_AUDIO_ENCODING_FAILED =
-        -43 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_ENCODING_FAILED", ToolTip = "Encoding of an audio packet failed"),
+    ODIN_ERROR_AUDIO_ENCODING_FAILED = -43
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_ENCODING_FAILED", ToolTip = "Encoding of an audio packet failed"),
     /**
      * Decoding of an audio packet failed
      */
-    ODIN_ERROR_AUDIO_DECODING_FAILED =
-        -44 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_DECODING_FAILED", ToolTip = "Decoding of an audio packet failed"),
+    ODIN_ERROR_AUDIO_DECODING_FAILED = -44
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_DECODING_FAILED", ToolTip = "Decoding of an audio packet failed"),
     /**
      * Position limit reached
      */
-    ODIN_ERROR_AUDIO_POSITION_LIMIT_REACHED =
-        -45 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_POSITION_LIMIT_REACHED", ToolTip = "Position limit reached"),
+    ODIN_ERROR_AUDIO_POSITION_LIMIT_REACHED = -45
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_POSITION_LIMIT_REACHED", ToolTip = "Position limit reached"),
+    /**
+     * The voice isolation effect reported an error
+     */
+    ODIN_ERROR_AUDIO_VOICE_ISOLATION_FAILED = -46
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_AUDIO_VOICE_ISOLATION_FAILED", ToolTip = "The voice isolation effect reported an error"),
 };
 
 /**
@@ -201,16 +206,88 @@ enum class EOdinEffectType : uint8 {
      */
     ODIN_EFFECT_TYPE_APM UMETA(DisplayName = "APM"),
     /**
+     * Voice Isolation (VI) effect that separates speech from background sound in the capture signal
+     */
+    ODIN_EFFECT_TYPE_VI UMETA(DisplayName = "VI"),
+    /**
      * Custom user-defined audio processing effect that can be integrated into the audio pipeline
      */
     ODIN_EFFECT_TYPE_CUSTOM UMETA(DisplayName = "CUSTOM"),
+};
+
+UENUM(BlueprintType)
+enum class EOdinSocketKind : uint8 {
+    ODIN_SOCKET_KIND_RELIABLE   UMETA(DisplayName = "Reliable"),
+    ODIN_SOCKET_KIND_UNRELIABLE UMETA(DisplayName = "Unreliable"),
+};
+
+USTRUCT(BlueprintType)
+struct ODIN_API FOdinSocketInfo {
+    GENERATED_BODY()
+
+  public:
+    inline FOdinSocketInfo *SetInfo(OdinSocketInfo *info)
+    {
+        if (const UOdinSubsystem *OdinSubsystem = UOdinSubsystem::Get()) {
+            Room = OdinSubsystem->GetRoomByHandle(info->room);
+        }
+        Kind         = static_cast<EOdinSocketKind>(info->kind);
+        IsInbound    = info->is_inbound;
+        RemotePeerId = info->remote_peer_id;
+        Label        = info->label;
+        Priority     = info->priority;
+        UnsentBytes  = info->unsent_bytes;
+
+        return this;
+    }
+    FOdinSocketInfo() = default;
+    FOdinSocketInfo(OdinSocketInfo info)
+    { SetInfo(&info); }
+
+    /**
+     * Odin Room
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Room"), Category = "Odin")
+    TWeakObjectPtr<UOdinRoom> Room;
+    /**
+     * Socket type
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Socket Kind"), Category = "Odin")
+    EOdinSocketKind Kind = EOdinSocketKind::ODIN_SOCKET_KIND_RELIABLE;
+    /**
+     * Socket remote flag
+     * Only true if the socket was received by the on_socket event and never created local
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Is Inbound"), Category = "Odin")
+    bool IsInbound = false;
+    /**
+     * Socket target peer id
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Remote Peer Id"), Category = "Odin")
+    int64 RemotePeerId = 0;
+    /**
+     * Socket name
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Label"), Category = "Odin")
+    int32 Label = 0;
+    /**
+     * Packet priority by value where 0 is default. Higher is more priority and lower is less
+     * Note: Setting this value to high can impact voice quality.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Priority"), Category = "Odin")
+    int32 Priority = 0;
+    /**
+     * Is always 0 on unreliable or all data was sent on reliable
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Unsent Bytes"), Category = "Odin")
+    int64 UnsentBytes = 0;
 };
 
 USTRUCT(BlueprintType)
 struct ODIN_API FOdinConnectionStats {
     GENERATED_BODY()
 
-    operator OdinConnectionStats()
+    operator OdinConnectionStats() const
     {
         return OdinConnectionStats{
             .udp_tx_datagrams = (uint64)UdpTxDatagrams,
@@ -393,6 +470,38 @@ struct ODIN_API FOdinVadConfig {
 };
 
 /**
+ * Configuration of the Voice Isolation (VI) effect, which uses a deep-learning noise suppression
+ * model to separate speech from background sound in the capture signal.
+ */
+USTRUCT(BlueprintType)
+struct ODIN_API FOdinViConfig {
+    GENERATED_BODY()
+
+    operator OdinViConfig()
+    {
+        return OdinViConfig{
+            .enabled              = Enabled,
+            .attenuation_limit_db = AttenuationLimitDb,
+        };
+    }
+
+    /**
+     * When enabled, the effect will attenuate non-speech portions of the input audio signal.
+     * Re-enabling a disabled effect also resets its internal state.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Enabled"), Category = "Odin|VI")
+    bool Enabled = false;
+
+    /**
+     * Maximum attenuation applied to non-speech in dB; values of `100` and above remove background
+     * sound entirely, while values close to `0` almost disable noise reduction.
+     */
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (DisplayName = "Attenuation Limit (dB)", ClampMin = "0.0", UIMin = "0.0", UIMax = "100.0"),
+              Category = "Odin|VI")
+    float AttenuationLimitDb = 100.0f;
+};
+
+/**
  * Represents a 3D position used for peer proximity calculations.
  * The coordinates are expressed as floating - point32 values(x, y, z).
  */
@@ -465,6 +574,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeRoomResendUserDataRespons
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeRoomSendRpcResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeRoomSendLoopbackRpcResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeRoomSendDatagramResponsePin, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeSocketCreateResponsePin, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeSocketInfoResponsePin, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeSocketSendResponsePin, bool, success);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeSocketResetResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeTokenGeneratorCreateResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeTokenGeneratorFreeResponsePin, bool, success);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOdinNativeTokenGeneratorGetAccessKeyResponsePin, bool, success);
@@ -1141,7 +1254,7 @@ class ODIN_API UOdinNativePipelineSetVadConfig : public UBlueprintAsyncActionBas
     UPROPERTY()
     uint32 EffectId;
 
-    FOdinVadConfig *Config;
+    FOdinVadConfig Config;
 
     UPROPERTY()
     UOdinPipeline                         *Pipeline;
@@ -1150,7 +1263,7 @@ class ODIN_API UOdinNativePipelineSetVadConfig : public UBlueprintAsyncActionBas
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativePipelineGetVadConfigError, EOdinError, errorCode);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativePipelineGetVadConfigSuccess, uint32, effect_id /*, const OdinVadConfig &, vadConfig*/);
+DECLARE_DYNAMIC_DELEGATE_TwoParams(FOdinNativePipelineGetVadConfigSuccess, uint32, effect_id, FOdinVadConfig, vadConfig);
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinNativePipelineGetVadConfig : public UBlueprintAsyncActionBase
 {
@@ -1171,7 +1284,7 @@ class ODIN_API UOdinNativePipelineGetVadConfig : public UBlueprintAsyncActionBas
     UPROPERTY()
     uint32 EffectId;
 
-    OdinVadConfig *Config;
+    FOdinVadConfig Config;
     UPROPERTY()
     UOdinPipeline                         *Pipeline;
     FOdinNativePipelineGetVadConfigError   OnError;
@@ -1189,7 +1302,7 @@ class ODIN_API UOdinNativePipelineSetApmConfig : public UBlueprintAsyncActionBas
                                          ToolTip = "odin_PipelineSetApmConfig", WorldContext = "WorldContextObject",
                                          AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
     static UOdinNativePipelineSetApmConfig *PipelineSetApmConfig(UObject *WorldContextObject, UPARAM(ref) UOdinPipeline *&pipeline, const int32 effect_id,
-                                                                 const FOdinNativePipelineSetApmConfigError   &onError,
+                                                                 UPARAM(ref) struct FOdinApmConfig &config, const FOdinNativePipelineSetApmConfigError &onError,
                                                                  const FOdinNativePipelineSetApmConfigSuccess &onSuccess);
 
     virtual void Activate() override;
@@ -1200,7 +1313,7 @@ class ODIN_API UOdinNativePipelineSetApmConfig : public UBlueprintAsyncActionBas
     UPROPERTY()
     uint32 EffectId;
 
-    OdinApmConfig *Config;
+    FOdinApmConfig Config;
     UPROPERTY()
     UOdinPipeline                         *Pipeline;
     FOdinNativePipelineSetApmConfigError   OnError;
@@ -1484,6 +1597,113 @@ class ODIN_API UOdinNativeRoomSendDatagram : public UBlueprintAsyncActionBase
     UOdinRoom                         *Room;
     FOdinNativeRoomSendDatagramError   OnError;
     FOdinNativeRoomSendDatagramSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketCreateError, EOdinError, errorCode);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketCreateSuccess, UOdinSocket *, socket);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinNativeSocketCreate : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin SocketCreate",
+                                         ToolTip = "odin_SocketCreate", WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinNativeSocketCreate *SocketCreate(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room, EOdinSocketKind socketKind, int32 remotePeerId,
+                                                 int32 label, int32 priority, const FOdinNativeSocketCreateError &onError,
+                                                 const FOdinNativeSocketCreateSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Events")
+    FOdinNativeSocketCreateResponsePin OnResponse;
+
+    UPROPERTY()
+    TWeakObjectPtr<UOdinRoom> Room;
+    UPROPERTY()
+    EOdinSocketKind SocketKind;
+    UPROPERTY()
+    int32 TargetPeerId;
+    UPROPERTY()
+    int32 Label;
+    UPROPERTY()
+    int32 Priority;
+
+    UPROPERTY()
+    UOdinSocket                   *Socket;
+    FOdinNativeSocketCreateError   OnError;
+    FOdinNativeSocketCreateSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketInfoError, EOdinError, errorCode);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketInfoSuccess, FOdinSocketInfo, info);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinNativeSocketInfo : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin SocketInfo",
+                                         ToolTip = "odin_SocketInfo", WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinNativeSocketInfo *SocketInfo(UObject *WorldContextObject, UPARAM(ref) UOdinSocket *&socket, const FOdinNativeSocketInfoError &onError,
+                                             const FOdinNativeSocketInfoSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Events")
+    FOdinNativeSocketInfoResponsePin OnResponse;
+
+    UPROPERTY()
+    TWeakObjectPtr<UOdinSocket> Socket;
+    UPROPERTY()
+    FOdinSocketInfo              Info;
+    FOdinNativeSocketInfoError   OnError;
+    FOdinNativeSocketInfoSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketSendError, EOdinError, errorCode);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketSendSuccess, uint32, bytes);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinNativeSocketSend : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin SocketSend",
+                                         ToolTip = "odin_SocketSend", WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinNativeSocketSend *SocketSend(UObject *WorldContextObject, UPARAM(ref) UOdinSocket *&socket, const TArray<uint8> &message,
+                                             const FOdinNativeSocketSendError &onError, const FOdinNativeSocketSendSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Events")
+    FOdinNativeSocketSendResponsePin OnResponse;
+
+    TArray<uint8> MessageBytes;
+    UPROPERTY()
+    TWeakObjectPtr<UOdinSocket>  Socket;
+    FOdinNativeSocketSendError   OnError;
+    FOdinNativeSocketSendSuccess OnSuccess;
+};
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeSocketResetError, EOdinError, errorCode);
+DECLARE_DYNAMIC_DELEGATE(FOdinNativeSocketResetSuccess);
+UCLASS(ClassGroup = Odin)
+class ODIN_API UOdinNativeSocketReset : public UBlueprintAsyncActionBase
+{
+    GENERATED_BODY()
+  public:
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin SocketReset",
+                                         ToolTip = "odin_SocketReset", WorldContext = "WorldContextObject", AutoCreateRefTerm = "onSuccess,onError"))
+    static UOdinNativeSocketReset *SocketReset(UObject *WorldContextObject, UPARAM(ref) UOdinSocket *&socket, const FOdinNativeSocketResetError &onError,
+                                               const FOdinNativeSocketResetSuccess &onSuccess);
+
+    virtual void Activate() override;
+
+    UPROPERTY(BlueprintAssignable, Category = "Odin|Events")
+    FOdinNativeSocketResetResponsePin OnResponse;
+
+    UPROPERTY()
+    TWeakObjectPtr<UOdinSocket>   Socket;
+    FOdinNativeSocketResetError   OnError;
+    FOdinNativeSocketResetSuccess OnSuccess;
 };
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FOdinNativeTokenGeneratorCreateError, EOdinError, errorCode);

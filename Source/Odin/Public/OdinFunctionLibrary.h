@@ -1,4 +1,4 @@
-﻿/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -111,7 +111,14 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintPure, Category = "Odin|Channels")
     static bool IsChannelEnabledInMask(const FOdinChannelMask& Mask, const int32 ChannelIndex);
 
-    UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Full Channel Mask"))
+    /**
+     * Creates a mask with all 64 channels enabled.
+     * @remarks Do not use a full mask for Set Encoder Position: an encoder holds at most 12 channel positions, so a full mask fails with
+     * ODIN_ERROR_AUDIO_POSITION_LIMIT_REACHED. Mask only the channels that are actually transmitted on (usually just channel 0).
+     */
+    UFUNCTION(BlueprintCallable, Category = "Odin|Channels",
+              meta = (Keywords = "Make Full Channel Mask",
+                      ToolTip  = "Creates a mask with all 64 channels enabled. Not for Set Encoder Position - an encoder holds at most 12 positions"))
     static FOdinChannelMask CreateFullMask();
 
     UFUNCTION(BlueprintCallable, Category = "Odin|Channels", meta = (Keywords = "Make Empty Channel Mask"))
@@ -120,4 +127,7 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintPure, Category = "Odin|Audio Pipeline|Events", meta = (CompactNodeTitle = "In Filter"), meta = (Keywords = "Audio Event Filter"))
     static bool DoesAudioEventMatchFilter(EOdinAudioEvents                                                                                      Event,
                                           UPARAM(meta = (DisplayName = "Filter", Bitmask, BitmaskEnum = "/Script/Odin.EOdinAudioEvents")) int32 Filter);
+
+    UFUNCTION(BlueprintPure, Category = "Odin|Debug", meta = (Keywords = "debug dump state"))
+    static FString OdinDebugDumpState();
 };
