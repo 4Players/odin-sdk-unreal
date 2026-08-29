@@ -1,3 +1,5 @@
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
+
 #pragma once
 #include "Dom/JsonValue.h"
 #include "Serialization/JsonWriter.h"

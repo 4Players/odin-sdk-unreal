@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -73,6 +73,10 @@ class ODIN_API UOdinHandle : public UObject
      * along with parameters to adjust for any additional capacity overhead.
      */
     UOdinHandle(OdinCipher *handle);
+    /**
+     * UOdinHandle represents a room socket; Note: on any reconnect the socket handle must be re-created.
+     */
+    UOdinHandle(OdinSocket *handle);
     /**
      * Uninitialized handle
      */

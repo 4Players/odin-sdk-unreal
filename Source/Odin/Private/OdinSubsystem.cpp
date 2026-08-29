@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinSubsystem.h"
 #include "OdinAudio/OdinDecoder.h"
@@ -84,6 +84,67 @@ void UOdinSubsystem::PushAudioToEncoder(OdinEncoder* Encoder, TArray<float>&& Au
     }
 }
 
+void UOdinSubsystem::RegisterEncoder(OdinEncoder* Handle, UOdinEncoder* Encoder)
+{
+    if (Handle == nullptr || !IsValid(Encoder)) {
+        return;
+    }
+    FScopeLock RegisterLock(&EncoderObjectsCS);
+    EncoderObjects.Add(Handle, FRegisteredEncoder{Encoder, ++EncoderRegistrationCounter});
+}
+
+void UOdinSubsystem::DeregisterEncoder(OdinEncoder* Handle)
+{
+    if (Handle == nullptr) {
+        return;
+    }
+    FScopeLock DeregisterLock(&EncoderObjectsCS);
+    EncoderObjects.Remove(Handle);
+}
+
+TWeakObjectPtr<UOdinEncoder> UOdinSubsystem::GetEncoderByHandle(OdinEncoder* Handle) const
+{
+    FScopeLock GetEncoderLock(&EncoderObjectsCS);
+    if (const FRegisteredEncoder* EncoderObject = EncoderObjects.Find(Handle)) {
+        return EncoderObject->Encoder;
+    }
+    return nullptr;
+}
+
+uint64 UOdinSubsystem::GetEncoderRegistrationId(OdinEncoder* Handle) const
+{
+    FScopeLock GetEncoderLock(&EncoderObjectsCS);
+    if (const FRegisteredEncoder* EncoderObject = EncoderObjects.Find(Handle)) {
+        return EncoderObject->RegistrationId;
+    }
+    return 0;
+}
+
+TWeakObjectPtr<UOdinEncoder> UOdinSubsystem::GetEncoderByRegistration(OdinEncoder* Handle, uint64 RegistrationId) const
+{
+    FScopeLock GetEncoderLock(&EncoderObjectsCS);
+    if (const FRegisteredEncoder* EncoderObject = EncoderObjects.Find(Handle)) {
+        if (EncoderObject->RegistrationId == RegistrationId) {
+            return EncoderObject->Encoder;
+        }
+    }
+    return nullptr;
+}
+
+TArray<TWeakObjectPtr<UOdinRoom>> UOdinSubsystem::GetRoomsForEncoder(OdinEncoder* Encoder) const
+{
+    TArray<TWeakObjectPtr<UOdinRoom>> Rooms;
+    if (PushDataThread.IsValid()) {
+        for (OdinRoom* RoomHandle : PushDataThread->GetRoomsFor(Encoder)) {
+            TWeakObjectPtr<UOdinRoom> Room = GetRoomByHandle(RoomHandle);
+            if (Room.IsValid()) {
+                Rooms.Add(Room);
+            }
+        }
+    }
+    return Rooms;
+}
+
 void UOdinSubsystem::RegisterRoom(OdinRoom* Handle, UOdinRoom* Room)
 {
     FScopeLock RegisterRoomLock(&RoomsCS);
@@ -159,7 +220,7 @@ bool UOdinSubsystem::IsRoomRegistered(const OdinRoom* Handle) const
 void UOdinSubsystem::LinkDecoderToPeer(const UOdinDecoder* Decoder, OdinRoom* TargetRoom, const uint32 PeerId)
 {
     if (DatagramProcessingThread.IsValid() && IsValid(Decoder)) {
-        DatagramProcessingThread->LinkDecoderToPeer(Decoder->GetNativeHandle(), TargetRoom, PeerId);
+        DatagramProcessingThread->LinkDecoderToPeer(Decoder->GetNativeHandle(), TargetRoom, PeerId, Decoder->ChannelMask);
     }
 }
 
@@ -211,16 +272,46 @@ void UOdinSubsystem::DeregisterDecoder(const OdinDecoder* Handle)
 }
 
 TArray<OdinDecoder*> UOdinSubsystem::GetDecoderHandlesFor(OdinRoom* TargetRoom, uint32 PeerId) const
+{ return GetDecoderHandlesFor(TargetRoom, PeerId, ~static_cast<uint64>(0)); }
+
+TArray<OdinDecoder*> UOdinSubsystem::GetDecoderHandlesFor(OdinRoom* TargetRoom, uint32 PeerId, uint64 ChannelMask) const
 {
     if (DatagramProcessingThread.IsValid()) {
-        return DatagramProcessingThread->GetDecoderHandlesFor(TargetRoom, PeerId);
+        return DatagramProcessingThread->GetDecoderHandlesFor(TargetRoom, PeerId, ChannelMask);
     }
     return TArray<OdinDecoder*>();
 }
 
 TArray<UOdinDecoder*> UOdinSubsystem::GetDecodersFor(OdinRoom* TargetRoom, uint32 PeerId) const
+{ return GetDecodersFor(TargetRoom, PeerId, ~static_cast<uint64>(0)); }
+
+TArray<UOdinDecoder*> UOdinSubsystem::GetDecodersFor(OdinRoom* TargetRoom, uint32 PeerId, uint64 ChannelMask) const
 {
-    const TArray<OdinDecoder*> OdinDecoderHandles = GetDecoderHandlesFor(TargetRoom, PeerId);
+    const TArray<OdinDecoder*> OdinDecoderHandles = GetDecoderHandlesFor(TargetRoom, PeerId, ChannelMask);
+    TArray<UOdinDecoder*>      OdinDecoders;
+    {
+        FScopeLock DecoderObjectsLock(&DecoderObjectsCS);
+        for (OdinDecoder* DecoderHandle : OdinDecoderHandles) {
+            const TWeakObjectPtr<UOdinDecoder>* DecoderObject = DecoderObjects.Find(DecoderHandle);
+            if (DecoderObject && DecoderObject->IsValid()) {
+                OdinDecoders.Add(DecoderObject->Get());
+            }
+        }
+    }
+    return OdinDecoders;
+}
+
+TArray<OdinDecoder*> UOdinSubsystem::GetAllDecoderHandlesByPeer(uint32 PeerId) const
+{
+    if (DatagramProcessingThread.IsValid()) {
+        return DatagramProcessingThread->GetDecodersByPeer(PeerId);
+    }
+    return TArray<OdinDecoder*>();
+}
+
+TArray<UOdinDecoder*> UOdinSubsystem::GetAllDecodersByPeer(uint32 PeerId) const
+{
+    const TArray<OdinDecoder*> OdinDecoderHandles = GetAllDecoderHandlesByPeer(PeerId);
     TArray<UOdinDecoder*>      OdinDecoders;
     {
         FScopeLock DecoderObjectsLock(&DecoderObjectsCS);

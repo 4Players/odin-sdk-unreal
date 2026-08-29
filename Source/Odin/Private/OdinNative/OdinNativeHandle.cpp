@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2025 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinNative/OdinNativeHandle.h"
 
@@ -23,6 +23,10 @@ UOdinHandle::UOdinHandle(OdinTokenGenerator *handle)
 {
 }
 UOdinHandle::UOdinHandle(OdinCipher *handle)
+    : UOdinHandle((void *)handle)
+{
+}
+UOdinHandle::UOdinHandle(OdinSocket *handle)
     : UOdinHandle((void *)handle)
 {
 }

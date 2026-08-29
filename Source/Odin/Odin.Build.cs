@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 using System.IO;
 
@@ -20,7 +20,11 @@ public class Odin : ModuleRules
 
     // Enable warnings for using undefined identifiers in #if expressions
 #if UE_5_5_OR_LATER
-    UndefinedIdentifierWarningLevel = 0;
+    #if UE_5_6_OR_LATER
+        CppCompileWarningSettings.UndefinedIdentifierWarningLevel = 0;
+    #else
+        UndefinedIdentifierWarningLevel = 0;
+    #endif
 #else
     bEnableUndefinedIdentifierWarnings = false;
 #endif

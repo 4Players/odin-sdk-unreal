@@ -1,4 +1,4 @@
-/* Copyright (c) 2022-2023 4Players GmbH. All rights reserved. */
+/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #pragma once
 
@@ -17,12 +17,16 @@ class ODIN_API FOdinModule : public IModuleInterface
 
     void LoadExtension(FString& libraryPath, FString libraryExtensionName);
 
-    static void LogErrorCode(const char* Prefix, int32 ErrorCode);
-    static void LogErrorCode(const char* Prefix, uint8 ErrorCode);
-    static void Debug(FString platform, FString path, FString name);
+    static void LogErrorCode(const char* Prefix, int32 ErrorCode, bool TraceAll = false);
+    static void LogErrorCode(const char* Prefix, uint8 ErrorCode, bool TraceAll = false);
+
+    static void    Debug(FString platform, FString path, FString name, int initializationResult);
+    static void    LogHook(const char* S);
+    static FString Dump(uint32 Size = 10240);
 
   private:
-    bool                 DBG               = false;
+    inline static uint32_t DBGV = 0;
+
     bool                 bIsInitialized    = false;
     void*                OdinLibraryHandle = nullptr;
     TMap<FString, void*> OdinLibraryExtensionHandles;
