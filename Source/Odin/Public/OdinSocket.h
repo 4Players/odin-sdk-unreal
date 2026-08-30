@@ -14,6 +14,9 @@ class UOdinRoom;
 
 /**
  * An opaque type representing an ODIN socket
+ *
+ * @remarks Sockets are bound to the current room session: they do not survive a reconnect, and sockets to a specific peer are closed automatically when
+ * that peer leaves the room.
  */
 UCLASS(ClassGroup = Odin, Blueprintable, BlueprintType)
 class ODIN_API UOdinSocket : public UObject

@@ -387,11 +387,27 @@ class ODIN_API UOdinRoom : public UObject
     UOdinSocket* RemoveSocket(const OdinSocket* SocketHandle);
     /**
      * Open socket to a peer in the current room.
-     * @param TargetPeerId  Remote PeerId
+     * @param TargetPeerId  Remote PeerId, or 0 to broadcast to all peers in the room
      * @param SocketKind    Kind of socket
+     * @remarks Sockets are bound to the current room session and do not survive a reconnect. Sockets to a specific peer are closed automatically when that
+     * peer leaves the room, since the server recycles peer ids and a stale socket could otherwise reach a later peer under the same id; broadcast sockets
+     * (target peer 0) stay open for the whole session.
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Open Socket", ToolTip = "Open socket to a peer in the current room."), Category = "Odin|Room|Socket")
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Open Socket",
+                          ToolTip     = "Open socket to a peer in the current room (0 = broadcast). Closed automatically when the target peer leaves."),
+              Category = "Odin|Room|Socket")
     UOdinSocket* OpenSocket(int64 TargetPeerId, EOdinSocketKind SocketKind);
+    /**
+     * Close and remove all sockets whose remote peer is the given peer.
+     * @param PeerId  Remote PeerId
+     * @remarks Called automatically when the peer leaves the room. Outbound sockets are closed for good (the server recycles peer ids, so sending on a
+     * stale socket could reach a later peer under the same id); for inbound sockets only the wrapper object is released, the native socket stays open
+     * because the native layer reuses its address when a peer with the recycled id opens new sockets.
+     */
+    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Remove Peer Sockets", ToolTip = "Remove and close all sockets to or from the given peer."),
+              Category = "Odin|Room|Socket")
+    void RemoveSocketsForPeer(int64 PeerId);
     /**
      * Close all sockets in the current room.
      */

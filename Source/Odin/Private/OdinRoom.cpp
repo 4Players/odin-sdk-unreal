@@ -537,6 +537,9 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     if (Delegate.IsBound()) {
                         Delegate.Broadcast(room.Get(), data);
                     }
+                    // the sockets of a peer that left can no longer send or receive; close them
+                    // after the event so handlers still saw them alive
+                    room->RemoveSocketsForPeer(data.peer_id);
                     ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerLeft::Name);
@@ -587,6 +590,7 @@ TWeakObjectPtr<UOdinSocket> UOdinRoom::CreateLocalSocket(EOdinSocketKind SocketK
     FScopeLock   OpenSocketLock(&Socket_CS);
     UOdinSocket *socket = UOdinSocket::ConstructSocket(this);
     socket->Create(this, SocketKind, TargetPeerId, Label, Priority);
+    socket->GetSocketInfo(); // cache the socket info so the remote peer id is known for cleanup
     ODIN_LOG(Log, "Create normal Socket %p in Room %p", socket->GetNativeHandle(), Handle);
 
     Sockets.Emplace(socket->GetNativeHandle(), MoveTemp(socket));
@@ -618,6 +622,30 @@ UOdinSocket *UOdinRoom::RemoveSocket(const OdinSocket *SocketHandle)
     }
     return nullptr;
 }
+void UOdinRoom::RemoveSocketsForPeer(const int64 PeerId)
+{
+    FScopeLock ResetSocketLock(&Socket_CS);
+    for (auto It = Sockets.CreateIterator(); It; ++It) {
+        UOdinSocket *Socket = It->Value.Get();
+        if (Socket == nullptr) {
+            It.RemoveCurrent();
+            continue;
+        }
+        if (Socket->GetRemotePeerId() == PeerId) {
+            ODIN_LOG(Verbose, "Removing Socket %p of peer %lld in Room %p", Socket->GetNativeHandle(), PeerId, Handle);
+            // close only outbound sockets: peer ids are recycled by the server, and a send on a
+            // stale socket would reach whichever later peer acquires the id. Inbound native
+            // sockets stay open, since the native layer reuses their address when a peer with
+            // the recycled id opens its sockets; only the wrapper is released and a fresh one is
+            // created lazily for the next message
+            if (!Socket->GetSocketInfo().IsInbound) {
+                Socket->ResetSocket();
+            }
+            It.RemoveCurrent();
+        }
+    }
+}
+
 void UOdinRoom::RemoveAllSockets()
 {
     FScopeLock ResetSocketLock(&Socket_CS);
