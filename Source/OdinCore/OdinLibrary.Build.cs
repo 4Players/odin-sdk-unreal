@@ -114,6 +114,9 @@ public class OdinLibrary : ModuleRules
         }
         else if (UnrealTargetPlatform.IsValidName("XSX") && UnrealTargetPlatform.TryParse("XSX", out UnrealTargetPlatform xsxSupport) && Target.Platform == xsxSupport)
         {
+            if (!File.Exists(Path.Combine(ModuleDirectory, "x64", "XSX", "odin_crypto.lib")))
+                PublicDefinitions.Remove(extensionFlag);
+
             string[] xsxFiles = new string[] { "odin.dll", "odin.lib" }.Union(winExtensionFiles).ToArray();
 
             addExtern(new string[] { ModuleDirectory, "x64", "XSX" }, xsxFiles, (fullpath, file) => {
