@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "2.2.4"
+#define ODIN_VERSION "2.2.5"
 
 /**
  * Defines standard error codes returned by ODIN functions. Non-negative values indicate success

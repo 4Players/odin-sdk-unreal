@@ -12,7 +12,7 @@
 #include <stdlib.h>
 #include "odin.h"
 
-#define ODIN_CRYPTO_VERSION "2.1.0"
+#define ODIN_CRYPTO_VERSION "2.2.0"
 
 /**
  * Represents the encryption status of a remote peer in an ODIN room.
