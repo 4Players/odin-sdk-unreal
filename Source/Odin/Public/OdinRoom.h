@@ -110,6 +110,13 @@ class ODIN_API UOdinRoom : public UObject
 
     DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOdinPeerLeftDelegate, UOdinRoom*, room, FOdinPeerLeft, data);
 
+    /**
+     * A peer left the room. Also raised synthetically for every peer this room announced via
+     * OnRoomPeerJoinedBP when the local session ends: on connection loss (status "joining"), on
+     * close (status "closed") and when the native room is freed or replaced by a reconnect. Each
+     * announced peer is reported as left exactly once, so handlers can tear down per-peer state
+     * without tracking the room status themselves.
+     */
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinPeerLeftDelegate OnRoomPeerLeftBP;
 
@@ -143,7 +150,8 @@ class ODIN_API UOdinRoom : public UObject
     static bool CloseOdinRoomByHandle(OdinRoom* room);
 
     /**
-     * Destroys the specified ODIN room handle in addition to close.
+     * Frees the native room immediately. Announced peers are reported via OnRoomPeerLeftBP first.
+     * The native free closes the room as well, but the "closed" status is not delivered anymore.
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Free Room", ToolTip = "Frees a room and handle immediately.", DefaultToSelf = "Room",
@@ -153,13 +161,20 @@ class ODIN_API UOdinRoom : public UObject
     /**
      * Destroys the specified ODIN room handle and releases all underlying resources.
      * @remarks Since the handle could be invalid for the SDK while connecting, manual call `odin_room_free` would work, even if the
-     * room is still connecting.
+     * room is still connecting. If the handle belongs to a registered UOdinRoom, this behaves like FreeRoom on that object.
      */
     static bool FreeRoomByHandle(OdinRoom* room);
     /**
+     * Reports every peer this room announced via OnRoomPeerJoinedBP as left, through the same path
+     * as a real peer left event, and forgets them. Used when the session ends without the server
+     * sending peer left events: connection loss, close, free and reconnect. Game thread only.
+     */
+    void FlushKnownPeers();
+    /**
      * Frees the native room (if any), drops the subsystem registration and invalidates the crypto
      * and all socket wrappers. Safe to call during destruction; every path that frees the native
-     * room must go through this, so the handle cannot be freed twice.
+     * room must go through this, so the handle cannot be freed twice. No delegate fires here, so
+     * callers that want announced peers reported as left call FlushKnownPeers first.
      */
     void ReleaseHandle();
     /**
@@ -452,6 +467,18 @@ class ODIN_API UOdinRoom : public UObject
      * overrides where set and the default listen channel mask otherwise.
      */
     bool ApplyListenChannelMasks();
+
+    /**
+     * Game thread handler shared by real and synthetic peer left events: forgets the peer,
+     * broadcasts OnRoomPeerLeftBP and closes its sockets. A peer that was never announced (or was
+     * already reported as left) is ignored, so every announced peer leaves exactly once.
+     */
+    void HandlePeerLeft(const FOdinPeerLeft& Data);
+    /**
+     * Game thread handler for a room status change: flushes announced peers and socket wrappers
+     * when the session ends, then stores and broadcasts the status.
+     */
+    void HandleRoomStatusChanged(const FOdinRoomStatusChanged& Data);
 
     FCriticalSection              ListenChannelMasksCS;
     TSet<int64>                   KnownPeerIds;

@@ -84,7 +84,7 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
 
     if (OdinRoom *ExistingHandle = GetHandle()) {
         ODIN_LOG(Warning, "ConnectRoom called on a room with an existing handle, closing and freeing the previous room.");
-        CloseOdinRoomByHandle(ExistingHandle);
+        FlushKnownPeers();
         ReleaseHandle();
     }
 
@@ -124,6 +124,11 @@ bool UOdinRoom::FreeRoom()
         ODIN_LOG(Verbose, "Aborted FreeRoom due to invalid Odin Room handle.");
         return false;
     }
+    const uint64 Generation = GetConnectionGeneration();
+    FlushKnownPeers();
+    if (GetConnectionGeneration() != Generation) {
+        return true;
+    }
     ReleaseHandle();
     return true;
 }
@@ -137,8 +142,7 @@ bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 
     if (UOdinSubsystem *const OdinSubsystem = UOdinSubsystem::Get()) {
         if (TWeakObjectPtr<UOdinRoom> Owner = OdinSubsystem->GetRoomByHandle(handle); Owner.IsValid()) {
-            Owner->ReleaseHandle();
-            return true;
+            return Owner->FreeRoom();
         }
     }
 
@@ -150,6 +154,11 @@ bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 void UOdinRoom::ReleaseHandle()
 {
     InvalidateAllSockets();
+    {
+        FScopeLock Lock(&ListenChannelMasksCS);
+        KnownPeerIds.Empty();
+        ListenChannelMaskOverrides.Empty();
+    }
 
     bool bFreedRoom = false;
     if (OdinRoom *RoomHandle = GetHandle()) {
@@ -381,25 +390,12 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
         const TSharedPtr<FJsonObject> *EventObject;
         if (ParsedRpc->TryGetObjectField(FOdinRoomStatusChanged::Name, EventObject)) {
             if (EventObject) {
-                const bool bSuccess = DeserializeAndBroadcast<FOdinRoomStatusChanged>(
-                    *EventObject, RoomObjectPtr, [](TWeakObjectPtr<UOdinRoom> OdinRoom, FOdinRoomStatusChanged EventData) {
-                        if (!OdinRoom.IsValid()) {
-                            return;
-                        }
-
-                        OdinRoom->Status = EventData;
-
-                        FOdinRoomStatusChangedDelegate Delegate = OdinRoom->OnRoomStatusChangedBP;
-                        if (Delegate.IsBound()) {
-                            Delegate.Broadcast(OdinRoom.Get(), EventData);
-                        }
-
-                        if (EventData.status == FOdinRoomStatusChanged::ClosedStatus) {
-                            ODIN_LOG(Warning, "room connection closed: \"%s\"", *EventData.message);
-                        }
-                        ODIN_LOG(Verbose, "Successfully parsed event %s: state: %s, msg: \"%s\"", *FOdinRoomStatusChanged::Name, *EventData.status,
-                                 *EventData.message);
-                    });
+                auto BroadcastDelegate = [](TWeakObjectPtr<UOdinRoom> OdinRoom, FOdinRoomStatusChanged EventData) {
+                    if (OdinRoom.IsValid()) {
+                        OdinRoom->HandleRoomStatusChanged(EventData);
+                    }
+                };
+                const bool bSuccess = DeserializeAndBroadcast<FOdinRoomStatusChanged>(*EventObject, RoomObjectPtr, BroadcastDelegate);
                 if (!bSuccess) {
                     ODIN_LOG(Error, "Parsing event %s failed!", *FOdinRoomStatusChanged::Name);
                 }
@@ -479,9 +475,17 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     return;
                 }
 
+                bool bNewPeer = false;
                 {
                     FScopeLock Lock(&room->ListenChannelMasksCS);
-                    room->KnownPeerIds.Add(data.peer_id);
+                    bNewPeer = !room->KnownPeerIds.Contains(data.peer_id);
+                    if (bNewPeer) {
+                        room->KnownPeerIds.Add(data.peer_id);
+                    }
+                }
+                if (!bNewPeer) {
+                    ODIN_LOG(Verbose, "Ignoring event %s for already announced peer %lld", *FOdinPeerJoined::Name, data.peer_id);
+                    return;
                 }
                 room->ApplyListenChannelMasks();
 
@@ -528,18 +532,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     if (!room.IsValid()) {
                         return;
                     }
-                    {
-                        FScopeLock Lock(&room->ListenChannelMasksCS);
-                        room->KnownPeerIds.Remove(data.peer_id);
-                        room->ListenChannelMaskOverrides.Remove(data.peer_id);
-                    }
-                    FOdinPeerLeftDelegate Delegate = room->OnRoomPeerLeftBP;
-                    if (Delegate.IsBound()) {
-                        Delegate.Broadcast(room.Get(), data);
-                    }
-                    // the sockets of a peer that left can no longer send or receive; close them
-                    // after the event so handlers still saw them alive
-                    room->RemoveSocketsForPeer(data.peer_id);
+                    room->HandlePeerLeft(data);
                     ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerLeft::Name);
@@ -562,6 +555,75 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinError::Name);
             }
+            return;
+        }
+    }
+}
+
+void UOdinRoom::HandleRoomStatusChanged(const FOdinRoomStatusChanged &Data)
+{
+    const uint64 Generation = GetConnectionGeneration();
+    if (Data.status != FOdinRoomStatusChanged::JoinedStatus) {
+        InvalidateAllSockets();
+        FlushKnownPeers();
+        if (GetConnectionGeneration() != Generation) {
+            return;
+        }
+    }
+
+    Status = Data;
+
+    FOdinRoomStatusChangedDelegate Delegate = OnRoomStatusChangedBP;
+    if (Delegate.IsBound()) {
+        Delegate.Broadcast(this, Data);
+    }
+    ODIN_LOG(Verbose, "Successfully parsed event %s: state: %s, msg: \"%s\"", *FOdinRoomStatusChanged::Name, *Data.status, *Data.message);
+
+    if (Data.status == FOdinRoomStatusChanged::ClosedStatus) {
+        ODIN_LOG(Log, "room connection closed: \"%s\"", *Data.message);
+    }
+}
+
+void UOdinRoom::HandlePeerLeft(const FOdinPeerLeft &Data)
+{
+    {
+        FScopeLock Lock(&ListenChannelMasksCS);
+        if (KnownPeerIds.Remove(Data.peer_id) == 0) {
+            ODIN_LOG(Verbose, "Ignoring event %s for unknown peer %lld", *FOdinPeerLeft::Name, Data.peer_id);
+            return;
+        }
+        ListenChannelMaskOverrides.Remove(Data.peer_id);
+    }
+
+    const uint64          Generation = GetConnectionGeneration();
+    FOdinPeerLeftDelegate Delegate   = OnRoomPeerLeftBP;
+    if (Delegate.IsBound()) {
+        Delegate.Broadcast(this, Data);
+    }
+    if (GetConnectionGeneration() != Generation) {
+        return;
+    }
+    RemoveSocketsForPeer(Data.peer_id);
+}
+
+void UOdinRoom::FlushKnownPeers()
+{
+    TArray<int64> Peers;
+    {
+        FScopeLock Lock(&ListenChannelMasksCS);
+        Peers = KnownPeerIds.Array();
+    }
+    if (Peers.IsEmpty()) {
+        return;
+    }
+
+    ODIN_LOG(Verbose, "Reporting %d announced peers as left", Peers.Num());
+    const uint64 Generation = GetConnectionGeneration();
+    for (const int64 PeerId : Peers) {
+        FOdinPeerLeft Left;
+        Left.peer_id = PeerId;
+        HandlePeerLeft(Left);
+        if (GetConnectionGeneration() != Generation) {
             return;
         }
     }

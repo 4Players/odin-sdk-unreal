@@ -1163,7 +1163,13 @@ void UOdinNativeRoomFree::Activate()
                 return;
             }
             const bool bFreed = this->Room->FreeRoom();
-            this->Room->ConditionalBeginDestroy();
+            if (this->Room->GetHandle() == nullptr) {
+                this->Room->ConditionalBeginDestroy();
+            } else {
+                // a peer left or close handler connected the room again while it was freed; the
+                // object now owns a live connection and must stay
+                ODIN_LOG(Warning, "RoomFree: a handler reconnected the room while it was freed, keeping the room object.");
+            }
             if (!bFreed) {
                 OnError.ExecuteIfBound();
                 OnResponse.Broadcast(false);
