@@ -6,6 +6,7 @@
 #include "OdinRoom.h"
 #include "OdinVoice.h"
 #include "Engine/Engine.h"
+#include "Engine/World.h"
 
 UOdinSubsystem* UOdinSubsystem::Get()
 { return GEngine ? GEngine->GetEngineSubsystem<UOdinSubsystem>() : nullptr; }
@@ -24,12 +25,14 @@ void UOdinSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     ODIN_LOG(Log, "Initialize Odin Registration Subsystem");
     PushDataThread           = MakeUnique<FOdinAudioPushDataThread>();
     DatagramProcessingThread = MakeUnique<FOdinDatagramProcessingThread>();
+    WorldTearDownHandle      = FWorldDelegates::OnWorldBeginTearDown.AddUObject(this, &UOdinSubsystem::OnWorldBeginTearDown);
 }
 
 void UOdinSubsystem::Deinitialize()
 {
     Super::Deinitialize();
     ODIN_LOG(Log, "Deinitialize Odin Registration Subsystem");
+    FWorldDelegates::OnWorldBeginTearDown.Remove(WorldTearDownHandle);
     if (PushDataThread.IsValid()) {
         PushDataThread->Exit();
         PushDataThread.Reset();
@@ -37,6 +40,25 @@ void UOdinSubsystem::Deinitialize()
     if (DatagramProcessingThread.IsValid()) {
         DatagramProcessingThread->Exit();
         DatagramProcessingThread.Reset();
+    }
+}
+
+void UOdinSubsystem::OnWorldBeginTearDown(UWorld* World)
+{
+    TArray<TWeakObjectPtr<UOdinRoom>> Rooms;
+    {
+        FScopeLock RoomsLock(&RoomsCS);
+        RegisteredRooms.GenerateValueArray(Rooms);
+    }
+
+    for (const TWeakObjectPtr<UOdinRoom>& RoomPtr : Rooms) {
+        UOdinRoom* Room = RoomPtr.Get();
+        if (Room == nullptr || Room->GetWorld() != World) {
+            continue;
+        }
+        ODIN_LOG(Log, "Closing Odin Room %s since its world %s is being torn down", *Room->GetName(), *World->GetName());
+        Room->FlushKnownPeers();
+        Room->CloseRoom();
     }
 }
 

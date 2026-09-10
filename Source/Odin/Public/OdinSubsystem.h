@@ -35,6 +35,14 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 
+    /**
+     * Rooms owned by a world that is torn down would be garbage collected without ever leaving
+     * gracefully, and their peer left events would reach nobody. Reports the announced peers of
+     * every registered room of that world as left while its actors are still alive and starts a
+     * graceful close, so our own peer leaves the server before the world goes away.
+     */
+    void OnWorldBeginTearDown(UWorld* World);
+
     void                              LinkEncoder(TWeakObjectPtr<UOdinEncoder> Encoder, TWeakObjectPtr<UOdinRoom> TargetRoom);
     void                              UnlinkEncoder(TWeakObjectPtr<UOdinEncoder> Encoder);
     void                              UnlinkEncoder(OdinEncoder* Encoder);
@@ -95,4 +103,5 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
 
     TUniquePtr<FOdinAudioPushDataThread>      PushDataThread;
     TUniquePtr<FOdinDatagramProcessingThread> DatagramProcessingThread;
+    FDelegateHandle                           WorldTearDownHandle;
 };
