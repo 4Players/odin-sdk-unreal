@@ -67,6 +67,16 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
     OdinRoom  *room = nullptr;
     ODIN_LOG(VeryVerbose, "Send ConnectRoom for Gateway %s, Auth: %s", *Gateway, *Authentication);
 
+    if (IsBeingDestroyed()) {
+        ODIN_LOG(Warning, "Aborting ConnectRoom: the room object is being destroyed.");
+        return OdinError::ODIN_ERROR_UNEXPECTED_STATE;
+    }
+    if (bConnecting) {
+        ODIN_LOG(Warning, "Aborting ConnectRoom: called from a handler while the room is already connecting.");
+        return OdinError::ODIN_ERROR_UNEXPECTED_STATE;
+    }
+    TGuardValue<bool> ConnectingGuard(bConnecting, true);
+
     OdinCipher *CipherHandle = nullptr;
     if (IsValid(InCrypto)) {
         if (InCrypto->IsAttachedToRoom()) {
@@ -88,6 +98,13 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
         ODIN_LOG(Warning, "ConnectRoom called on a room with an existing handle, closing and freeing the previous room.");
         FlushKnownPeers();
         ReleaseHandle();
+        if (!ensureMsgf(GetHandle() == nullptr, TEXT("ConnectRoom: a handler attached a native room while the previous one was released"))) {
+            ReleaseHandle();
+        }
+        if (IsBeingDestroyed()) {
+            ODIN_LOG(Warning, "Aborting ConnectRoom: a handler destroyed the room object while the previous room was released.");
+            return OdinError::ODIN_ERROR_UNEXPECTED_STATE;
+        }
     }
 
     auto ret = odin_room_create(TCHAR_TO_UTF8(*Gateway), TCHAR_TO_UTF8(*Authentication), &this->Roomcb, CipherHandle, &room);

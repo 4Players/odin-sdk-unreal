@@ -8,6 +8,7 @@
 
 #include "CoreMinimal.h"
 #include "Containers/Ticker.h"
+#include "Templates/UnrealTemplate.h"
 #include "OdinCryptoExtension.h"
 #include "OdinNative/OdinNativeHandle.h"
 #include "OdinNative/OdinNativeRpc.h"
@@ -518,7 +519,12 @@ class ODIN_API UOdinRoom : public UObject
     void FinishClose();
     void ClearCloseTimeout();
 
+    /** True while the object is being destroyed; no native room may be created for it anymore. */
+    bool IsBeingDestroyed() const
+    { return HasAnyFlags(RF_BeginDestroyed | RF_FinishDestroyed) || !IsValid(this); }
+
     bool                       bCloseRequested = false; // game thread only
+    bool                       bConnecting     = false; // game thread only, rejects nested ConnectRoom calls from handlers
     FTSTicker::FDelegateHandle CloseTimeoutHandle;
 
     FCriticalSection              ListenChannelMasksCS;
