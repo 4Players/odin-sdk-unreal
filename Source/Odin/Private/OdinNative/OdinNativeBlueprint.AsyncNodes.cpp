@@ -1121,22 +1121,24 @@ void UOdinNativeRoomClose::Activate()
 {
     FFunctionGraphTask::CreateAndDispatchWhenReady(
         [this]() {
-            if (!IsValid(this->Room)) {
+            if (!IsValid(this->Room) || this->Room->GetHandle() == nullptr) {
                 OnError.ExecuteIfBound();
                 OnResponse.Broadcast(false);
                 this->SetReadyToDestroy();
                 return;
             }
-            const bool bHadHandle = this->Room->GetHandle() != nullptr;
-            this->Room->ConditionalBeginDestroy();
-            if (!bHadHandle) {
-                OnError.ExecuteIfBound();
-                OnResponse.Broadcast(false);
-            } else {
+            this->Room->OnRoomClosed.AddWeakLambda(this, [this](UOdinRoom* ClosedRoom) {
+                ClosedRoom->OnRoomClosed.RemoveAll(this);
                 OnSuccess.ExecuteIfBound();
                 OnResponse.Broadcast(true);
+                this->SetReadyToDestroy();
+            });
+            if (!this->Room->CloseRoom()) {
+                this->Room->OnRoomClosed.RemoveAll(this);
+                OnError.ExecuteIfBound();
+                OnResponse.Broadcast(false);
+                this->SetReadyToDestroy();
             }
-            this->SetReadyToDestroy();
         },
         TStatId(), nullptr, ENamedThreads::GameThread);
 }

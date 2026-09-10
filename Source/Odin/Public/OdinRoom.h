@@ -7,6 +7,7 @@
 #include <atomic>
 
 #include "CoreMinimal.h"
+#include "Containers/Ticker.h"
 #include "OdinCryptoExtension.h"
 #include "OdinNative/OdinNativeHandle.h"
 #include "OdinNative/OdinNativeRpc.h"
@@ -125,6 +126,22 @@ class ODIN_API UOdinRoom : public UObject
     UPROPERTY(BlueprintAssignable, Category = "Odin|Room|Events")
     FOdinErrorDelegate OnRoomErrorBP;
 
+    DECLARE_MULTICAST_DELEGATE_OneParam(FOdinRoomClosedNativeDelegate, UOdinRoom*);
+    /**
+     * Native-only notification that a close started via CloseRoom has ended: the native room was
+     * freed after the "closed" status arrived or CloseTimeoutSeconds elapsed, or it was released
+     * otherwise while the close was pending (FreeRoom, ConnectRoom, destruction). Fired exactly
+     * once per CloseRoom, on the thread that released the room, after the synthetic peer left and
+     * the status changed events.
+     */
+    FOdinRoomClosedNativeDelegate OnRoomClosed;
+
+    /**
+     * How long CloseRoom waits for the native "closed" status before it frees the room anyway.
+     * The native close only starts the leave; the status confirms that the connection is gone.
+     */
+    static constexpr float CloseTimeoutSeconds = 2.0f;
+
     /**
      * Creates a new ODIN room handle and starts the asynchronous connection process.
      */
@@ -137,15 +154,27 @@ class ODIN_API UOdinRoom : public UObject
     static UOdinRoom* ConstructRoom(UObject* WorldContextObject, OdinRoom* handle, OdinCipher* crypto = nullptr);
 
     /**
-     * Closes the specified ODIN room handle, thus making our own peer leave the room on the server and closing the connection if needed.
+     * Gracefully leaves the room: closes the native room, which makes our own peer leave the room
+     * on the server, waits for the native "closed" status (at most CloseTimeoutSeconds) and only
+     * then frees the native room. Every announced peer is reported via OnRoomPeerLeftBP before
+     * the "closed" status is broadcast; OnRoomClosed fires once the native room is freed.
+     * @remarks Must be called on the game thread. Returns false if there is no native room.
+     * Use FreeRoom to release the native room immediately without waiting.
      */
-    UFUNCTION(BlueprintCallable, Category = "Odin", meta = (Keywords = "Disconnect,Close Connection,Destroy Room"))
+    UFUNCTION(BlueprintCallable, Category = "Odin", meta = (Keywords = "Disconnect,Close Connection,Leave Room"))
     bool CloseRoom();
+    /**
+     * Whether CloseRoom was called and the native room has not been freed yet.
+     */
+    UFUNCTION(BlueprintPure, Category = "Odin|Room")
+    bool IsClosing() const
+    { return bCloseRequested; }
 
     /**
-     * Closes the specified ODIN room handle, thus making our own peer leave the room on the server
-     * and closing the connection if needed.
-     * @remarks To release resources, call `FreeRoomByHandle`.
+     * Starts closing the specified native room, thus making our own peer leave the room on the
+     * server. The native close is asynchronous; the room reports the "closed" status afterwards.
+     * @remarks To release resources, call `FreeRoomByHandle`. Freeing right after closing
+     * suppresses the "closed" status. Prefer CloseRoom on the owning UOdinRoom.
      */
     static bool CloseOdinRoomByHandle(OdinRoom* room);
 
@@ -173,8 +202,9 @@ class ODIN_API UOdinRoom : public UObject
     /**
      * Frees the native room (if any), drops the subsystem registration and invalidates the crypto
      * and all socket wrappers. Safe to call during destruction; every path that frees the native
-     * room must go through this, so the handle cannot be freed twice. No delegate fires here, so
-     * callers that want announced peers reported as left call FlushKnownPeers first.
+     * room must go through this, so the handle cannot be freed twice. Ends a pending CloseRoom and
+     * fires OnRoomClosed for it; no other delegate fires here, so callers that want announced
+     * peers reported as left call FlushKnownPeers first.
      */
     void ReleaseHandle();
     /**
@@ -476,9 +506,20 @@ class ODIN_API UOdinRoom : public UObject
     void HandlePeerLeft(const FOdinPeerLeft& Data);
     /**
      * Game thread handler for a room status change: flushes announced peers and socket wrappers
-     * when the session ends, then stores and broadcasts the status.
+     * when the session ends, stores and broadcasts the status and completes a pending CloseRoom
+     * once the native room reports "closed".
      */
     void HandleRoomStatusChanged(const FOdinRoomStatusChanged& Data);
+    /**
+     * Completes a CloseRoom: reports remaining peers as left and frees the native room, unless a
+     * handler freed or replaced it meanwhile. Called from the "closed" status or from the close
+     * timeout.
+     */
+    void FinishClose();
+    void ClearCloseTimeout();
+
+    bool                       bCloseRequested = false; // game thread only
+    FTSTicker::FDelegateHandle CloseTimeoutHandle;
 
     FCriticalSection              ListenChannelMasksCS;
     TSet<int64>                   KnownPeerIds;

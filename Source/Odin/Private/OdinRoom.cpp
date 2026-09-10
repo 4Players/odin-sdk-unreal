@@ -19,7 +19,9 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
 void UOdinRoom::BeginDestroy()
 {
     ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
-    CloseRoom();
+    // the object is going away, so no delegate may fire anymore and nothing can wait for the
+    // native "closed" status; freeing closes the native room as well, so our peer still leaves
+    // the server. Call CloseRoom before dropping the last reference to get a graceful leave
     ReleaseHandle();
     Super::BeginDestroy();
 }
@@ -92,6 +94,7 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
         this->SetHandle(room);
         ++ConnectionGeneration;
+        this->Status = FOdinRoomStatusChanged();
         this->Crypto = CipherHandle != nullptr ? InCrypto : nullptr;
         if (CipherHandle != nullptr) {
             InCrypto->MarkAttachedToRoom();
@@ -105,7 +108,78 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
 }
 
 bool UOdinRoom::CloseRoom()
-{ return CloseOdinRoomByHandle(GetHandle()); }
+{
+    OdinRoom *RoomHandle = GetHandle();
+    if (RoomHandle == nullptr) {
+        ODIN_LOG(Verbose, "Aborted CloseRoom due to invalid Odin Room handle.");
+        return false;
+    }
+    if (bCloseRequested) {
+        return true;
+    }
+    bCloseRequested = true;
+
+    if (Status.status == FOdinRoomStatusChanged::ClosedStatus) {
+        FinishClose();
+        return true;
+    }
+
+    odin_room_close(RoomHandle);
+
+    const uint64              Generation = GetConnectionGeneration();
+    TWeakObjectPtr<UOdinRoom> WeakThis(this);
+    CloseTimeoutHandle = FTSTicker::GetCoreTicker().AddTicker(
+        FTickerDelegate::CreateLambda([WeakThis, Generation](float) {
+            if (WeakThis.IsValid() && WeakThis->bCloseRequested && WeakThis->GetConnectionGeneration() == Generation) {
+                ODIN_LOG(Warning, "CloseRoom did not receive the closed status within %.1f seconds, freeing the room anyway.", CloseTimeoutSeconds);
+                WeakThis->FinishClose();
+            }
+            return false;
+        }),
+        CloseTimeoutSeconds);
+    return true;
+}
+
+void UOdinRoom::FinishClose()
+{
+    ClearCloseTimeout();
+    if (!bCloseRequested) {
+        return;
+    }
+
+    const uint64 Generation = GetConnectionGeneration();
+
+    FlushKnownPeers();
+    if (GetConnectionGeneration() != Generation) {
+        return;
+    }
+
+    if (Status.status != FOdinRoomStatusChanged::ClosedStatus) {
+        FOdinRoomStatusChanged Closed;
+        Closed.status  = FOdinRoomStatusChanged::ClosedStatus;
+        Closed.message = TEXT("closed locally after timeout");
+        Status         = Closed;
+
+        FOdinRoomStatusChangedDelegate Delegate = OnRoomStatusChangedBP;
+        if (Delegate.IsBound()) {
+            Delegate.Broadcast(this, Closed);
+        }
+        if (GetConnectionGeneration() != Generation) {
+            return;
+        }
+    }
+
+    // fires OnRoomClosed
+    ReleaseHandle();
+}
+
+void UOdinRoom::ClearCloseTimeout()
+{
+    if (CloseTimeoutHandle.IsValid()) {
+        FTSTicker::GetCoreTicker().RemoveTicker(CloseTimeoutHandle);
+        CloseTimeoutHandle.Reset();
+    }
+}
 
 bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 {
@@ -153,6 +227,9 @@ bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 
 void UOdinRoom::ReleaseHandle()
 {
+    const bool bWasClosing = bCloseRequested;
+    ClearCloseTimeout();
+    bCloseRequested = false;
     InvalidateAllSockets();
     {
         FScopeLock Lock(&ListenChannelMasksCS);
@@ -166,6 +243,10 @@ void UOdinRoom::ReleaseHandle()
         odin_room_free(RoomHandle);
         SetHandle(nullptr);
         bFreedRoom = true;
+        if (Status.status != FOdinRoomStatusChanged::ClosedStatus) {
+            Status.status  = FOdinRoomStatusChanged::ClosedStatus;
+            Status.message = TEXT("room freed");
+        }
     }
 
     if (bFreedRoom && IsValid(Crypto) && Crypto->IsAttachedToRoom()) {
@@ -174,6 +255,10 @@ void UOdinRoom::ReleaseHandle()
     Crypto = nullptr;
 
     ++ConnectionGeneration;
+
+    if (bWasClosing) {
+        OnRoomClosed.Broadcast(this);
+    }
 }
 
 int64 UOdinRoom::GetOwnPeerId()
@@ -581,6 +666,9 @@ void UOdinRoom::HandleRoomStatusChanged(const FOdinRoomStatusChanged &Data)
 
     if (Data.status == FOdinRoomStatusChanged::ClosedStatus) {
         ODIN_LOG(Log, "room connection closed: \"%s\"", *Data.message);
+        if (bCloseRequested && GetConnectionGeneration() == Generation) {
+            FinishClose();
+        }
     }
 }
 

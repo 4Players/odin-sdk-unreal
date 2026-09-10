@@ -1391,9 +1391,9 @@ class ODIN_API UOdinNativeRoomClose : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
-    UFUNCTION(BlueprintCallable,
-              meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin RoomClose", ToolTip = "odin_RoomClose",
-                      WorldContext = "WorldContextObject", AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin RoomClose",
+                                         ToolTip      = "Leaves the room gracefully: waits for the closed status (max 2s), then frees the native room.",
+                                         WorldContext = "WorldContextObject", AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
     static UOdinNativeRoomClose *RoomClose(UObject *WorldContextObject, UPARAM(ref) UOdinRoom *&room, const FOdinNativeRoomCloseError &onError,
                                            const FOdinNativeRoomCloseSuccess &onSuccess);
 
