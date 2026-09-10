@@ -81,6 +81,16 @@ enum class EOdinError : uint8 {
     ODIN_ERROR_ARGUMENT_INVALID_JSON = -17
         + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_JSON", ToolTip = "A provided JSON argument is invalid"),
     /**
+     * A provided OdinCipher argument is invalid
+     */
+    ODIN_ERROR_ARGUMENT_INVALID_CIPHER = -18
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_INVALID_CIPHER", ToolTip = "A provided OdinCipher argument is invalid"),
+    /**
+     * A provided argument is too large
+     */
+    ODIN_ERROR_ARGUMENT_TOO_LARGE = -19
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_TOO_LARGE", ToolTip = "A provided argument is too large"),
+    /**
      * The provided version is invalid
      */
     ODIN_ERROR_INVALID_VERSION = -21
