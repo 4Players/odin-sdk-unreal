@@ -828,8 +828,15 @@ bool UOdinRoom::DeserializeAndBroadcast(const TSharedPtr<FJsonObject> EventObjec
         return false;
     }
 
-    FFunctionGraphTask::CreateAndDispatchWhenReady([OdinRoom, Delegate, EventData]() { Delegate(OdinRoom, EventData); }, TStatId(), nullptr,
-                                                   ENamedThreads::GameThread);
+    const uint64 Generation = OdinRoom.IsValid() ? OdinRoom->GetConnectionGeneration() : 0;
+    FFunctionGraphTask::CreateAndDispatchWhenReady(
+        [OdinRoom, Delegate, EventData, Generation]() {
+            if (!OdinRoom.IsValid() || OdinRoom->GetConnectionGeneration() != Generation) {
+                return;
+            }
+            Delegate(OdinRoom, EventData);
+        },
+        TStatId(), nullptr, ENamedThreads::GameThread);
 
     return true;
 }
