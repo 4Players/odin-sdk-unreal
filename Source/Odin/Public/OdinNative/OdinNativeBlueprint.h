@@ -47,6 +47,11 @@ enum class EOdinError : uint8 {
      */
     ODIN_ERROR_CLOSED = -4 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_CLOSED", ToolTip = "The object is closed"),
     /**
+     * The object is already active in a lower call stack frame
+     */
+    ODIN_ERROR_ALREADY_IN_USE = -5
+        + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ALREADY_IN_USE", ToolTip = "The object is already active in a lower call stack frame"),
+    /**
      * A mandatory argument is null
      */
     ODIN_ERROR_ARGUMENT_NULL = -11 + OdinUtility::EODIN_ERROR_OFFSET UMETA(DisplayName = "ERROR_ARGUMENT_NULL", ToolTip = "A mandatory argument is null"),
