@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define ODIN_VERSION "2.2.6"
+#define ODIN_VERSION "2.2.7"
 
 /**
  * Defines standard error codes returned by ODIN functions. Non-negative values indicate success
@@ -42,6 +42,10 @@ typedef enum OdinError {
      * The object is closed.
      */
     ODIN_ERROR_CLOSED = -4,
+    /**
+     * The object is already active in a lower call stack frame.
+     */
+    ODIN_ERROR_ALREADY_IN_USE = -5,
     /**
      * A mandatory argument is null.
      */
