@@ -649,8 +649,9 @@ class ODIN_API UOdinNativeErrorGetLastError : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
-    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin Shutdown", ToolTip = "odin_shutdown",
-                                         WorldContext = "WorldContextObject", AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin ErrorGetLastError",
+                                         ToolTip = "odin_error_get_last_error", WorldContext = "WorldContextObject",
+                                         AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
     static UOdinNativeErrorGetLastError *ErrorGetLastError(UObject *WorldContextObject, const FOdinNativeErrorGetLastErrorError &onError,
                                                            const FOdinNativeErrorGetLastErrorSuccess &onSuccess);
 
@@ -672,8 +673,9 @@ class ODIN_API UOdinNativeErrorResetLastError : public UBlueprintAsyncActionBase
 {
     GENERATED_BODY()
   public:
-    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin Shutdown", ToolTip = "odin_shutdown",
-                                         WorldContext = "WorldContextObject", AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
+    UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true", Category = "Odin|Native", DisplayName = "Odin ErrorResetLastError",
+                                         ToolTip = "odin_error_reset_last_error", WorldContext = "WorldContextObject",
+                                         AutoCreateRefTerm = "initialPeerUserData,url,onSuccess,onError"))
     static UOdinNativeErrorResetLastError *ErrorResetLastError(UObject *WorldContextObject, const FOdinNativeErrorResetLastErrorError &onError,
                                                                const FOdinNativeErrorResetLastErrorSuccess &onSuccess);
 
