@@ -35,6 +35,7 @@ class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
     UPROPERTY(BlueprintReadWrite, Category = "Odin|Audio Pipeline|State")
     float ScaleExponent = 1.0;
 
+    /** If set, SampleScale is a gain in decibels (e.g. -6 halves the amplitude) instead of a linear factor. */
     UPROPERTY(BlueprintReadWrite, Category = "Odin|Audio Pipeline|State")
     bool VolumeLog10 = false;
 

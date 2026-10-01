@@ -18,14 +18,14 @@ void UOdinVolumeEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&
     if (*bIsSilent)
         return;
 
-    // scale close to silence
-    if (FMath::IsNearlyEqual(SampleScale, 0.0, 0.001)) {
+    // decibels to linear gain, or a linear scale raised to the exponent
+    float bufferScale = VolumeLog10 ? FMath::Pow(10.0f, SampleScale / 20.0f) : FMath::Pow(SampleScale, ScaleExponent);
+
+    // gain close to silence
+    if (FMath::IsNearlyEqual(bufferScale, 0.0f, 0.001f)) {
         *bIsSilent = true;
         return;
     }
-
-    // Log10(2.0)*20 || 2.0 ^ 1.0
-    float bufferScale = VolumeLog10 ? FMath::LogX(10, SampleScale) * 20.0 : FMath::Pow(SampleScale, ScaleExponent);
 
     for (int32 i = 0; i < InSamples.Num(); i++)
         InSamples[i] *= bufferScale;
