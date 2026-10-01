@@ -1464,7 +1464,7 @@ void UOdinNativeSocketCreate::Activate()
 
             auto result =
                 odin_socket_create(handle, static_cast<OdinSocketKind>(this->SocketKind), this->TargetPeerId, this->Label, this->Priority, &socketHandle);
-            this->Socket = NewObject<UOdinSocket>(this->GetWorld());
+            this->Socket = NewObject<UOdinSocket>();
             if (result == OdinError::ODIN_ERROR_SUCCESS) {
                 this->Socket->SetHandle(socketHandle);
             }
@@ -1602,7 +1602,7 @@ void UOdinNativeTokenGeneratorCreate::Activate()
         [this]() {
             OdinTokenGenerator* tokenGenerator = nullptr;
             auto                result         = odin_token_generator_create(TCHAR_TO_UTF8(*this->AccessKey), &tokenGenerator);
-            this->TokenGenerator               = NewObject<UOdinTokenGenerator>(this->GetWorld());
+            this->TokenGenerator               = NewObject<UOdinTokenGenerator>();
             if (result == OdinError::ODIN_ERROR_SUCCESS) {
                 this->TokenGenerator->SetHandle(tokenGenerator);
             }
