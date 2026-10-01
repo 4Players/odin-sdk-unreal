@@ -54,8 +54,15 @@ void UOdinFunctionLibrary::OdinHexStringToBytes(const FString& Input, TArray<uin
         Buffer.Empty();
         return;
     }
-    const uint32 size = Input.Len(); // exclude '\0'
-    Buffer.SetNumUninitialized(size / 2);
+    for (const TCHAR Char : Input) {
+        if (!FChar::IsHexDigit(Char)) {
+            ODIN_LOG(Error, "OdinHexStringToBytes: invalid hex character '%c' in input", Char);
+            Buffer.Empty();
+            return;
+        }
+    }
+    // HexToBytes writes a leading nibble for odd lengths, so round up
+    Buffer.SetNumUninitialized((Input.Len() + 1) / 2);
     ::HexToBytes(Input, Buffer.GetData());
 }
 
