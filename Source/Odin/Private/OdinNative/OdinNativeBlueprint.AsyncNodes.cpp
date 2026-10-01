@@ -311,6 +311,8 @@ void UOdinNativeEncoderCreate::Activate()
             auto         result  = odin_encoder_create(this->PeerId, this->Samplerate, this->Stereo, &encoder);
 
             if (result == OdinError::ODIN_ERROR_SUCCESS) {
+                // free the previous native encoder (and with it its pipeline) instead of leaking it
+                UOdinEncoder::FreeEncoder(this->Encoder.Get());
                 this->Encoder->SetHandle(encoder);
             }
 
@@ -362,6 +364,8 @@ void UOdinNativeEncoderCreateEx::Activate()
                                                  this->UpdatePositionInterval, &encoder);
 
             if (result == OdinError::ODIN_ERROR_SUCCESS) {
+                // free the previous native encoder (and with it its pipeline) instead of leaking it
+                UOdinEncoder::FreeEncoder(this->Encoder.Get());
                 this->Encoder->SetHandle(encoder);
             }
 
