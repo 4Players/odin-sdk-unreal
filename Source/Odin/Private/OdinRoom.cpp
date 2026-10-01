@@ -120,6 +120,10 @@ OdinError UOdinRoom::ConnectRoomNative(const FString &Gateway, const FString &Au
         if (auto esub = UOdinSubsystem::Get()) {
             esub->RegisterRoom(room, this);
         }
+    } else if (CipherHandle != nullptr) {
+        // odin_room_create takes ownership of the cipher and already released it on failure
+        InCrypto->MarkAttachedToRoom();
+        InCrypto->InvalidateHandle();
     }
     return ret;
 }
