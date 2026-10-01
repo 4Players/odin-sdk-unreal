@@ -137,8 +137,15 @@ FString FOdinModule::Dump(uint32 Size)
 
     UE_LOG(Odin, VeryVerbose, TEXT("FOdinModule::Dump - Set len to %ud"), len);
     auto ret = odin_debug_dump_state(KeyChars.GetData(), &len);
+    if (ret == OdinError::ODIN_ERROR_ARGUMENT_TOO_SMALL) {
+        // len now holds the required size, without the null terminator
+        KeyChars.SetNumZeroed(len + 1);
+        len = KeyChars.Num();
+        ret = odin_debug_dump_state(KeyChars.GetData(), &len);
+    }
     if (ret != OdinError::ODIN_ERROR_SUCCESS) {
         ODIN_LOG(Warning, "odin_debug_dump_state silent error %d", static_cast<int32_t>(ret));
+        return FString();
     }
     UE_LOG(Odin, VeryVerbose, TEXT("FOdinModule::Dump - len after dumping is %ud"), len);
 
