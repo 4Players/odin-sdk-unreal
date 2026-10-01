@@ -341,6 +341,8 @@ class ODIN_API UOdinPipeline : public UObject
     { return IsValid(Handle) ? reinterpret_cast<const OdinPipeline*>(Handle->GetHandle()) : nullptr; }
 
     void SetHandle(const OdinPipeline* NewHandle);
+    /** Called by the owning encoder or decoder before it frees the native pipeline along with its handle. */
+    void InvalidateHandle();
 
   private:
     UPROPERTY()

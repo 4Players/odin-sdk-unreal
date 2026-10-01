@@ -15,6 +15,15 @@
 #include "OdinDecoder.generated.h"
 
 /**
+ * The native decoder handle as used by sound generators on the audio render thread. They hold the lock while popping,
+ * so the decoder can clear the handle and free the native decoder without pulling it out from under them.
+ */
+struct FOdinDecoderHandleCell {
+    FCriticalSection Lock;
+    OdinDecoder     *Handle = nullptr;
+};
+
+/**
  * Represents a decoder for media streams from remote voice chat clients, which encapsulates all
  * the components required to process incoming audio streams.
  */
@@ -172,11 +181,19 @@ class ODIN_API UOdinDecoder : public UObject
      */
     void SetHandle(OdinDecoder *NewHandle);
 
+    TSharedRef<FOdinDecoderHandleCell, ESPMode::ThreadSafe> GetHandleCell() const
+    { return HandleCell; }
+
   protected:
     virtual void BeginDestroy() override;
 
   private:
+    /** Detaches sound generators and the pipeline wrapper before the native decoder is freed. */
+    void ReleaseNativeReferences();
+
     UPROPERTY()
     UOdinHandle *Handle;
-    static void  HandleOdinAudioEventCallback(OdinDecoder *DecoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UObject> UserData = nullptr);
+
+    TSharedRef<FOdinDecoderHandleCell, ESPMode::ThreadSafe> HandleCell = MakeShared<FOdinDecoderHandleCell, ESPMode::ThreadSafe>();
+    static void HandleOdinAudioEventCallback(OdinDecoder *DecoderHandle, const OdinAudioEvents Events, TWeakObjectPtr<UObject> UserData = nullptr);
 };

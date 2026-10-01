@@ -27,6 +27,10 @@ void UOdinDecoder::SetHandle(OdinDecoder *NewHandle)
     if (IsValid(Handle)) {
         Handle->SetHandle(NewHandle);
     }
+    {
+        FScopeLock CellLock(&HandleCell->Lock);
+        HandleCell->Handle = NewHandle;
+    }
     if (nullptr != NewHandle) {
         if (UOdinSubsystem *OdinSubsystem = UOdinSubsystem::Get()) {
             OdinSubsystem->RegisterDecoderObject(this);
@@ -37,8 +41,23 @@ void UOdinDecoder::SetHandle(OdinDecoder *NewHandle)
 void UOdinDecoder::BeginDestroy()
 {
     ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
+    ReleaseNativeReferences();
     FreeDecoderInternal(GetNativeHandle());
     Super::BeginDestroy();
+}
+
+void UOdinDecoder::ReleaseNativeReferences()
+{
+    {
+        // waits for a sound generator that is still popping from the decoder
+        FScopeLock CellLock(&HandleCell->Lock);
+        HandleCell->Handle = nullptr;
+    }
+    // the native pipeline is owned by the decoder and freed along with it
+    if (Pipeline) {
+        Pipeline->InvalidateHandle();
+        Pipeline = nullptr;
+    }
 }
 
 UOdinDecoder *UOdinDecoder::ConstructDecoder(UObject *WorldContextObject, OdinDecoder *Handle)
@@ -87,6 +106,7 @@ bool UOdinDecoder::FreeDecoder(UOdinDecoder *Decoder)
         return false;
     }
 
+    Decoder->ReleaseNativeReferences();
     const auto bResult = FreeDecoderInternal(Decoder->GetNativeHandle());
     if (bResult) {
         Decoder->SetHandle(nullptr);

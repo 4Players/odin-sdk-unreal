@@ -363,6 +363,13 @@ UOdinRmsEffect *UOdinPipeline::CreateRmsEffect(int32 Index)
 UOdinRmsEffect *UOdinPipeline::AppendRmsEffect()
 { return CreateRmsEffect(GetEffectCount()); }
 
+void UOdinPipeline::InvalidateHandle()
+{
+    if (IsValid(Handle)) {
+        Handle->Invalidate();
+    }
+}
+
 void UOdinPipeline::SetHandle(const OdinPipeline *NewHandle)
 {
     this->Handle = NewObject<UOdinHandle>();

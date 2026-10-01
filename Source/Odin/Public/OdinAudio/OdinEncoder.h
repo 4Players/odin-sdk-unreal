@@ -325,6 +325,9 @@ class ODIN_API UOdinEncoder : public UObject
     UOdinPipeline* Pipeline = nullptr;
 
   private:
+    /** Drops the pipeline wrapper before the native encoder, which owns the native pipeline, is freed. */
+    void ReleasePipeline();
+
     UPROPERTY()
     UOdinHandle*          Handle;
     FAudioGeneratorHandle Audio_Generator_Handle;
@@ -360,12 +363,14 @@ class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
     virtual void OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, float* AudioData, int32 NumSamples, int32 NumChannels, const int32 SampleRate,
                                    double AudioClock) override;
     void         SetPipelineHandle(UOdinPipeline* NewHandle);
-    void         AttachToSubmix();
-    void         AddEffectId(uint32 EffectId, int32 PlaybackSampleRate, bool bPlaybackStereo);
-    void         DetachFromSubmix();
-    void         RemoveEffectId(uint32 EffectId);
-    void         SetDelay(int32 NewDelayInMs);
-    int32        GetNumEffectsRegistered() const;
+    /** Forgets the pipeline and its effects; returns once no audio callback uses the pipeline anymore. */
+    void  ClearPipelineHandle();
+    void  AttachToSubmix();
+    void  AddEffectId(uint32 EffectId, int32 PlaybackSampleRate, bool bPlaybackStereo);
+    void  DetachFromSubmix();
+    void  RemoveEffectId(uint32 EffectId);
+    void  SetDelay(int32 NewDelayInMs);
+    int32 GetNumEffectsRegistered() const;
 
   protected:
     void OnAudioDeviceCreated(Audio::FDeviceId Id);
@@ -388,6 +393,7 @@ class ODIN_API FOdinSubmixListener : public ISubmixBufferListener
     TArray<float>                      ChannelScratch;
     TArray<float>                      ResampleScratch;
     mutable FCriticalSection           EffectIdAccessSection;
+    FCriticalSection                   PipelineAccessSection;
     std::atomic<int32>                 DelayMs      = 15;
     std::atomic<bool>                  bIsListening = false;
 

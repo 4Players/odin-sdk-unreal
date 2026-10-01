@@ -80,9 +80,6 @@ void UOdinEncoder::BeginDestroy()
     }
     this->AudioGenerator = nullptr;
     FreeEncoder(this);
-    if (Pipeline) {
-        Pipeline->OnApmConfigChanged.RemoveDynamic(this, &UOdinEncoder::OnPipelineApmConfigChanged);
-    }
     if (SubmixListener.IsValid()) {
         SubmixListener->DetachFromSubmix();
         SubmixListener.Reset();
@@ -121,6 +118,7 @@ UOdinEncoder* UOdinEncoder::CreateEncoder(int64 InPeerId, int32 InSampleRate, bo
 
     OdinEncoder* encoder = this->GetHandle();
     if (encoder != nullptr) {
+        ReleasePipeline();
         FreeEncoderHandle(encoder);
     }
 
@@ -148,8 +146,10 @@ UOdinEncoder* UOdinEncoder::CreateEncoderEx(int64 InConnectedPeerId, int32 InSam
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinEncoder::CreateEncoderEx);
 
     OdinEncoder* encoder = this->GetHandle();
-    if (encoder != nullptr)
+    if (encoder != nullptr) {
+        ReleasePipeline();
         FreeEncoderHandle(encoder);
+    }
 
     this->PeerId     = InConnectedPeerId;
     this->SampleRate = InSampleRate;
@@ -179,9 +179,7 @@ bool UOdinEncoder::FreeEncoder(UOdinEncoder* Encoder)
         return false;
     }
 
-    if (Encoder->SubmixListener.IsValid()) {
-        Encoder->SubmixListener->DetachFromSubmix();
-    }
+    Encoder->ReleasePipeline();
 
     const bool Result = FreeEncoderHandle(Encoder->GetHandle());
     if (Result) {
@@ -207,6 +205,20 @@ bool UOdinEncoder::FreeEncoderHandle(OdinEncoder* Handle)
 
     odin_encoder_free(Handle);
     return true;
+}
+
+void UOdinEncoder::ReleasePipeline()
+{
+    if (SubmixListener.IsValid()) {
+        SubmixListener->DetachFromSubmix();
+        // the submix may still deliver a buffer after detaching, this waits for it to finish with the pipeline
+        SubmixListener->ClearPipelineHandle();
+    }
+    if (Pipeline) {
+        Pipeline->OnApmConfigChanged.RemoveDynamic(this, &UOdinEncoder::OnPipelineApmConfigChanged);
+        Pipeline->InvalidateHandle();
+        Pipeline = nullptr;
+    }
 }
 
 UOdinPipeline* UOdinEncoder::GetOrCreateEncoderPipeline(UOdinEncoder* Encoder)
@@ -571,6 +583,8 @@ void FOdinSubmixListener::OnNewSubmixBuffer(const USoundSubmix* OwningSubmix, fl
                                             double AudioClock)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinSubmixListener::OnNewSubmixBuffer);
+    // held while the pipeline is used, so ClearPipelineHandle can wait for it before the encoder frees the pipeline
+    FScopeLock          PipelineAccessLock(&PipelineAccessSection);
     const OdinPipeline* OdinPipeline = NativePipelineHandle.load();
     if (bIsListening && OdinPipeline != nullptr) {
 
@@ -624,6 +638,15 @@ void FOdinSubmixListener::SetPipelineHandle(UOdinPipeline* NewHandle)
     if (NewHandle) {
         NativePipelineHandle = NewHandle->GetHandle();
     }
+}
+
+void FOdinSubmixListener::ClearPipelineHandle()
+{
+    FScopeLock PipelineAccessLock(&PipelineAccessSection);
+    NativePipelineHandle = nullptr;
+
+    FScopeLock EffectAccessLock(&EffectIdAccessSection);
+    ApmEffectIds.Empty();
 }
 
 void FOdinSubmixListener::AttachToSubmix()

@@ -9,8 +9,7 @@
 #include "OdinCore/include/odin.h"
 
 FOdinSoundGenerator::FOdinSoundGenerator()
-    : NativeDecoderHandle(nullptr)
-    , bIsFinished(false)
+    : bIsFinished(false)
 { ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__)); }
 
 FOdinSoundGenerator::~FOdinSoundGenerator()
@@ -18,23 +17,20 @@ FOdinSoundGenerator::~FOdinSoundGenerator()
 
 void FOdinSoundGenerator::ResetConnectedDecoder()
 {
-    OdinDecoderHandle.Reset();
     FScopeLock HandleAccess(&NativeHandleAccessSection);
-    NativeDecoderHandle = nullptr;
+    DecoderCell.Reset();
 }
 
 void FOdinSoundGenerator::SetOdinDecoder(UOdinDecoder* InDecoder)
 {
     if (InDecoder) {
-        OdinDecoderHandle  = InDecoder->GetHandle();
         this->SampleRate   = InDecoder->SampleRate;
         this->ChannelCount = InDecoder->bStereo ? 2 : 1;
-        if (OdinDecoderHandle.IsValid()) {
-            FScopeLock HandleAccess(&NativeHandleAccessSection);
-            NativeDecoderHandle = reinterpret_cast<OdinDecoder*>(OdinDecoderHandle->GetHandle());
-        } else {
+        if (InDecoder->GetNativeHandle() == nullptr) {
             ODIN_LOG(Error, "Native Decoder Handle given in SetOdinDecoder is invalid, Generator won't be able to generate Audio.")
         }
+        FScopeLock HandleAccess(&NativeHandleAccessSection);
+        DecoderCell = InDecoder->GetHandleCell();
 
     } else {
         ODIN_LOG(Log, "Input decoder pointer was null. Resetting UObject decoder handle and native decoder handle.");
@@ -52,7 +48,12 @@ int32 FOdinSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(OdinSoundGenerator::OnGenerateAudio)
     ODIN_LOG(VeryVerbose, "OnGenerateAudio called, requested NumSamples %d", NumSamples);
-    if (nullptr == NativeDecoderHandle) {
+    TSharedPtr<FOdinDecoderHandleCell, ESPMode::ThreadSafe> Cell;
+    {
+        FScopeLock HandleAccess(&NativeHandleAccessSection);
+        Cell = DecoderCell;
+    }
+    if (!Cell.IsValid()) {
         return NumSamples;
     }
 
@@ -61,8 +62,11 @@ int32 FOdinSoundGenerator::OnGenerateAudio(float* OutAudio, int32 NumSamples)
     {
         TRACE_CPUPROFILER_EVENT_SCOPE(OdinSoundGenerator::OnGenerateAudio - odin_decoder_pop)
 
-        FScopeLock HandleAccess(&NativeHandleAccessSection);
-        Result = odin_decoder_pop(NativeDecoderHandle, OutAudio, NumSamples, &bIsSilence);
+        FScopeLock CellLock(&Cell->Lock);
+        if (Cell->Handle == nullptr) {
+            return NumSamples;
+        }
+        Result = odin_decoder_pop(Cell->Handle, OutAudio, NumSamples, &bIsSilence);
         ODIN_LOG(VeryVerbose, "odin_decoder_pop called,  Result: %d, IsSilence %s", static_cast<int32>(Result), bIsSilence ? TEXT("True") : TEXT("False"));
     }
 
