@@ -294,7 +294,7 @@ bool UOdinAudioCapture::RestartCapturing(bool bAutomaticallyStartCapture)
         SelectedDeviceOptimalFrames = 960; // 20 ms at 48 kHz, in case no device info is available
     }
 
-    ODIN_LOG(Verbose, "Choosing NumFramesDesired: %d", SelectedDeviceOptimalFrames);
+    ODIN_LOG(Log, "Choosing NumFramesDesired: %d", SelectedDeviceOptimalFrames);
     bool bSuccess = AudioCapture.OpenAudioCaptureStream(Params, MoveTemp(OnCapture), SelectedDeviceOptimalFrames);
     // OpenCaptureStream automatically closes the capture stream, if it's already active.
     if (bSuccess) {

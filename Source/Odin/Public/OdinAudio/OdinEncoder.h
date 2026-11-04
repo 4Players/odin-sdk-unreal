@@ -197,6 +197,7 @@ class ODIN_API UOdinEncoder : public UObject
      * @remarks The server only forwards audio to peers whose positions are within a distance of 1.0 of each other, so coordinates must be scaled
      * such that 1.0 equals the intended hearing range (e.g. divide unreal world units by the distance where the client side attenuation reaches
      * silence). Unscaled world coordinates put peers out of range of each other and the server forwards no audio at all.
+     * @remarks An empty channel mask (the default of an unconnected mask) sets nothing
      * @param ChannelMask   audio layer
      * @param Position   position for each layer
      * @return true if successful
@@ -224,6 +225,7 @@ class ODIN_API UOdinEncoder : public UObject
      * encoder from transmitting on that channel entirely
      * @remarks this does not reset the position to the origin while leaving the channel active.
      * Use SetPosition instead if the channel should keep transmitting with a unused position.
+     * @remarks An empty channel mask (the default of an unconnected mask) clears nothing and logs a warning.
      * @param ChannelMask   audio layer
      * @return true if successful
      */
@@ -244,9 +246,10 @@ class ODIN_API UOdinEncoder : public UObject
     int32 Pop(TArray<uint8>& Datagram);
 
     /**
-     * Set tarray samples wrapper to process on pop
+     * Pushes raw audio samples to the encoder. The samples must be interleaved floating-point values in the range [-1, 1] in the sample
+     * rate and channel layout of the encoder; they are run through the encoder's pipeline and encoded on the next Pop.
      * @param Samples   audio data
-     * @return samples send to encoder or 0
+     * @return number of samples pushed or 0
      */
     UFUNCTION(BlueprintCallable, meta = (DisplayName = "Push Samples", ToolTip = "Push samples to the audio encoder pipeline buffer"),
               Category = "Odin|Audio Pipeline")

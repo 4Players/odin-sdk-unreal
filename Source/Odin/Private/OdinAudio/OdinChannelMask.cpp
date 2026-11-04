@@ -20,7 +20,7 @@ bool FOdinChannelMask::IsSet(uint64 mask) const
 
 uint64 FOdinChannelMask::Set(int32 index, bool bSet)
 {
-    if (index > 63) {
+    if (index < 0 || index > 63) {
         return ChannelMask;
     }
 
@@ -30,7 +30,7 @@ uint64 FOdinChannelMask::Set(int32 index, bool bSet)
 
 uint64 FOdinChannelMask::Flip(int32 index)
 {
-    if (index > 63)
+    if (index < 0 || index > 63)
         return ChannelMask;
 
     return ChannelMask ^= (static_cast<uint64_t>(1) << index);

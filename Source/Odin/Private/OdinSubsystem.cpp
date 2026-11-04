@@ -56,7 +56,7 @@ void UOdinSubsystem::OnWorldBeginTearDown(UWorld* World)
         if (Room == nullptr || Room->GetWorld() != World) {
             continue;
         }
-        ODIN_LOG(Log, "Closing Odin Room %s since its world %s is being torn down", *Room->GetName(), *World->GetName());
+        ODIN_LOG(VeryVerbose, "Closing Odin Room %s since its world %s is being torn down", *Room->GetName(), *World->GetName());
         Room->FlushKnownPeers();
         Room->CloseRoom();
     }
@@ -189,12 +189,12 @@ void UOdinSubsystem::SwapRoomHandle(OdinRoom* OldHandle, OdinRoom* NewHandle)
 {
     FScopeLock DeregisterRoomLock(&RoomsCS);
     if (RegisteredRooms.Contains(OldHandle)) {
-        ODIN_LOG(Verbose, "Swap Odin Room handle %p with handle %p", OldHandle, NewHandle);
+        ODIN_LOG(Log, "Swap Odin Room handle %p with handle %p", OldHandle, NewHandle);
         TWeakObjectPtr<UOdinRoom> Room;
         RegisteredRooms.RemoveAndCopyValue(OldHandle, Room);
         RegisterRoom(NewHandle, Room.Get());
     } else {
-        ODIN_LOG(Warning, "Failed swap Odin room with handle %p - room handle was never registered.", OldHandle);
+        ODIN_LOG(Log, "Failed swap Odin room with handle %p: Room handle was never registered.", OldHandle);
     }
 }
 
@@ -204,10 +204,10 @@ TWeakObjectPtr<UOdinRoom> UOdinSubsystem::GetRoomByHandle(OdinRoom* Handle) cons
     FScopeLock                       GetRoomLock(&RoomsCS);
     const TWeakObjectPtr<UOdinRoom>* OdinRoom = RegisteredRooms.Find(Handle);
     if (OdinRoom) {
-        ODIN_LOG(Verbose, "Retrieved Odin Room with handle %p", Handle);
+        ODIN_LOG(VeryVerbose, "Retrieved Odin Room with handle %p", Handle);
         return *OdinRoom;
     }
-    ODIN_LOG(Verbose, "Did not find Odin Room with handle %p", Handle);
+    ODIN_LOG(VeryVerbose, "Did not find Odin Room with handle %p", Handle);
     return nullptr;
 }
 
@@ -258,10 +258,10 @@ TWeakObjectPtr<UOdinDecoder> UOdinSubsystem::GetDecoderByHandle(OdinDecoder* Han
 {
     FScopeLock GetDecoderLock(&DecoderObjectsCS);
     if (const TWeakObjectPtr<UOdinDecoder>* DecoderObject = DecoderObjects.Find(Handle)) {
-        ODIN_LOG(Verbose, "Retrieved Odin Decoder with handle %p", Handle);
+        ODIN_LOG(VeryVerbose, "Retrieved Odin Decoder with handle %p", Handle);
         return *DecoderObject;
     }
-    ODIN_LOG(Verbose, "Did not find Odin Decoder with handle %p", Handle);
+    ODIN_LOG(VeryVerbose, "Did not find Odin Decoder with handle %p", Handle);
     return nullptr;
 }
 
@@ -289,7 +289,7 @@ void UOdinSubsystem::DeregisterDecoder(const OdinDecoder* Handle)
     {
         FScopeLock DeregisterDecoderObjects(&DecoderObjectsCS);
         DecoderObjects.Remove(Handle);
-        ODIN_LOG(Verbose, "Number of registered decoder objects: %d", DecoderObjects.Num());
+        ODIN_LOG(VeryVerbose, "Number of registered decoder objects: %d", DecoderObjects.Num());
     }
 }
 

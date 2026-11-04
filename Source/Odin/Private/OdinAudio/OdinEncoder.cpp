@@ -397,9 +397,12 @@ bool UOdinEncoder::SetPosition(FOdinChannelMask ChannelMask, FOdinPosition Posit
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinEncoder::SetPosition);
 
+    if (ChannelMask.GetChannelMask() == 0) {
+        ODIN_LOG(Warning, "SetPosition called with an empty channel mask, no position is set. Pass the channels to transmit on, usually channel 0.");
+    }
     OdinPosition pos = Position;
     auto         ret = odin_encoder_set_position(this->GetHandle(), ChannelMask.GetChannelMask(), &pos);
-    ODIN_LOG(Verbose, TEXT("Set Position Called with ChannelMask %llu and position %s"), ChannelMask.GetChannelMask(), *Position.ToString());
+    ODIN_LOG(Verbose, "Set Position Called with ChannelMask %llu and position %s", ChannelMask.GetChannelMask(), *Position.ToString());
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
         return true;
     } else {
@@ -424,6 +427,9 @@ bool UOdinEncoder::ClearPosition(FOdinChannelMask ChannelMask)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinEncoder::ClearPosition);
 
+    if (ChannelMask.GetChannelMask() == 0) {
+        ODIN_LOG(Warning, "ClearPosition called with an empty channel mask, no position is cleared. Pass the channels to stop transmitting on.");
+    }
     auto ret = odin_encoder_clear_position(this->GetHandle(), ChannelMask.GetChannelMask());
     ODIN_LOG(Verbose, "Clear Position called with Channelmask %llu", ChannelMask.GetChannelMask());
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
@@ -441,8 +447,11 @@ int32 UOdinEncoder::Pop(TArray<uint8>& Datagram)
 
     uint32_t size = Datagram.Num();
     auto     ret  = odin_encoder_pop(this->GetHandle(), Datagram.GetData(), &size);
-    if (ret == OdinError::ODIN_ERROR_SUCCESS || ret == OdinError::ODIN_ERROR_NO_DATA) {
+    if (ret == OdinError::ODIN_ERROR_SUCCESS) {
         return size;
+    } else if (ret == OdinError::ODIN_ERROR_NO_DATA) {
+        // nothing to send (e.g. silence); the native call leaves size at the buffer length
+        return 0;
     } else {
         FOdinModule::LogErrorCode("Aborting Pop due to invalid odin_encoder_pop call: %s", ret);
     }

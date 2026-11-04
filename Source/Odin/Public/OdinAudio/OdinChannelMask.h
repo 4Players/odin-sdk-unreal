@@ -24,7 +24,7 @@ struct ODIN_API FOdinChannelMask {
 
     bool operator[](int32 index) const
     {
-        if (index >= 64)
+        if (index < 0 || index >= 64)
             return false;
         return ChannelMask & (static_cast<uint64_t>(1) << index);
     }

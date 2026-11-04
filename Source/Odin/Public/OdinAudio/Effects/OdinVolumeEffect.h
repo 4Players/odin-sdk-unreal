@@ -1,6 +1,8 @@
 /* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 #pragma once
 
+#include <atomic>
+
 #include "OdinCustomEffect.h"
 
 #include "OdinVolumeEffect.generated.h"
@@ -12,6 +14,8 @@ class UOdinPipeline;
  * The effect will mutate samples buffer with logarithmic or exponental scale.
  * Provides a simple way for an audio boost functionality.
  * For more complex amplitude checkout dBFS and override the custom effect function.
+ * A gain of (nearly) 0 zeroes the samples and marks them as silent. A gain that is not a finite number, like a negative SampleScale with a
+ * fractional ScaleExponent, leaves the samples unchanged and logs a warning.
  */
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
@@ -43,4 +47,7 @@ class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
 
   private:
     virtual void BeginDestroy() override;
+
+    /** Set while the gain is invalid and that was logged, so the warning is not repeated for every block. */
+    mutable std::atomic<bool> bWarnedInvalidGain{false};
 };

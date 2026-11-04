@@ -246,7 +246,7 @@ void UOdinFunctionLibrary::SetChannelInMask(FOdinChannelMask& Mask, const int32 
 { Mask.Set(ChannelIndex, bEnabled); }
 
 bool UOdinFunctionLibrary::IsChannelEnabledInMask(const FOdinChannelMask& Mask, const int32 ChannelIndex)
-{ return Mask.IsSet(ChannelIndex); }
+{ return Mask[ChannelIndex]; }
 
 FOdinChannelMask UOdinFunctionLibrary::CreateFullMask()
 { return FOdinChannelMask::CreateFull(); }

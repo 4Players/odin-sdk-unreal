@@ -16,10 +16,11 @@ enum class EOdinMuteEffectOptions : uint8 {
 
 /**
  * Codec-Effect for the odin audio pipeline.
- * The effect will mutate the silent flag based on the mute uproperty.
- * Sets the flag for chaining effects in the pipeline as well.
- * Symbolizing silenced audio data without changing the buffer.
- * This results in not necessarily sending the audio packet over the network at all.
+ * While MuteFlag is Set, the effect marks the audio as silent and zeroes the samples, so the following effects in the chain and the
+ * decoder output get silence and an encoder stops sending after the current talk spurt.
+ * With bClearSamples off only the silent flag is set and the samples pass through the chain unchanged, e.g. for following effects that
+ * still need the audio. A decoder plays the samples of silent audio though, and an encoder sends the first muted block of a talk spurt
+ * as its end, so this alone does not silence the output.
  */
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinMuteEffect : public UOdinCustomEffect
@@ -33,14 +34,18 @@ class ODIN_API UOdinMuteEffect : public UOdinCustomEffect
                               TOdinCustomEffectUserData<UOdinCustomEffect>* const InUserData) const override;
 
     UFUNCTION(BlueprintCallable,
-              meta = (DisplayName = "Construct Mute Effect", ToolTip = "Creates a new Mute effect to set the is_silent flag", HidePin = "WorldContextObject",
-                      DefaultToSelf = "WorldContextObject"),
+              meta     = (DisplayName = "Construct Mute Effect", ToolTip = "Creates a new Mute effect to silence the audio and set the is_silent flag",
+                          HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject"),
               Category = "Odin|Audio Pipeline|Effects")
     static UOdinMuteEffect* ConstructMuteEffect(UObject*               WorldContextObject,
-                                                EOdinMuteEffectOptions Toggle = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED);
+                                                EOdinMuteEffectOptions Toggle          = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED,
+                                                bool                   bInClearSamples = true);
 
     UPROPERTY(BlueprintReadWrite, Category = "Odin|Audio Pipeline|State")
-    EOdinMuteEffectOptions                     MuteFlag = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED;
+    EOdinMuteEffectOptions MuteFlag = EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED;
+    /** Zero the samples while muted. Turn off to only set the silent flag and keep the samples for the following effects in the chain. */
+    UPROPERTY(BlueprintReadWrite, Category = "Odin|Audio Pipeline|State")
+    bool                                       bClearSamples = true;
     TOdinCustomEffectUserData<UOdinMuteEffect> UserData;
 
   private:

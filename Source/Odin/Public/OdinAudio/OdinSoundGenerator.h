@@ -77,7 +77,48 @@ class ODIN_API FOdinSoundGenerator : public ISoundGenerator
      */
     virtual bool IsFinished() const override;
 
+    /**
+     * Pops and discards the audio the audio engine skipped, e.g. while its voice is virtual and the engine stops calling OnGenerateAudio.
+     * ODIN decoders have to be popped in real time: otherwise they emit no events (a voice muted on "is silent" would never be unmuted)
+     * and incoming audio piles up as latency. Call it regularly, e.g. every game tick; it does nothing while the engine pulls in real time.
+     * Popping is paced by the clock, not until the decoder reports silence: popping faster than real time empties the jitter buffer and
+     * makes the decoder report silence (and fire "is silent changed") while the peer still talks.
+     * @return Number of samples popped and discarded, they are not passed to audio buffer listeners.
+     * @remarks For engine integrations (e.g. Wwise, FMOD) with voice virtualization. Not needed for UOdinSynthComponent, Unreal keeps synth
+     * sounds playing while silent or culled.
+     */
+    int32 CatchUpToRealTime();
+    /**
+     * CatchUpToRealTime with an explicit timestamp.
+     */
+    int32 CatchUpToRealTime(double NowSeconds);
+
+    /** Duration of one ODIN audio frame; catching up pops whole frames. */
+    static constexpr double FrameSeconds = 0.02;
+    /** How far popping has to fall behind real time before CatchUpToRealTime pops. */
+    static constexpr double CatchUpThresholdSeconds = 0.1;
+    /** How far behind real time CatchUpToRealTime stops, so the decoder keeps a little audio buffered. */
+    static constexpr double CatchUpTargetLagSeconds = 0.03;
+    /**
+     * Most audio a single CatchUpToRealTime call pops. A longer gap (like a stalled game thread) is not paid off later: the decoder drops
+     * what its jitter buffer cannot hold anyway and popping the whole gap would drain it empty.
+     */
+    static constexpr double CatchUpMaxSeconds = 1.0;
+
   private:
+    /**
+     * Pops NumSamples interleaved samples from the decoder into OutAudio.
+     * @return true if the decoder was popped
+     */
+    bool PopDecoder(float* OutAudio, int32 NumSamples);
+
+    /** timestamp up to which audio was popped */
+    double           PoppedUntilSeconds = 0.0;
+    FCriticalSection CatchUpSection;
+    /** Discarded catch-up audio */
+    TArray<float>    CatchUpDiscardBuffer;
+    FCriticalSection CatchUpBufferSection;
+
     TArray<TWeakPtr<IAudioBufferListener>> AudioBufferListeners;
     FCriticalSection                       CriticalSectionAudioBufferListeners;
 

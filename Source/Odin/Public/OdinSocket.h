@@ -60,24 +60,31 @@ class ODIN_API UOdinSocket : public UObject
     UOdinSocket* Create(UOdinRoom* Room, EOdinSocketKind SocketKind, int64 TargetPeerId, int32 Label, int32 Priority);
 
     /**
-     * Get last retrieved reconnect token.
+     * Gets the remote peer of the socket: the target peer of an outbound socket (0 for a broadcast socket) or the sender of an inbound one.
      */
     UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Remote Peer Id", ToolTip = "Gets the target peer id of the socket"),
               Category = "Odin|Socket|Info")
     int64 GetRemotePeerId();
     /**
-     * Retrieves the socket label
+     * Gets the label the socket was created with; for an inbound socket the label its sender chose.
      */
     UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Label", ToolTip = "Gets the socket creation label"), Category = "Odin|Socket|Info")
     int32 GetSocketLabel();
     /**
-     * Retrieves the socket label
+     * Gets the socket label as a name, i.e. the label number as text (label 42 is "42").
      */
     UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Named Label", ToolTip = "Gets the socket creation label that was named"),
               Category = "Odin|Socket|Info")
     FName GetSocketNamedLabel();
     /**
-     * Retrieves the connection stats.
+     * Retrieves the socket kind
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Kind", ToolTip = "Gets kind of the socket (reliable/unreliable)"),
+              Category = "Odin|Socket|Info")
+    EOdinSocketKind GetSocketKind();
+    /**
+     * Retrieves a set of properties describing the current state of the socket (kind, direction, remote peer, label, priority and unsent
+     * bytes). Keeps and returns the last known info if the socket cannot be queried anymore.
      */
     UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Socket Info", ToolTip = "Gets additional socket info"),
               Category = "Odin|Socket|Info")

@@ -1,4 +1,4 @@
-/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
+﻿/* Copyright (c) 2020-2026 4Players GmbH. All rights reserved. */
 
 #include "OdinAudio/OdinDatagramProcessingThread.h"
 
@@ -34,7 +34,7 @@ void FOdinDatagramProcessingThread::LinkDecoderToPeer(OdinDecoder* DecoderHandle
         FScopeLock                  RegisterDecoderLock(&DecoderHandlesCS);
         TMap<OdinDecoder*, uint64>& OdinDecoders = RegisteredDecoderHandles.FindOrAdd(TPair<OdinRoom*, uint32>(TargetRoom, PeerId));
         OdinDecoders.Add(DecoderHandle, ChannelMask);
-        ODIN_LOG(Verbose, "Linking Odin Decoder %p to Room Handle %p and Peer Id %u with ChannelMask %llu", DecoderHandle, TargetRoom, PeerId, ChannelMask);
+        ODIN_LOG(VeryVerbose, "Linking Odin Decoder %p to Room Handle %p and Peer Id %u with ChannelMask %llu", DecoderHandle, TargetRoom, PeerId, ChannelMask);
 
     } else {
         ODIN_LOG(Error, "Linking Odin Decoder requires valid internal Decoder Handle and Room Handle.");
@@ -61,8 +61,8 @@ void FOdinDatagramProcessingThread::UnlinkDecoder(const OdinDecoder* DecoderHand
             }
         }
 
-        ODIN_LOG(Verbose, "Deregistered %d Decoders", RemovedDecoders);
-        ODIN_LOG(Verbose, "Number of registered decoder handles: %d", RegisteredDecoderHandles.Num());
+        ODIN_LOG(VeryVerbose, "Deregistered %d Decoders", RemovedDecoders);
+        ODIN_LOG(VeryVerbose, "Number of registered decoder handles: %d", RegisteredDecoderHandles.Num());
     }
 }
 

@@ -108,6 +108,11 @@ class ODIN_API UOdinFunctionLibrary : public UBlueprintFunctionLibrary
     UFUNCTION(BlueprintCallable, Category = "Odin|Channels")
     static void SetChannelInMask(UPARAM(ref) FOdinChannelMask& Mask, int32 ChannelIndex, bool bEnabled);
 
+    /**
+     * Whether a channel is enabled in the mask.
+     * @param Mask  Channel mask to check
+     * @param ChannelIndex  Index of the channel, 0 to 63
+     */
     UFUNCTION(BlueprintPure, Category = "Odin|Channels")
     static bool IsChannelEnabledInMask(const FOdinChannelMask& Mask, const int32 ChannelIndex);
 

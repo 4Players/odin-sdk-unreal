@@ -18,7 +18,7 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
 
 void UOdinRoom::BeginDestroy()
 {
-    ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
+    ODIN_LOG(VeryVerbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
     // the object is going away, so no delegate may fire anymore and nothing can wait for the
     // native "closed" status; freeing closes the native room as well, so our peer still leaves
     // the server. Call CloseRoom before dropping the last reference to get a graceful leave
@@ -132,7 +132,7 @@ bool UOdinRoom::CloseRoom()
 {
     OdinRoom *RoomHandle = GetHandle();
     if (RoomHandle == nullptr) {
-        ODIN_LOG(Verbose, "Aborted CloseRoom due to invalid Odin Room handle.");
+        ODIN_LOG(VeryVerbose, "Aborted CloseRoom due to invalid Odin Room handle.");
         return false;
     }
     if (bCloseRequested) {
@@ -205,7 +205,7 @@ void UOdinRoom::ClearCloseTimeout()
 bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 {
     if (handle == nullptr) {
-        ODIN_LOG(Verbose, "Aborted CloseRoom due to invalid Odin Room handle.");
+        ODIN_LOG(VeryVerbose, "Aborted CloseRoom due to invalid Odin Room handle.");
         return false;
     }
 
@@ -216,7 +216,7 @@ bool UOdinRoom::CloseOdinRoomByHandle(OdinRoom *handle)
 bool UOdinRoom::FreeRoom()
 {
     if (GetHandle() == nullptr) {
-        ODIN_LOG(Verbose, "Aborted FreeRoom due to invalid Odin Room handle.");
+        ODIN_LOG(VeryVerbose, "Aborted FreeRoom due to invalid Odin Room handle.");
         return false;
     }
     const uint64 Generation = GetConnectionGeneration();
@@ -231,7 +231,7 @@ bool UOdinRoom::FreeRoom()
 bool UOdinRoom::FreeRoomByHandle(OdinRoom *handle)
 {
     if (handle == nullptr) {
-        ODIN_LOG(Verbose, "Aborted FreeRoom due to invalid Odin Room handle.");
+        ODIN_LOG(VeryVerbose, "Aborted FreeRoom due to invalid Odin Room handle.");
         return false;
     }
 
@@ -285,6 +285,12 @@ void UOdinRoom::ReleaseHandle()
 int64 UOdinRoom::GetOwnPeerId()
 { return this->State.own_peer_id; }
 
+TArray<int64> UOdinRoom::GetPeerIds() const
+{
+    FScopeLock Lock(&ListenChannelMasksCS);
+    return KnownPeerIds.Array();
+}
+
 FString UOdinRoom::GetReconnectToken()
 { return FString(this->ReconnectToken.token); }
 
@@ -317,7 +323,7 @@ bool UOdinRoom::SendRpc(FString json)
 {
     auto ret = odin_room_send_rpc(this->GetHandle(), TCHAR_TO_UTF8(*json));
     if (ret == OdinError::ODIN_ERROR_SUCCESS) {
-        ODIN_LOG(Verbose, "SendRpc: %s", *json)
+        ODIN_LOG(VeryVerbose, "SendRpc: %s", *json)
         return true;
     } else {
         FOdinModule::LogErrorCode("Aborting SendRpc due to invalid odin_room_send_rpc call: %s", ret);
@@ -524,7 +530,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                         if (Delegate.IsBound()) {
                             Delegate.Broadcast(room.Get(), data);
                         }
-                        ODIN_LOG(Verbose, "Successfully parsed event %s: \"%s\"", *FOdinNewReconnectToken::Name, *data.token);
+                        ODIN_LOG(VeryVerbose, "Successfully parsed event %s: \"%s\"", *FOdinNewReconnectToken::Name, *data.token);
                     })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinNewReconnectToken::Name);
             }
@@ -546,7 +552,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                        if (Delegate.IsBound()) {
                            Delegate.Broadcast(room.Get(), data);
                        }
-                       ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinMessageReceived::Name, data.sender_peer_id);
+                       ODIN_LOG(VeryVerbose, "Successfully parsed event %s: %lld", *FOdinMessageReceived::Name, data.sender_peer_id);
                    })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinMessageReceived::Name);
             }
@@ -564,7 +570,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     if (Delegate.IsBound()) {
                         Delegate.Broadcast(room.Get(), data);
                     }
-                    ODIN_LOG(Verbose, "Successfully parsed event %s: \"%s\"", *FOdinJoined::Name, *data.room_id);
+                    ODIN_LOG(VeryVerbose, "Successfully parsed event %s: \"%s\"", *FOdinJoined::Name, *data.room_id);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinJoined::Name);
             }
@@ -599,7 +605,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                 if (Delegate.IsBound()) {
                     Delegate.Broadcast(room.Get(), data);
                 }
-                ODIN_LOG(Verbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinPeerJoined::Name, data.peer_id, *data.user_id);
+                ODIN_LOG(VeryVerbose, "Successfully parsed event %s: %lld \"%s\"", *FOdinPeerJoined::Name, data.peer_id, *data.user_id);
             };
 
             const bool bParsingSuccess = !DeserializeAndBroadcast<FOdinPeerJoined>(*EventObject, RoomObjectPtr, BroadcastDelegate);
@@ -625,7 +631,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                        if (Delegate.IsBound()) {
                            Delegate.Broadcast(room.Get(), data);
                        }
-                       ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerChanged::Name, data.peer_id);
+                       ODIN_LOG(VeryVerbose, "Successfully parsed event %s: %lld", *FOdinPeerChanged::Name, data.peer_id);
                    })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerChanged::Name);
             }
@@ -639,7 +645,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                         return;
                     }
                     room->HandlePeerLeft(data);
-                    ODIN_LOG(Verbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
+                    ODIN_LOG(VeryVerbose, "Successfully parsed event %s: %lld", *FOdinPeerLeft::Name, data.peer_id);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinPeerLeft::Name);
             }
@@ -657,7 +663,7 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     if (Delegate.IsBound()) {
                         Delegate.Broadcast(room.Get(), data);
                     }
-                    ODIN_LOG(Verbose, "Successfully parsed event %s: %s", *FOdinError::Name, *data.message);
+                    ODIN_LOG(VeryVerbose, "Successfully parsed event %s: %s", *FOdinError::Name, *data.message);
                 })) {
                 ODIN_LOG(Error, "parsing event %s failed!", *FOdinError::Name);
             }
@@ -683,7 +689,7 @@ void UOdinRoom::HandleRoomStatusChanged(const FOdinRoomStatusChanged &Data)
     if (Delegate.IsBound()) {
         Delegate.Broadcast(this, Data);
     }
-    ODIN_LOG(Verbose, "Successfully parsed event %s: state: %s, msg: \"%s\"", *FOdinRoomStatusChanged::Name, *Data.status, *Data.message);
+    ODIN_LOG(VeryVerbose, "Successfully parsed event %s: state: %s, msg: \"%s\"", *FOdinRoomStatusChanged::Name, *Data.status, *Data.message);
 
     if (Data.status == FOdinRoomStatusChanged::ClosedStatus) {
         ODIN_LOG(Log, "room connection closed: \"%s\"", *Data.message);
@@ -726,7 +732,7 @@ void UOdinRoom::FlushKnownPeers()
         return;
     }
 
-    ODIN_LOG(Verbose, "Reporting %d announced peers as left", Peers.Num());
+    ODIN_LOG(VeryVerbose, "Reporting %d announced peers as left", Peers.Num());
     const uint64 Generation = GetConnectionGeneration();
     for (const int64 PeerId : Peers) {
         FOdinPeerLeft Left;
@@ -843,7 +849,7 @@ TWeakObjectPtr<UOdinSocket> UOdinRoom::GetSocketByHandle(const OdinSocket *Socke
     FScopeLock GetSocketLock(&Socket_CS);
 
     if (const TWeakObjectPtr<UOdinSocket> *SocketObject = Sockets.Find(SocketHandle)) {
-        ODIN_LOG(Verbose, "Retrieved Odin Socket with handle %p", Handle);
+        ODIN_LOG(VeryVerbose, "Retrieved Odin Socket with handle %p", Handle);
         return *SocketObject;
     }
     ODIN_LOG(Verbose, "Did not find Odin Socket with handle %p", Handle);

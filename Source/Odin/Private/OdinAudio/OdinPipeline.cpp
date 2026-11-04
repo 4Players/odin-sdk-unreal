@@ -5,6 +5,7 @@
 #include "AudioDevice.h"
 #include "OdinVoice.h"
 #include "OdinAudio/Effects/OdinActivityEffect.h"
+#include "OdinAudio/Effects/OdinCallbackEffect.h"
 #include "OdinAudio/Effects/OdinCloneEffect.h"
 #include "OdinAudio/Effects/OdinMuteEffect.h"
 #include "OdinAudio/Effects/OdinVolumeEffect.h"
@@ -362,6 +363,18 @@ UOdinRmsEffect *UOdinPipeline::CreateRmsEffect(int32 Index)
 
 UOdinRmsEffect *UOdinPipeline::AppendRmsEffect()
 { return CreateRmsEffect(GetEffectCount()); }
+
+UOdinCallbackEffect *UOdinPipeline::CreateCallbackEffect(int32 Index)
+{
+    UOdinCallbackEffect *CallbackEffect = UOdinCallbackEffect::ConstructCallbackEffect(this);
+    if (InsertCustomEffect(Index, CallbackEffect))
+        return CallbackEffect;
+
+    return nullptr;
+}
+
+UOdinCallbackEffect *UOdinPipeline::AppendCallbackEffect()
+{ return CreateCallbackEffect(GetEffectCount()); }
 
 void UOdinPipeline::InvalidateHandle()
 {

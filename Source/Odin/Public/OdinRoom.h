@@ -144,7 +144,7 @@ class ODIN_API UOdinRoom : public UObject
     static constexpr float CloseTimeoutSeconds = 2.0f;
 
     /**
-     * Creates a new ODIN room handle and starts the asynchronous connection process.
+     * Creates a new room object without connecting it; ConnectRoom joins a room.
      */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Construct Room", ToolTip = "Creates a new room", HidePin = "WorldContextObject", DefaultToSelf = "WorldContextObject",
@@ -221,6 +221,17 @@ class ODIN_API UOdinRoom : public UObject
     uint64 GetConnectionGeneration() const
     { return ConnectionGeneration.load(); }
 
+    /**
+     * Creates a new ODIN room handle and starts the asynchronous connection process. This requires the address of an ODIN gateway and an
+     * authentication string, which must either be a valid and signed JSON Web Token (JWT) or a serialized JSON object containing the token,
+     * initial peer user data, channel masks and other optional parameters. The room events (e.g. OnRoomStatusChangedBP, OnRoomJoinedBP) report
+     * how joining proceeds.
+     * @param gateway   address of the ODIN gateway
+     * @param authentication   signed token or JSON object containing it
+     * @param bSuccess   true if the connection attempt was started; joining can still fail later, which the room status reports
+     * @param crypto   optional crypto extension for end-to-end encryption of the room communication
+     * @return this room
+     */
     UFUNCTION(BlueprintCallable,
               meta     = (DisplayName = "Connect Room", ToolTip = "Creates the room in a connection pool",
                           Keywords = "Start Connection,Start Room,Join,JoinRoom,Join Room"),
@@ -238,6 +249,12 @@ class ODIN_API UOdinRoom : public UObject
     UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get own Peer ID", ToolTip = "Gets the own peer id from an already connected room"),
               Category = "Odin|Room|Info")
     int64 GetOwnPeerId();
+    /**
+     * Get the ids of all remote peers that have not left yet (announced via OnRoomPeerJoinedBP)
+     */
+    UFUNCTION(BlueprintCallable, BlueprintPure, meta = (DisplayName = "Get Peer IDs", ToolTip = "Gets the ids of all remote peers of the connected room"),
+              Category = "Odin|Room|Info")
+    TArray<int64> GetPeerIds() const;
     /**
      * Get last retrieved reconnect token.
      */
@@ -527,7 +544,7 @@ class ODIN_API UOdinRoom : public UObject
     bool                       bConnecting     = false; // game thread only, rejects nested ConnectRoom calls from handlers
     FTSTicker::FDelegateHandle CloseTimeoutHandle;
 
-    FCriticalSection              ListenChannelMasksCS;
+    mutable FCriticalSection      ListenChannelMasksCS;
     TSet<int64>                   KnownPeerIds;
     TMap<int64, FOdinChannelMask> ListenChannelMaskOverrides;
     FOdinChannelMask              DefaultListenChannelMask     = FOdinChannelMask::CreateFull();

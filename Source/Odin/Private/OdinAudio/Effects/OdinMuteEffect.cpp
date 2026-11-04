@@ -22,13 +22,19 @@ void UOdinMuteEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bI
     if (GetParent().IsValid() == false)
         return;
 
-    *bIsSilent = *bIsSilent || MuteFlag == EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON;
+    if (MuteFlag != EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON)
+        return;
+
+    *bIsSilent = true;
+    if (bClearSamples)
+        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
 }
 
-UOdinMuteEffect *UOdinMuteEffect::ConstructMuteEffect(UObject *WorldContextObject, EOdinMuteEffectOptions Toggle)
+UOdinMuteEffect *UOdinMuteEffect::ConstructMuteEffect(UObject *WorldContextObject, EOdinMuteEffectOptions Toggle, bool bInClearSamples)
 {
     UOdinMuteEffect *result = NewObject<UOdinMuteEffect>(WorldContextObject);
     result->MuteFlag        = Toggle;
+    result->bClearSamples   = bInClearSamples;
     return result;
 }
 

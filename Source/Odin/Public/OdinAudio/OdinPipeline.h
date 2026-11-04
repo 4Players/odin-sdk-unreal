@@ -11,6 +11,7 @@
 
 #include "OdinPipeline.generated.h"
 
+class UOdinCallbackEffect;
 class UOdinCloneEffect;
 /**
  * A highly dynamic audio processing chain that manages a thread-safe collection of filters like
@@ -91,11 +92,15 @@ class ODIN_API UOdinPipeline : public UObject
      * is implemented via a callback function and associated user data. A unique effect identifier
      * is returned.
      * @remarks Index is shifting subsequent effects. An index of `0` inserts at the beginning of the pipeline.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @param Index desired index
      * @param Effect effect object
      * @return the new effect id or 0
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Insert Custom Effect", ToolTip = "Add a custom effect to the pipline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Insert Custom Effect",
+                          ToolTip     = "Add a custom effect to the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline")
     int32 InsertCustomEffect(int32 Index, UOdinCustomEffect* Effect);
     /**
@@ -274,12 +279,24 @@ class ODIN_API UOdinPipeline : public UObject
      * The effect will invoke activity event and field based on the silent flag.
      * Event is dispatched to the GameThread.
      * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @return the custom effect object
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Activity Effect", ToolTip = "Create a custom effect in the pipeline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Activity Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinActivityEffect* CreateActivityEffect(int32 Index);
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Append Activity Effect", ToolTip = "Append a custom effect in the pipeline"),
+    /**
+     * Appends a new activity effect at the end of the pipeline, see CreateActivityEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Activity Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinActivityEffect* AppendActivityEffect();
     /**
@@ -288,12 +305,24 @@ class ODIN_API UOdinPipeline : public UObject
      * and if bound to the delegate, a clone of that buffer.
      * Callback will be called on the GameThread by default.
      * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @return the custom effect object
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Clone Effect", ToolTip = "Create a custom effect in the pipeline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Clone Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinCloneEffect* CreateCloneEffect(int32 Index);
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Append Clone Effect", ToolTip = "Append a custom effect in the pipeline"),
+    /**
+     * Appends a new clone effect at the end of the pipeline, see CreateCloneEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Clone Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinCloneEffect* AppendCloneEffect();
     /**
@@ -303,39 +332,100 @@ class ODIN_API UOdinPipeline : public UObject
      * Symbolizing silenced audio data without changing the buffer.
      * This results in not necessarily sending the audio packet over the network at all.
      * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @return the custom effect object
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Mute Effect", ToolTip = "Create a custom effect in the pipeline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Mute Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinMuteEffect* CreateMuteEffect(int32 Index);
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Append Mute Effect", ToolTip = "Append a custom effect in the pipeline"),
+    /**
+     * Appends a new mute effect at the end of the pipeline, see CreateMuteEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Mute Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinMuteEffect* AppendMuteEffect();
     /**
      * PRESET: Codec-Effect for the odin audio pipeline.
-     * The effect will invoke activity event and field based on the silent flag.
-     * Event is dispatched to the GameThread.
+     * The effect scales the samples by SampleScale: a linear factor raised to ScaleExponent, or a gain in decibels if VolumeLog10 is set.
+     * It is created with a scale of 1, which leaves the volume unchanged.
      * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @return the custom effect object
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Volume Effect", ToolTip = "Create a custom effect in the pipeline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Volume Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinVolumeEffect* CreateVolumeEffect(int32 Index);
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Append Volume Effect", ToolTip = "Append a custom effect in the pipeline"),
+    /**
+     * Appends a new volume effect at the end of the pipeline, see CreateVolumeEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Volume Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinVolumeEffect* AppendVolumeEffect();
     /**
      * PRESET: Codec-Effect for the odin audio pipeline.
      * The effect will set RMS-dBFS based on samples.
      * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
      * @return the custom effect object
      */
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Create Rms Effect", ToolTip = "Create a custom effect in the pipeline"),
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Rms Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinRmsEffect* CreateRmsEffect(int32 Index);
-    UFUNCTION(BlueprintCallable, meta = (DisplayName = "Append Rms Effect", ToolTip = "Append a custom effect in the pipeline"),
+    /**
+     * Appends a new rms effect at the end of the pipeline, see CreateRmsEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Rms Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
               Category = "Odin|Audio Pipeline|Effects")
     UOdinRmsEffect* AppendRmsEffect();
+    /**
+     * PRESET: Codec-Effect for the odin audio pipeline.
+     * The effect processes the samples with C++ code on a worker thread (UOdinCallbackEffect::ProcessSamples or SetProcessFunction) and
+     * writes the result back into the chain, delaying the audio by at least one block, e.g. for a voice changer.
+     * @param Index desired index
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Create Callback Effect",
+                          ToolTip     = "Create a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
+              Category = "Odin|Audio Pipeline|Effects")
+    UOdinCallbackEffect* CreateCallbackEffect(int32 Index);
+    /**
+     * Appends a new callback effect at the end of the pipeline, see CreateCallbackEffect.
+     * @remarks The pipeline does not keep the effect alive: keep a reference to it (e.g. in a variable), otherwise garbage collection
+     * destroys it and removes it from the pipeline.
+     * @return the custom effect object
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Append Callback Effect",
+                          ToolTip     = "Append a custom effect in the pipeline. Keep a reference to it, garbage collection removes an unreferenced effect"),
+              Category = "Odin|Audio Pipeline|Effects")
+    UOdinCallbackEffect* AppendCallbackEffect();
 
     inline const OdinPipeline* GetHandle() const
     { return IsValid(Handle) ? reinterpret_cast<const OdinPipeline*>(Handle->GetHandle()) : nullptr; }

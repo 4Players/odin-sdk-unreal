@@ -2,6 +2,8 @@
 
 #include "OdinAudio/Effects/OdinVolumeEffect.h"
 
+#include "OdinVoice.h"
+
 UOdinVolumeEffect::UOdinVolumeEffect(const FObjectInitializer &PCIP)
     : Super(PCIP)
 { UserData = TOdinCustomEffectUserData(this); }
@@ -14,19 +16,27 @@ void UOdinVolumeEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&
     if (GetParent().IsValid() == false)
         return;
 
-    // already silent content
-    if (*bIsSilent)
-        return;
-
     // decibels to linear gain, or a linear scale raised to the exponent
-    float bufferScale = VolumeLog10 ? FMath::Pow(10.0f, SampleScale / 20.0f) : FMath::Pow(SampleScale, ScaleExponent);
+    const float bufferScale = VolumeLog10 ? FMath::Pow(10.0f, SampleScale / 20.0f) : FMath::Pow(SampleScale, ScaleExponent);
 
-    // gain close to silence
+    // e.g. a negative scale with a fractional exponent: keep the samples instead of writing NaN into the audio
+    if (!FMath::IsFinite(bufferScale)) {
+        if (!bWarnedInvalidGain.exchange(true)) {
+            ODIN_LOG(Warning, "Volume effect ignores a gain that is not a finite number (SampleScale %f, ScaleExponent %f, VolumeLog10 %d).", SampleScale,
+                     ScaleExponent, VolumeLog10 ? 1 : 0);
+        }
+        return;
+    }
+    bWarnedInvalidGain = false;
+
+    // gain close to silence: the flag alone does not silence the audio, a decoder plays the samples of silent blocks
     if (FMath::IsNearlyEqual(bufferScale, 0.0f, 0.001f)) {
         *bIsSilent = true;
+        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
         return;
     }
 
+    // silent blocks are scaled too, they are not necessarily zero
     for (int32 i = 0; i < InSamples.Num(); i++)
         InSamples[i] *= bufferScale;
 }

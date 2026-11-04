@@ -125,7 +125,7 @@ void FOdinModule::LogHook(const char* S)
     if (DBGV > 0) {
         UE_LOG(Odin, VeryVerbose, TEXT("ODIN_NATIVE %s"), UTF8_TO_TCHAR(S));
     } else {
-        UE_LOG(Odin, Warning, TEXT("ODIN_NATIVE %s"), UTF8_TO_TCHAR(S));
+        UE_LOG(Odin, Display, TEXT("ODIN_NATIVE %s"), UTF8_TO_TCHAR(S));
     }
 }
 

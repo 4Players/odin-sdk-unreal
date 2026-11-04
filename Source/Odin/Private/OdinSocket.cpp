@@ -16,7 +16,7 @@ UOdinSocket::UOdinSocket(const class FObjectInitializer &PCIP)
 
 void UOdinSocket::BeginDestroy()
 {
-    ODIN_LOG(Verbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
+    ODIN_LOG(VeryVerbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
     // ResetSocket(); // no need to reset on game object destroy -> freed native by room
     Super::BeginDestroy();
 }
@@ -55,7 +55,7 @@ bool UOdinSocket::ResetSocket()
 bool UOdinSocket::ResetOdinSocketByHandle(OdinSocket *handle)
 {
     if (handle == nullptr) {
-        ODIN_LOG(Verbose, "Aborted ResetSocket due to invalid Odin Socket handle.");
+        ODIN_LOG(VeryVerbose, "Aborted ResetSocket due to invalid Odin Socket handle.");
         return false;
     }
 
@@ -70,6 +70,9 @@ int32 UOdinSocket::GetSocketLabel()
 
 FName UOdinSocket::GetSocketNamedLabel()
 { return FName(*FString::FromInt(this->GetSocketLabel())); }
+
+EOdinSocketKind UOdinSocket::GetSocketKind()
+{ return this->Info.Kind; }
 
 FOdinSocketInfo UOdinSocket::GetSocketInfo()
 {

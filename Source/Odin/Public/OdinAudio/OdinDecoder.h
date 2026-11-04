@@ -15,8 +15,11 @@
 #include "OdinDecoder.generated.h"
 
 /**
- * The native decoder handle as used by sound generators on the audio render thread. They hold the lock while popping,
- * so the decoder can clear the handle and free the native decoder without pulling it out from under them.
+ * The native decoder handle shared with the sound generators of a decoder, which pop from it on the audio render thread.
+ * Recreating the native decoder replaces the handle in place, so attached generators follow it without being assigned again.
+ * Generators hold the lock while popping, so once the decoder cleared the handle no pop (and no audio event fired by one) is running.
+ * @remarks Not needed for memory safety: native handles are ids in a native registry, calls with a freed handle fail with
+ * ODIN_ERROR_ARGUMENT_INVALID_HANDLE and a running call keeps its decoder alive until it returns.
  */
 struct FOdinDecoderHandleCell {
     FCriticalSection Lock;

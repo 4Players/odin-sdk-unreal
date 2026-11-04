@@ -37,6 +37,14 @@ class UOdinPipeline;
  * @remarks The audio pipeline execution context is started on a pop call, not push.
  * @remarks e.g: encoder/decoder odin_encoder_push -> BLOCKING(encoder audio pipeline/effects -> odin_encoder_pop)
  * @remarks Not affected is, including, but not limited to, IO and Event library threads
+ * @remarks Threads: effects of an encoder run on the audio push thread, effects of a decoder on the audio render thread (or the mixer of
+ * an audio middleware like Wwise or FMOD). A slow or blocking effect stalls the audio and every effect after it in the chain; keep
+ * CustomEffect short and hand heavier work to another thread, e.g. with UOdinCallbackEffect.
+ * @remarks Format: every call gets one block of 20 ms of interleaved stereo at 48 kHz (PipelineBlockSamples samples), whatever the
+ * sample rate and channel layout of the encoder or decoder. An encoder copies mono input to both channels at -3 dB; a decoder converts
+ * the block to its output format after the pipeline.
+ * @remarks The silent flag does not silence the samples: a decoder plays the samples of a block marked as silent, and an encoder still
+ * sends the first silent block of a talk spurt. Zero the samples as well to silence them.
  */
 UCLASS(ClassGroup = Odin, Abstract, BlueprintType, Blueprintable)
 class ODIN_API UOdinCustomEffect : public UObject
@@ -65,6 +73,13 @@ class ODIN_API UOdinCustomEffect : public UObject
     UFUNCTION(BlueprintCallable, meta = (DisplayName = "Detach Effect", ToolTip = "Try to remove this effect from parent pipeline"),
               Category = "Odin|Audio Pipeline")
     bool RemoveSelfFromParent();
+
+    /** Sample rate of the pipeline audio */
+    static constexpr int32 PipelineSampleRate = 48000;
+    /** Channel count of the pipeline audio, interleaved */
+    static constexpr int32 PipelineChannels = 2;
+    /** Samples per CustomEffect call: 20 ms of PipelineChannels at PipelineSampleRate */
+    static constexpr int32 PipelineBlockSamples = PipelineSampleRate / 50 * PipelineChannels;
 
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Pipeline|State")
     int32 Index;
