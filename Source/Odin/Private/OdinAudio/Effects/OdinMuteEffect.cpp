@@ -15,19 +15,20 @@ void UOdinMuteEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&bI
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(UOdinMuteEffect::CustomEffect);
 
-    if (MuteFlag == EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_UNCHANGED)
-        return;
-
     // nothing to do if there is no pipeline anymore
     if (GetParent().IsValid() == false)
         return;
 
-    if (MuteFlag != EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON)
-        return;
+    const bool bMuted = MuteFlag == EOdinMuteEffectOptions::ODIN_EFFECT_TOGGLE_ON;
+    if (bMuted)
+        *bIsSilent = true;
 
-    *bIsSilent = true;
-    if (bClearSamples)
-        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
+    // clearing starts and stops with a fade over one block, cutting the voice off clicks; the first block starts cleared or not
+    const float Gain      = bMuted && bClearSamples ? 0.0f : 1.0f;
+    const float StartGain = bHasAppliedGain ? AppliedGain : Gain;
+    AppliedGain           = Gain;
+    bHasAppliedGain       = true;
+    ApplyGainRamp(InSamples, StartGain, Gain);
 }
 
 UOdinMuteEffect *UOdinMuteEffect::ConstructMuteEffect(UObject *WorldContextObject, EOdinMuteEffectOptions Toggle, bool bInClearSamples)

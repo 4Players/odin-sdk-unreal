@@ -19,6 +19,10 @@ UOdinRoom::UOdinRoom(const class FObjectInitializer &PCIP)
 void UOdinRoom::BeginDestroy()
 {
     ODIN_LOG(VeryVerbose, "ODIN Destroy: %s", ANSI_TO_TCHAR(__FUNCTION__));
+    if (PositionUpdateHandle.IsValid()) {
+        FTSTicker::GetCoreTicker().RemoveTicker(PositionUpdateHandle);
+        PositionUpdateHandle.Reset();
+    }
     // the object is going away, so no delegate may fire anymore and nothing can wait for the
     // native "closed" status; freeing closes the native room as well, so our peer still leaves
     // the server. Call CloseRoom before dropping the last reference to get a graceful leave
@@ -387,6 +391,176 @@ bool UOdinRoom::ApplyListenChannelMasks()
     return SetChannelMasks(Masks, /*reset=*/true);
 }
 
+namespace
+{
+// I28F4 bits of a coordinate as the native library converts the positions of an encoder: rounded to nearest with ties to even, saturated
+// when out of range and 0 when not a number. So a coordinate gets to the server the same way from a room and from an encoder.
+int32 ToPositionBits(const float Value)
+{
+    if (FMath::IsNaN(Value)) {
+        return 0;
+    }
+    const double Bits = FMath::RoundHalfToEven(static_cast<double>(Value) * 16.0);
+    return static_cast<int32>(FMath::Clamp(Bits, static_cast<double>(MIN_int32), static_cast<double>(MAX_int32)));
+}
+
+// whether a coordinate fits, without falling back to 0 or a limit
+bool IsInPositionRange(const float Value)
+{
+    const double Bits = FMath::RoundHalfToEven(static_cast<double>(Value) * 16.0);
+    return Bits >= MIN_int32 && Bits <= MAX_int32;
+}
+
+// whether two positions are the same in a datagram
+bool IsSamePositionBits(const FOdinPosition &A, const FOdinPosition &B)
+{ return ToPositionBits(A.x) == ToPositionBits(B.x) && ToPositionBits(A.y) == ToPositionBits(B.y) && ToPositionBits(A.z) == ToPositionBits(B.z); }
+
+// D2 and the I28F4 bits of a coordinate as a big-endian signed 32-bit integer
+void WritePositionCoordinate(TArray<uint8> &Datagram, const float Value)
+{
+    const uint32 Encoded = static_cast<uint32>(ToPositionBits(Value));
+    Datagram.Append(
+        {0xd2, static_cast<uint8>(Encoded >> 24), static_cast<uint8>(Encoded >> 16), static_cast<uint8>(Encoded >> 8), static_cast<uint8>(Encoded)});
+}
+} // namespace
+
+TArray<TArray<uint8>> UOdinRoom::SerializePositionDatagrams(const TSortedMap<uint8, FOdinPosition> &Positions)
+{
+    TArray<TArray<uint8>> Datagrams;
+    for (const TPair<uint8, FOdinPosition> &Entry : Positions) {
+        if (Datagrams.IsEmpty() || Datagrams.Last()[3] == (0x90 | MaxPositionsPerDatagram)) {
+            // session id, datagram kind (positions only), sender peer id, array of positions (counted up below)
+            Datagrams.Add({0x00, 0x00, 0x00, 0x90});
+        }
+        TArray<uint8> &Datagram = Datagrams.Last();
+        ++Datagram[3];
+
+        // array of channel index (below 64, so a single byte) and x, y and z
+        Datagram.Append({0x94, Entry.Key});
+        WritePositionCoordinate(Datagram, Entry.Value.x);
+        WritePositionCoordinate(Datagram, Entry.Value.y);
+        WritePositionCoordinate(Datagram, Entry.Value.z);
+    }
+    return Datagrams;
+}
+
+bool UOdinRoom::SetPosition(FOdinChannelMask ChannelMask, FOdinPosition Position)
+{
+    // The values are MessagePack of a fixed width, which the server reads like the shortest form an encoder writes:
+    //     00 00 00 9N [94 CC D2 XX XX XX XX D2 YY YY YY YY D2 ZZ ZZ ZZ ZZ] * N
+    // - 00: WebTransport session id 0 (QUIC variable-length integer)
+    // - 00: datagram kind; 0 is positions only, 1 voice, 2 socket, 3 request
+    // - 00: sender peer id 0, which odin_room_send_datagram replaces with the own peer id, also the new one after a reconnect
+    // - 9N: array of N positions, at most MaxPositionsPerDatagram, sorted by channel; more channels go into further datagrams
+    // - 94 CC: array of 4 values, the channel index CC (below 64) and the coordinates
+    // - D2 XX XX XX XX: a coordinate as signed 32-bit integer, big endian (the unsigned CE would make the server reject negative ones). It is
+    //   fixed point with 4 fractional bits (I28F4): the value times 16, rounded to nearest with ties to even, saturated when out of range
+    //   and 0 when not a number, as the native library converts the positions of an encoder.
+
+    const uint64 Mask = ChannelMask.GetChannelMask();
+    if (Mask == 0) {
+        ODIN_LOG(Warning, "Room SetPosition called with an empty channel mask, no position is set. Pass the channels to listen on, usually channel 0.");
+        return false;
+    }
+    // sent anyway, like the native library sends such a position of an encoder; warned once, as SetPosition can be called every frame
+    const bool bInRange = IsInPositionRange(Position.x) && IsInPositionRange(Position.y) && IsInPositionRange(Position.z);
+    if (!bInRange && !bWarnedPositionRange) {
+        ODIN_LOG(Warning,
+                 "Room SetPosition got a coordinate that is not a number or out of range (%s): it is sent as 0 or as the nearest limit of -134217728 "
+                 "and 134217727.",
+                 *Position.ToString());
+    }
+    bWarnedPositionRange = !bInRange;
+
+    // a position that is the same in a datagram is not sent again, e.g. when it is set every frame while standing still
+    for (uint8 Channel = 0; Channel < 64; ++Channel) {
+        if (Mask & (static_cast<uint64>(1) << Channel)) {
+            const FOdinPosition *Previous = Positions.Find(Channel);
+            if (Previous == nullptr || !IsSamePositionBits(*Previous, Position)) {
+                Positions.Add(Channel, Position);
+                bPositionsChanged = true;
+            }
+        }
+    }
+    ODIN_LOG(Verbose, "Room SetPosition called with ChannelMask %llu and position %s", Mask, *Position.ToString());
+
+    if (!PositionUpdateHandle.IsValid()) {
+        // the core ticker also ticks while the game is paused
+        const FTickerDelegate Update = FTickerDelegate::CreateWeakLambda(this, [this](float) {
+            UpdatePositions();
+            return true;
+        });
+        PositionUpdateHandle         = FTSTicker::GetCoreTicker().AddTicker(Update, MinPositionSendInterval);
+    }
+    UpdatePositions();
+    return true;
+}
+
+void UOdinRoom::UpdatePositions()
+{
+    // a change goes out right away, but at most every MinPositionSendInterval seconds, as SetPosition can be called every frame; the ticker
+    // sends a change that came sooner
+    const double SinceSent = FPlatformTime::Seconds() - PositionsSentSeconds;
+    if (SinceSent >= MinPositionSendInterval && (bPositionsChanged || (PositionResendInterval > 0.0f && SinceSent >= PositionResendInterval))) {
+        SendPositions();
+    }
+}
+
+void UOdinRoom::ApplyPositionsToEncoder(OdinEncoder *Encoder) const
+{
+    if (!bSetEncoderPositions || Encoder == nullptr) {
+        return;
+    }
+    for (const TPair<uint8, FOdinPosition> &Entry : Positions) {
+        // the native library before 2.2.9 aborts on a coordinate that is not a number, the room sends it as 0
+        auto               Sanitize = [](const float Value) { return FMath::IsNaN(Value) ? 0.0f : Value; };
+        const OdinPosition Position{Sanitize(Entry.Value.x), Sanitize(Entry.Value.y), Sanitize(Entry.Value.z)};
+        const OdinError    Result = odin_encoder_set_position(Encoder, static_cast<uint64>(1) << Entry.Key, &Position);
+        if (Result == ODIN_ERROR_ARGUMENT_INVALID_HANDLE) {
+            // freed while still linked, the push thread removes the link
+            ODIN_LOG(Verbose, "Room positions not set on the freed encoder %p", Encoder);
+            return;
+        }
+        if (Result != ODIN_ERROR_SUCCESS) {
+            FOdinModule::LogErrorCode("Aborting ApplyPositionsToEncoder due to invalid odin_encoder_set_position call: %s", Result);
+            return;
+        }
+    }
+}
+
+void UOdinRoom::ApplyPositionsToEncoders() const
+{
+    if (const UOdinSubsystem *OdinSubsystem = UOdinSubsystem::Get()) {
+        for (OdinEncoder *Encoder : OdinSubsystem->GetEncodersForRoom(GetHandle())) {
+            ApplyPositionsToEncoder(Encoder);
+        }
+    }
+}
+
+void UOdinRoom::SendPositions()
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(UOdinRoom::SendPositions);
+
+    // before the join the native room cannot fill in the sender, and the server drops datagrams of an unknown peer
+    OdinRoom *RoomHandle = GetHandle();
+    if (Positions.IsEmpty() || RoomHandle == nullptr || !IsConnected()) {
+        return;
+    }
+    if (bPositionsChanged) {
+        // rate limited with the sends of the room: an encoder sends a position update for every change while it is silent
+        ApplyPositionsToEncoders();
+    }
+    PositionsSentSeconds = FPlatformTime::Seconds();
+    bPositionsChanged    = false;
+    for (const TArray<uint8> &Datagram : SerializePositionDatagrams(Positions)) {
+        const OdinError Result = odin_room_send_datagram(RoomHandle, Datagram.GetData(), Datagram.Num());
+        if (Result != OdinError::ODIN_ERROR_SUCCESS) {
+            FOdinModule::LogErrorCode("Aborting SendPositions due to invalid odin_room_send_datagram call: %s", Result);
+            return;
+        }
+    }
+}
+
 bool UOdinRoom::SendMessage(const FOdinSendMessage &request)
 { return this->SendRpc(request.AsJson()); }
 
@@ -565,7 +739,9 @@ void UOdinRoom::HandleOdinEventRpc(OdinRoom *RoomHandle, const FString &JsonStri
                     if (!room.IsValid())
                         return;
 
-                    room->State                  = data;
+                    room->State = data;
+                    // in case the joined status came first; the own peer id is known from here on
+                    room->SendPositions();
                     FOdinJoinedDelegate Delegate = room->OnRoomJoinedBP;
                     if (Delegate.IsBound()) {
                         Delegate.Broadcast(room.Get(), data);
@@ -684,6 +860,9 @@ void UOdinRoom::HandleRoomStatusChanged(const FOdinRoomStatusChanged &Data)
     }
 
     Status = Data;
+    if (Data.status == FOdinRoomStatusChanged::JoinedStatus) {
+        SendPositions();
+    }
 
     FOdinRoomStatusChangedDelegate Delegate = OnRoomStatusChangedBP;
     if (Delegate.IsBound()) {

@@ -23,6 +23,27 @@ void UOdinCustomEffect::CustomEffect(const TArrayView<float>& InSamples, bool*& 
         return;
 }
 
+void UOdinCustomEffect::ApplyGainRamp(const TArrayView<float>& Samples, const float StartGain, const float EndGain)
+{
+    if (StartGain == EndGain) {
+        if (EndGain == 0.0f) {
+            FMemory::Memzero(Samples.GetData(), Samples.Num() * sizeof(float));
+        } else if (EndGain != 1.0f) {
+            for (float& Sample : Samples) {
+                Sample *= EndGain;
+            }
+        }
+        return;
+    }
+
+    // the last frame gets EndGain, so the next block can continue from there
+    const int32 NumFrames = FMath::Max(1, Samples.Num() / PipelineChannels);
+    for (int32 Index = 0; Index < Samples.Num(); ++Index) {
+        const int32 Frame = FMath::Min(Index / PipelineChannels, NumFrames - 1);
+        Samples[Index] *= FMath::Lerp(StartGain, EndGain, static_cast<float>(Frame + 1) / NumFrames);
+    }
+}
+
 bool UOdinCustomEffect::RemoveSelfFromParent()
 {
     auto pipeline = GetParent();

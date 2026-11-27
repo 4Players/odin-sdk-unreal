@@ -21,6 +21,8 @@ enum class EOdinMuteEffectOptions : uint8 {
  * With bClearSamples off only the silent flag is set and the samples pass through the chain unchanged, e.g. for following effects that
  * still need the audio. A decoder plays the samples of silent audio though, and an encoder sends the first muted block of a talk spurt
  * as its end, so this alone does not silence the output.
+ * Clearing starts and stops with a fade over one block (20 ms) instead of cutting the voice off, which would click: the first muted block
+ * fades out, the first unmuted block fades in. The first block of the effect is cleared or not without a fade.
  */
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinMuteEffect : public UOdinCustomEffect
@@ -50,4 +52,8 @@ class ODIN_API UOdinMuteEffect : public UOdinCustomEffect
 
   private:
     virtual void BeginDestroy() override;
+
+    /** Gain the last block ended with: 0 while the samples are cleared, 1 otherwise; only used on the thread of the pipeline. */
+    mutable float AppliedGain     = 1.0f;
+    mutable bool  bHasAppliedGain = false;
 };

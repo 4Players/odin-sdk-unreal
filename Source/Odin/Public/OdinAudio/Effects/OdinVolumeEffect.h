@@ -16,6 +16,8 @@ class UOdinPipeline;
  * For more complex amplitude checkout dBFS and override the custom effect function.
  * A gain of (nearly) 0 zeroes the samples and marks them as silent. A gain that is not a finite number, like a negative SampleScale with a
  * fractional ScaleExponent, leaves the samples unchanged and logs a warning.
+ * A changed gain fades over the next block (20 ms) instead of jumping, which would click: the block after lowering the gain to 0 fades
+ * out and is already marked as silent. The first block of the effect starts at the gain.
  */
 UCLASS(ClassGroup = Odin)
 class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
@@ -50,4 +52,7 @@ class ODIN_API UOdinVolumeEffect : public UOdinCustomEffect
 
     /** Set while the gain is invalid and that was logged, so the warning is not repeated for every block. */
     mutable std::atomic<bool> bWarnedInvalidGain{false};
+    /** Gain the last block ended with, which a changed gain fades from; only used on the thread of the pipeline. */
+    mutable float AppliedScale     = 1.0f;
+    mutable bool  bHasAppliedScale = false;
 };

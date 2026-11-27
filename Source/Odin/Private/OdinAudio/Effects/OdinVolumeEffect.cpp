@@ -17,7 +17,7 @@ void UOdinVolumeEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&
         return;
 
     // decibels to linear gain, or a linear scale raised to the exponent
-    const float bufferScale = VolumeLog10 ? FMath::Pow(10.0f, SampleScale / 20.0f) : FMath::Pow(SampleScale, ScaleExponent);
+    float bufferScale = VolumeLog10 ? FMath::Pow(10.0f, SampleScale / 20.0f) : FMath::Pow(SampleScale, ScaleExponent);
 
     // e.g. a negative scale with a fractional exponent: keep the samples instead of writing NaN into the audio
     if (!FMath::IsFinite(bufferScale)) {
@@ -25,20 +25,24 @@ void UOdinVolumeEffect::CustomEffect(const TArrayView<float> &InSamples, bool *&
             ODIN_LOG(Warning, "Volume effect ignores a gain that is not a finite number (SampleScale %f, ScaleExponent %f, VolumeLog10 %d).", SampleScale,
                      ScaleExponent, VolumeLog10 ? 1 : 0);
         }
-        return;
+        bufferScale = 1.0f;
+    } else {
+        bWarnedInvalidGain = false;
     }
-    bWarnedInvalidGain = false;
 
     // gain close to silence: the flag alone does not silence the audio, a decoder plays the samples of silent blocks
     if (FMath::IsNearlyEqual(bufferScale, 0.0f, 0.001f)) {
-        *bIsSilent = true;
-        FMemory::Memzero(InSamples.GetData(), InSamples.Num() * sizeof(float));
-        return;
+        bufferScale = 0.0f;
+        *bIsSilent  = true;
     }
 
+    // a changed gain fades over this block instead of clicking; the first block starts at the gain
+    const float startScale = bHasAppliedScale ? AppliedScale : bufferScale;
+    AppliedScale           = bufferScale;
+    bHasAppliedScale       = true;
+
     // silent blocks are scaled too, they are not necessarily zero
-    for (int32 i = 0; i < InSamples.Num(); i++)
-        InSamples[i] *= bufferScale;
+    ApplyGainRamp(InSamples, startScale, bufferScale);
 }
 
 UOdinVolumeEffect *UOdinVolumeEffect::ConstructVolumeEffect(UObject *WorldContextObject, float scale)

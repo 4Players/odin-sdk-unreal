@@ -81,6 +81,15 @@ class ODIN_API UOdinCustomEffect : public UObject
     /** Samples per CustomEffect call: 20 ms of PipelineChannels at PipelineSampleRate */
     static constexpr int32 PipelineBlockSamples = PipelineSampleRate / 50 * PipelineChannels;
 
+    /**
+     * Scales a block of pipeline samples by a gain that moves linearly from StartGain to EndGain over the block, the same for every
+     * channel of a frame. A gain that jumps between two blocks makes an audible click.
+     * @param Samples   interleaved samples in the pipeline format
+     * @param StartGain   gain the previous block ended with
+     * @param EndGain   gain of the last frame of this block
+     */
+    static void ApplyGainRamp(const TArrayView<float>& Samples, float StartGain, float EndGain);
+
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Pipeline|State")
     int32 Index;
     UPROPERTY(BlueprintReadOnly, Category = "Odin|Audio Pipeline|State")

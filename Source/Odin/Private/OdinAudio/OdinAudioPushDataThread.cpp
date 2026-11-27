@@ -12,22 +12,25 @@
 #include "odin.h"
 #include "OdinFunctionLibrary.h"
 
-FOdinAudioPushDataThread::FOdinAudioPushDataThread()
+FOdinAudioPushDataThread::FOdinAudioPushDataThread(const float InPushFrequencyInMs)
     : bIsRunning(false)
-    , PushEvent(nullptr)
-    , PushFrequencyInMs(10)
+    // lives as long as this object: the capture thread triggers it, also before the thread runs and while it exits
+    , PushEvent(FGenericPlatformProcess::GetSynchEventFromPool())
+    , PushFrequencyInMs(InPushFrequencyInMs)
 {
 }
 
-FOdinAudioPushDataThread::~FOdinAudioPushDataThread() = default;
+FOdinAudioPushDataThread::~FOdinAudioPushDataThread()
+{
+    Exit();
+    FGenericPlatformProcess::ReturnSynchEventToPool(PushEvent);
+}
 
 void FOdinAudioPushDataThread::LinkEncoder(OdinEncoder* Encoder, OdinRoom* TargetRoom)
 {
     TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::LinkEncoder)
     if (!bIsRunning) {
         bIsRunning = true;
-        PushEvent  = FGenericPlatformProcess::GetSynchEventFromPool();
-        check(PushEvent);
         Thread.Reset(FRunnableThread::Create(this, TEXT("OdinPushAudioThread"), 0, TPri_TimeCritical));
     }
 
@@ -61,6 +64,8 @@ void FOdinAudioPushDataThread::PushAudioToEncoder(OdinEncoder* TargetEncoder, TA
     if (!Audio.IsEmpty()) {
         FOdinEncoderAudioFrame NewFrame{.EncoderHandle = TargetEncoder, .Audio = MoveTemp(Audio)};
         AudioPushQueue.Enqueue(MoveTemp(NewFrame));
+        // encode and send right away instead of on the next poll, which would delay the voice by up to PushFrequencyInMs
+        PushEvent->Trigger();
     }
 }
 
@@ -73,6 +78,20 @@ TArray<OdinRoom*> FOdinAudioPushDataThread::GetRoomsFor(OdinEncoder* Encoder) co
         return LinkedRooms->Array();
     }
     return TArray<OdinRoom*>();
+}
+
+TArray<OdinEncoder*> FOdinAudioPushDataThread::GetEncodersFor(OdinRoom* Room) const
+{
+    TRACE_CPUPROFILER_EVENT_SCOPE(FOdinAudioPushDataThread::GetEncodersFor);
+
+    TArray<OdinEncoder*> Encoders;
+    FScopeLock           Lock(&EncoderRoomLinkCS);
+    for (const TPair<OdinEncoder*, TSet<OdinRoom*>>& Link : EncoderRoomLinks) {
+        if (Link.Value.Contains(Room)) {
+            Encoders.Add(Link.Key);
+        }
+    }
+    return Encoders;
 }
 
 uint32 FOdinAudioPushDataThread::Run()
@@ -221,16 +240,8 @@ void FOdinAudioPushDataThread::Exit()
         EncoderRoomLinks.Empty();
     }
 
-    if (PushEvent) {
-        PushEvent->Trigger();
-    }
-
+    PushEvent->Trigger();
     if (Thread.IsValid()) {
         Thread->WaitForCompletion();
-    }
-
-    if (PushEvent) {
-        FGenericPlatformProcess::ReturnSynchEventToPool(PushEvent);
-        PushEvent = nullptr;
     }
 }

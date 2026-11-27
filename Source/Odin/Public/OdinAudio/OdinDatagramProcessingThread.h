@@ -13,7 +13,10 @@ typedef TPair<OdinRoom*, uint32> FDecoderIdentifier;
 class FOdinDatagramProcessingThread : public FRunnable
 {
   public:
-    FOdinDatagramProcessingThread();
+    /**
+     * @param InPushFrequencyInMs Longest wait between two runs of the thread; a queued datagram wakes it right away.
+     */
+    explicit FOdinDatagramProcessingThread(float InPushFrequencyInMs = 10.0f);
     virtual ~FOdinDatagramProcessingThread() override;
 
     /**
@@ -64,7 +67,7 @@ class FOdinDatagramProcessingThread : public FRunnable
     TArray<OdinDecoder*> GetDecodersByPeer(uint32 PeerId) const;
 
     /**
-     * Enqueues an incoming datagram for asynchronous processing by the thread.
+     * Enqueues an incoming datagram and wakes the thread to push it to the linked decoders.
      * @param RoomHandle The room from which the datagram originated.
      * @param PeerId The ID of the peer who sent the datagram.
      * @param ChannelMask The channel mask associated with the audio data.

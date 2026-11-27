@@ -79,6 +79,8 @@ void UOdinSubsystem::LinkEncoder(const TWeakObjectPtr<UOdinEncoder> Encoder, con
         return;
     }
     PushDataThread->LinkEncoder(Encoder->GetHandle(), TargetRoom->GetHandle());
+    // its audio carries the positions of the room from now on, not the default position of a new encoder
+    TargetRoom->ApplyPositionsToEncoder(Encoder->GetHandle());
 }
 
 void UOdinSubsystem::UnlinkEncoder(TWeakObjectPtr<UOdinEncoder> Encoder)
@@ -166,6 +168,9 @@ TArray<TWeakObjectPtr<UOdinRoom>> UOdinSubsystem::GetRoomsForEncoder(OdinEncoder
     }
     return Rooms;
 }
+
+TArray<OdinEncoder*> UOdinSubsystem::GetEncodersForRoom(OdinRoom* Room) const
+{ return PushDataThread.IsValid() && Room != nullptr ? PushDataThread->GetEncodersFor(Room) : TArray<OdinEncoder*>(); }
 
 void UOdinSubsystem::RegisterRoom(OdinRoom* Handle, UOdinRoom* Room)
 {

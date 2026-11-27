@@ -14,7 +14,10 @@
 class FOdinAudioPushDataThread : public FRunnable
 {
   public:
-    FOdinAudioPushDataThread();
+    /**
+     * @param InPushFrequencyInMs Longest wait between two runs of the thread; queued audio wakes it right away.
+     */
+    explicit FOdinAudioPushDataThread(float InPushFrequencyInMs = 10.0f);
     virtual ~FOdinAudioPushDataThread() override;
 
     /**
@@ -33,7 +36,7 @@ class FOdinAudioPushDataThread : public FRunnable
     bool UnlinkEncoder(OdinEncoder* EncoderHandle);
 
     /**
-     * Queues audio data to be pushed to a specific encoder.
+     * Queues audio data to be pushed to a specific encoder and wakes the thread to encode and send it.
      *
      * @param TargetEncoder The encoder to which the audio data belongs.
      * @param Audio The audio data buffer to be processed.
@@ -47,6 +50,14 @@ class FOdinAudioPushDataThread : public FRunnable
      * @return An array of the rooms the encoder currently broadcasts to.
      */
     TArray<OdinRoom*> GetRoomsFor(OdinEncoder* Encoder) const;
+
+    /**
+     * Retrieves all encoders currently linked to a given room.
+     *
+     * @param Room The room to query.
+     * @return An array of the encoders that broadcast to the room.
+     */
+    TArray<OdinEncoder*> GetEncodersFor(OdinRoom* Room) const;
 
     virtual uint32 Run() override;
     virtual void   Exit() override;

@@ -3,6 +3,7 @@
 #pragma once
 
 #include "Components/SynthComponent.h"
+#include "Containers/Ticker.h"
 #include "CoreMinimal.h"
 #include "OdinSynthComponent.generated.h"
 
@@ -11,6 +12,10 @@ class UOdinDecoder;
 
 /**
  * Component for playing back audio data received from an Odin Decoder in Unreal.
+ * The decoder is drained in real time even while the engine does not pull the audio (game paused, the component stopped or deactivated,
+ * the voice virtualized by voice limits or concurrency), so its events keep coming and no stale audio builds up.
+ * Plays while the game is paused by default ("Is UI Sound"); turn that off to pause voice with the game. As a UI sound it also keeps
+ * playing when the engine stops all game sounds (e.g. on a map change) and ignores the global pitch scale.
  */
 UCLASS(ClassGroup = (Odin), Blueprintable, BlueprintType, meta = (BlueprintSpawnableComponent))
 class ODIN_API UOdinSynthComponent : public USynthComponent
@@ -56,6 +61,15 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UFUNCTION(BlueprintCallable, Category = "Odin|Sound")
     void SetDecoder(UOdinDecoder* InDecoder);
 
+    /**
+     * Pops and discards the decoder audio the engine did not pull, see FOdinSoundGenerator::CatchUpToRealTime. The component calls it
+     * every frame, also while the game is paused.
+     * @return Number of samples popped and discarded
+     */
+    int32 CatchUpToRealTime();
+    /** CatchUpToRealTime with an explicit FPlatformTime::Seconds timestamp. */
+    int32 CatchUpToRealTime(double NowSeconds);
+
   protected:
     /**
      * Restarts the Odin Synth Component by stopping and then restarting its audio generation.
@@ -75,9 +89,18 @@ class ODIN_API UOdinSynthComponent : public USynthComponent
     UPROPERTY(BlueprintGetter = GetDecoder, BlueprintSetter = SetDecoder, meta = (ExposeOnSpawn = true), Category = "Odin|Sound")
     UOdinDecoder* Decoder;
 
+    /** Created with the decoder, so the decoder is drained even before (or without) the engine playing the sound; guarded by GeneratorSection */
     TSharedPtr<FOdinSoundGenerator, ESPMode::ThreadSafe> OdinSoundGeneratorPtr;
     FThreadSafeCounter                                   CurrentAudioDeviceId = -1;
 
   private:
+    /** Creates the sound generator if needed and hands it the decoder; game thread. */
+    void EnsureSoundGenerator();
+    void RemoveCatchUpTicker();
+
+    /** The engine creates sound generators on the audio thread */
+    FCriticalSection           GeneratorSection;
+    FTSTicker::FDelegateHandle CatchUpTickerHandle;
+
     bool bWasPlayingBeforeUnregister = false;
 };

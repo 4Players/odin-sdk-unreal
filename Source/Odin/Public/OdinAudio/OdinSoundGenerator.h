@@ -84,8 +84,10 @@ class ODIN_API FOdinSoundGenerator : public ISoundGenerator
      * Popping is paced by the clock, not until the decoder reports silence: popping faster than real time empties the jitter buffer and
      * makes the decoder report silence (and fire "is silent changed") while the peer still talks.
      * @return Number of samples popped and discarded, they are not passed to audio buffer listeners.
-     * @remarks For engine integrations (e.g. Wwise, FMOD) with voice virtualization. Not needed for UOdinSynthComponent, Unreal keeps synth
-     * sounds playing while silent or culled.
+     * @remarks For engine integrations (e.g. Wwise, FMOD) with voice virtualization. UOdinSynthComponent calls it every frame: Unreal
+     * keeps pulling synth sounds while they are silent or out of range, but not while the game is paused (unless "Is UI Sound" is set),
+     * the component is stopped or deactivated, or the voice is virtualized by voice limits, concurrency or with "Allow Play When Silent"
+     * turned off in the project settings.
      */
     int32 CatchUpToRealTime();
     /**

@@ -7,9 +7,11 @@
 #include <atomic>
 
 #include "CoreMinimal.h"
+#include "Containers/SortedMap.h"
 #include "Containers/Ticker.h"
 #include "Templates/UnrealTemplate.h"
 #include "OdinCryptoExtension.h"
+#include "OdinNative/OdinNativeBlueprint.h"
 #include "OdinNative/OdinNativeHandle.h"
 #include "OdinNative/OdinNativeRpc.h"
 #include "OdinSocket.h"
@@ -339,6 +341,63 @@ class ODIN_API UOdinRoom : public UObject
     bool ClearListenChannelMaskForPeer(int64 PeerId);
 
     /**
+     * Sets the position of this peer on the given channels without an encoder, e.g. for a peer without a microphone that only listens.
+     * The server forwards the audio of a channel only between peers within range of each other on it, and a peer that never sent a
+     * position is at the origin. Positions use the scale of UOdinEncoder::SetPosition: a distance of 1.0 is the hearing range.
+     * While the room is joined, a changed position is sent right away, but at most every MinPositionSendInterval seconds, so it can be set
+     * every frame; a position that is the same in a datagram (in steps of 1/16) is not sent again. The positions are sent again after every
+     * join and every PositionResendInterval seconds, as the packets can be lost.
+     * @remarks The server keeps the last position of every channel and cannot forget one; move a channel elsewhere instead of clearing it.
+     * @remarks Encoders linked to this room (UOdinSubsystem::LinkEncoder, e.g. by Create Encoder or Link Encoder To Room) get the positions
+     * too, when they are linked and when a position changes, as the server keeps the position that arrived last and their audio carries
+     * their own positions. They then also transmit their audio on these channels and keep their other ones (a new encoder transmits on
+     * channel 0 at the origin). The room still sends its positions as well, for the times without audio. To only listen on a channel while
+     * talking on others, turn bSetEncoderPositions off and set the positions of the encoder with UOdinEncoder::SetPosition; a channel both
+     * use needs the same position on both. An encoder whose datagrams are sent with SendAudio is not linked and does not get the positions.
+     * @remarks An empty channel mask sets nothing and logs a warning. A coordinate that is not a number is sent as 0 and one out of range
+     * (the fixed point of the server holds -134217728 to 134217727) as the nearest limit, as the native library sends such a position of an
+     * encoder; the first such position in a row logs a warning. Game thread only.
+     * @remarks The positions are sent as position-only datagrams in the grid-common wire format, the kind an encoder sends while silent.
+     * The server only updates the listed channels and forwards nothing; a room cipher leaves the datagram unencrypted, as the server needs
+     * the positions.
+     * @param ChannelMask   channels to set the position on
+     * @param Position   position on these channels
+     * @return true if the position is set
+     */
+    UFUNCTION(BlueprintCallable,
+              meta     = (DisplayName = "Set Room Position",
+                          ToolTip     = "Set this peer's position without an encoder, e.g. to only listen. Scale so 1.0 = hearing range (server culls beyond)"),
+              Category = "Odin|Room")
+    bool SetPosition(FOdinChannelMask ChannelMask, FOdinPosition Position);
+
+    /** Seconds between the resends of the positions set with SetPosition while joined; 0 or less only sends them when set and after a join */
+    UPROPERTY(BlueprintReadWrite, Category = "Odin|Room")
+    float PositionResendInterval = 1.0f;
+
+    /** Whether the positions set with SetPosition are set on the encoders linked to this room as well */
+    UPROPERTY(BlueprintReadWrite, Category = "Odin|Room")
+    bool bSetEncoderPositions = true;
+
+    /**
+     * Sets the positions set with SetPosition on an encoder, unless bSetEncoderPositions is off; called by UOdinSubsystem::LinkEncoder.
+     * Game thread only.
+     */
+    void ApplyPositionsToEncoder(OdinEncoder* Encoder) const;
+
+    /** Least seconds between two sends of the positions set with SetPosition; a change that comes sooner is sent after it */
+    static constexpr float MinPositionSendInterval = 0.1f;
+
+    /** Most positions in one datagram, the limit of the server */
+    static constexpr int32 MaxPositionsPerDatagram = 12;
+
+    /**
+     * Serializes positions into the position-only datagrams SetPosition sends.
+     * @param Positions   position of each channel index
+     * @return one datagram for every MaxPositionsPerDatagram channels
+     */
+    static TArray<TArray<uint8>> SerializePositionDatagrams(const TSortedMap<uint8, FOdinPosition>& Positions);
+
+    /**
      *
      * @param request Set Message
      * @return true on ODIN_ERROR_SUCCESS or false
@@ -543,6 +602,22 @@ class ODIN_API UOdinRoom : public UObject
     bool                       bCloseRequested = false; // game thread only
     bool                       bConnecting     = false; // game thread only, rejects nested ConnectRoom calls from handlers
     FTSTicker::FDelegateHandle CloseTimeoutHandle;
+
+    /** Sends the positions set with SetPosition if they changed or are due to be resent. */
+    void UpdatePositions();
+    /** Sends the positions set with SetPosition while the room is joined, and sets changed ones on the linked encoders. */
+    void SendPositions();
+    /** Sets the positions set with SetPosition on every encoder linked to this room. */
+    void ApplyPositionsToEncoders() const;
+
+    /** Positions set with SetPosition by channel index, kept across joins; game thread only. */
+    TSortedMap<uint8, FOdinPosition> Positions;
+    /** A position changed since the last send */
+    bool bPositionsChanged = false;
+    /** The last position had a coordinate that is not a number or out of range, and that was logged */
+    bool                       bWarnedPositionRange = false;
+    double                     PositionsSentSeconds = 0.0;
+    FTSTicker::FDelegateHandle PositionUpdateHandle;
 
     mutable FCriticalSection      ListenChannelMasksCS;
     TSet<int64>                   KnownPeerIds;

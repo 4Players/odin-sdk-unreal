@@ -48,6 +48,7 @@ class ODIN_API UOdinSubsystem : public UEngineSubsystem
     void                              UnlinkEncoder(OdinEncoder* Encoder);
     void                              PushAudioToEncoder(OdinEncoder* Encoder, TArray<float>&& Audio);
     TArray<TWeakObjectPtr<UOdinRoom>> GetRoomsForEncoder(OdinEncoder* Encoder) const;
+    TArray<OdinEncoder*>              GetEncodersForRoom(OdinRoom* Room) const; // encoders linked to the room with LinkEncoder (thread safe)
     void                              RegisterEncoder(OdinEncoder* Handle, UOdinEncoder* Encoder);
     void                              DeregisterEncoder(OdinEncoder* Handle);
     /**

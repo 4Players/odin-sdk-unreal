@@ -11,6 +11,8 @@ UOdinSynthComponent::UOdinSynthComponent(const FObjectInitializer& ObjectInitial
     : Super(ObjectInitializer)
     , Decoder(nullptr)
 {
+    // voice keeps playing while the game is paused
+    bIsUISound = true;
 }
 
 bool UOdinSynthComponent::Init(int32& SampleRate)
@@ -29,18 +31,17 @@ ISoundGeneratorPtr UOdinSynthComponent::CreateSoundGenerator(const FSoundGenerat
 {
     ODIN_LOG(Verbose, "UOdinSynthComponent::CreateSoundGenerator was called, audio component id: %d, device id: %d, Instance Id: %llu",
              InParams.AudioComponentId, InParams.AudioDeviceID, InParams.InstanceID);
-    if (OdinSoundGeneratorPtr.IsValid()) {
-        if (CurrentAudioDeviceId.GetValue() != InParams.AudioDeviceID) {
-
-            OdinSoundGeneratorPtr->Close();
-            OdinSoundGeneratorPtr.Reset();
-        }
+    FScopeLock Lock(&GeneratorSection);
+    // a generator created with the decoder is not bound to an audio device yet
+    if (OdinSoundGeneratorPtr.IsValid() && CurrentAudioDeviceId.GetValue() != INDEX_NONE && CurrentAudioDeviceId.GetValue() != InParams.AudioDeviceID) {
+        OdinSoundGeneratorPtr->Close();
+        OdinSoundGeneratorPtr.Reset();
     }
 
     if (!OdinSoundGeneratorPtr.IsValid()) {
         OdinSoundGeneratorPtr = MakeShared<FOdinSoundGenerator, ESPMode::ThreadSafe>();
-        CurrentAudioDeviceId.Set(InParams.AudioDeviceID);
     }
+    CurrentAudioDeviceId.Set(InParams.AudioDeviceID);
     if (Decoder && OdinSoundGeneratorPtr.IsValid()) {
         OdinSoundGeneratorPtr->SetOdinDecoder(Decoder);
     } else {
@@ -61,11 +62,50 @@ void UOdinSynthComponent::SetDecoder(UOdinDecoder* InDecoder)
 
     if (InDecoder != Decoder) {
         Decoder = InDecoder;
+        EnsureSoundGenerator();
+        RestartSynthComponent();
+    }
+}
 
+int32 UOdinSynthComponent::CatchUpToRealTime()
+{ return CatchUpToRealTime(FPlatformTime::Seconds()); }
+
+int32 UOdinSynthComponent::CatchUpToRealTime(double NowSeconds)
+{
+    TSharedPtr<FOdinSoundGenerator, ESPMode::ThreadSafe> Generator;
+    {
+        FScopeLock Lock(&GeneratorSection);
+        Generator = OdinSoundGeneratorPtr;
+    }
+    return Generator.IsValid() ? Generator->CatchUpToRealTime(NowSeconds) : 0;
+}
+
+void UOdinSynthComponent::EnsureSoundGenerator()
+{
+    {
+        FScopeLock Lock(&GeneratorSection);
+        if (!OdinSoundGeneratorPtr.IsValid() && Decoder) {
+            OdinSoundGeneratorPtr = MakeShared<FOdinSoundGenerator, ESPMode::ThreadSafe>();
+        }
         if (OdinSoundGeneratorPtr.IsValid()) {
             OdinSoundGeneratorPtr->SetOdinDecoder(Decoder);
         }
-        RestartSynthComponent();
+    }
+
+    // the core ticker also ticks while the game is paused, unlike the component tick
+    if (!CatchUpTickerHandle.IsValid() && Decoder) {
+        CatchUpTickerHandle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateWeakLambda(this, [this](float) {
+            CatchUpToRealTime();
+            return true;
+        }));
+    }
+}
+
+void UOdinSynthComponent::RemoveCatchUpTicker()
+{
+    if (CatchUpTickerHandle.IsValid()) {
+        FTSTicker::GetCoreTicker().RemoveTicker(CatchUpTickerHandle);
+        CatchUpTickerHandle.Reset();
     }
 }
 
@@ -91,6 +131,10 @@ void UOdinSynthComponent::RestartSynthComponent()
 void UOdinSynthComponent::BeginPlay()
 {
     Super::BeginPlay();
+    // the decoder may have been set without SetDecoder (on spawn)
+    if (Decoder) {
+        EnsureSoundGenerator();
+    }
     ODIN_LOG(Verbose, "%s", ANSI_TO_TCHAR(__FUNCTION__));
 }
 
@@ -121,6 +165,8 @@ void UOdinSynthComponent::OnUnregister()
 
 void UOdinSynthComponent::CloseSoundGenerator()
 {
+    RemoveCatchUpTicker();
+    FScopeLock Lock(&GeneratorSection);
     if (OdinSoundGeneratorPtr.IsValid()) {
         OdinSoundGeneratorPtr->Close();
         OdinSoundGeneratorPtr.Reset();

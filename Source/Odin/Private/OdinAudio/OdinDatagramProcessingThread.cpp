@@ -10,14 +10,19 @@
 #include "HAL/RunnableThread.h"
 #include "HAL/Event.h"
 
-FOdinDatagramProcessingThread::FOdinDatagramProcessingThread()
+FOdinDatagramProcessingThread::FOdinDatagramProcessingThread(const float InPushFrequencyInMs)
     : bIsRunning(false)
-    , PushEvent(nullptr)
-    , PushFrequencyInMs(10)
+    // lives as long as this object: the network thread triggers it, also before the thread runs and while it exits
+    , PushEvent(FGenericPlatformProcess::GetSynchEventFromPool())
+    , PushFrequencyInMs(InPushFrequencyInMs)
 {
 }
 
-FOdinDatagramProcessingThread::~FOdinDatagramProcessingThread() = default;
+FOdinDatagramProcessingThread::~FOdinDatagramProcessingThread()
+{
+    Exit();
+    FGenericPlatformProcess::ReturnSynchEventToPool(PushEvent);
+}
 
 void FOdinDatagramProcessingThread::LinkDecoderToPeer(OdinDecoder* DecoderHandle, OdinRoom* TargetRoom, const uint32 PeerId, uint64 ChannelMask)
 {
@@ -26,8 +31,6 @@ void FOdinDatagramProcessingThread::LinkDecoderToPeer(OdinDecoder* DecoderHandle
     if (DecoderHandle && TargetRoom) {
         if (!bIsRunning) {
             bIsRunning = true;
-            PushEvent  = FGenericPlatformProcess::GetSynchEventFromPool();
-            check(PushEvent);
             Thread.Reset(FRunnableThread::Create(this, TEXT("OdinDatagramProcessingThread"), 0, TPri_TimeCritical));
         }
 
@@ -108,6 +111,8 @@ void FOdinDatagramProcessingThread::HandleDatagram(OdinRoom* RoomHandle, uint32 
         FOdinDatagramEvent{.Handle = RoomHandle, .PeerId = PeerId, .ChannelMask = ChannelMask, .SsrcId = SsrcId, .Datagram = MoveTemp(Datagram)};
 
     DatagramQueue.Enqueue(MoveTemp(EventData));
+    // hand it to the decoders right away instead of on the next poll, which would delay the voice by up to PushFrequencyInMs
+    PushEvent->Trigger();
 }
 
 uint32 FOdinDatagramProcessingThread::Run()
@@ -123,8 +128,7 @@ uint32 FOdinDatagramProcessingThread::Run()
                 TRACE_CPUPROFILER_EVENT_SCOPE(FOdinDatagramProcessingThread - Single Datagram Processing)
                 if (const UOdinSubsystem* OdinSubsystem = UOdinSubsystem::Get()) {
                     if (OdinSubsystem->IsRoomRegistered(DatagramEvent.Handle)) {
-                        for (OdinDecoder* Decoder :
-                             OdinSubsystem->GetDecoderHandlesFor(DatagramEvent.Handle, DatagramEvent.PeerId, DatagramEvent.ChannelMask)) {
+                        for (OdinDecoder* Decoder : GetDecoderHandlesFor(DatagramEvent.Handle, DatagramEvent.PeerId, DatagramEvent.ChannelMask)) {
                             {
                                 TRACE_CPUPROFILER_EVENT_SCOPE(FOdinDatagramProcessingThread - decoder_push)
                                 const OdinError Result = odin_decoder_push(Decoder, DatagramEvent.Datagram.GetData(), DatagramEvent.Datagram.Num());
@@ -149,16 +153,8 @@ void FOdinDatagramProcessingThread::Exit()
     }
 
     bIsRunning = false;
-
-    if (PushEvent) {
-        PushEvent->Trigger();
-    }
+    PushEvent->Trigger();
     if (Thread.IsValid()) {
         Thread->WaitForCompletion();
-    }
-
-    if (PushEvent) {
-        FGenericPlatformProcess::ReturnSynchEventToPool(PushEvent);
-        PushEvent = nullptr;
     }
 }
